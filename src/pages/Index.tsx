@@ -16,8 +16,10 @@ import {
   Smartphone,
   Users,
 } from "lucide-react";
+import { useMemo, useState } from "react";
+import { toast } from "sonner";
 
-const desks = [
+const initialDesks = [
   { id: "A1", x: "16%", y: "24%", status: "available", label: "Standing" },
   { id: "A2", x: "34%", y: "24%", status: "occupied", label: "Dual" },
   { id: "A3", x: "52%", y: "24%", status: "available", label: "Window" },
@@ -27,6 +29,8 @@ const desks = [
   { id: "C1", x: "30%", y: "74%", status: "occupied", label: "Near Mia" },
   { id: "C2", x: "56%", y: "72%", status: "available", label: "Monitor" },
 ];
+
+const timeSlots = ["Full Day", "Morning", "Afternoon"];
 
 const metrics = [
   { label: "Utilization", value: "72%", tone: "primary" },
@@ -41,6 +45,46 @@ const features = [
 ];
 
 const Index = () => {
+  const [desks, setDesks] = useState(initialDesks);
+  const [selectedDeskId, setSelectedDeskId] = useState("A1");
+  const [selectedSlot, setSelectedSlot] = useState("Morning");
+  const [booking, setBooking] = useState<{ deskId: string; slot: string; label: string } | null>(null);
+
+  const selectedDesk = useMemo(() => desks.find((desk) => desk.id === selectedDeskId), [desks, selectedDeskId]);
+
+  const handleDeskSelect = (deskId: string) => {
+    const desk = desks.find((item) => item.id === deskId);
+    if (!desk) return;
+
+    setSelectedDeskId(deskId);
+    if (desk.status === "occupied") {
+      toast.error(`Desk ${desk.id} is already occupied`, {
+        description: "Choose a green desk or change your filters.",
+      });
+    }
+  };
+
+  const handleCreateBooking = () => {
+    if (!selectedDesk) return;
+
+    if (selectedDesk.status === "occupied") {
+      toast.error(`Desk ${selectedDesk.id} cannot be booked`, {
+        description: "This desk is currently occupied for the selected slot.",
+      });
+      return;
+    }
+
+    setDesks((currentDesks) =>
+      currentDesks.map((desk) =>
+        desk.id === selectedDesk.id ? { ...desk, status: "occupied" } : desk,
+      ),
+    );
+    setBooking({ deskId: selectedDesk.id, slot: selectedSlot, label: selectedDesk.label });
+    toast.success(`Desk ${selectedDesk.id} booked`, {
+      description: `${selectedSlot} slot confirmed. QR check-in reminder scheduled.`,
+    });
+  };
+
   return (
     <main className="min-h-screen overflow-hidden bg-hero-field text-foreground">
       <section className="relative px-4 py-5 sm:px-6 lg:px-8">
@@ -94,8 +138,23 @@ const Index = () => {
                 </div>
                 <div className="rounded-md bg-muted px-3 py-2 text-right">
                   <p className="text-xs font-semibold text-muted-foreground">Today</p>
-                  <p className="text-sm font-extrabold">Morning slot</p>
+                  <p className="text-sm font-extrabold">{selectedSlot} slot</p>
                 </div>
+              </div>
+              <div className="mb-4 grid grid-cols-3 gap-2">
+                {timeSlots.map((slot) => (
+                  <button
+                    key={slot}
+                    onClick={() => setSelectedSlot(slot)}
+                    className={`focus-premium rounded-md border px-3 py-2 text-sm font-extrabold transition-all hover:-translate-y-0.5 ${
+                      selectedSlot === slot
+                        ? "border-primary bg-primary text-primary-foreground shadow-glow"
+                        : "border-border bg-surface text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    {slot}
+                  </button>
+                ))}
               </div>
               <div className="mb-4 grid grid-cols-[1fr_auto] gap-3">
                 <div className="flex items-center gap-2 rounded-md border border-border bg-background px-3 py-2 text-muted-foreground">
@@ -113,10 +172,15 @@ const Index = () => {
                 {desks.map((desk) => (
                   <button
                     key={desk.id}
+                    onClick={() => handleDeskSelect(desk.id)}
                     className={`focus-premium absolute -translate-x-1/2 -translate-y-1/2 rounded-md border px-3 py-2 text-left shadow-card transition-transform hover:scale-105 ${
                       desk.status === "available"
-                        ? "border-success/40 bg-success text-success-foreground"
-                        : "border-occupied/40 bg-occupied text-occupied-foreground"
+                        ? selectedDeskId === desk.id
+                          ? "border-primary bg-primary text-primary-foreground ring-4 ring-primary/20"
+                          : "border-success/40 bg-success text-success-foreground"
+                        : selectedDeskId === desk.id
+                          ? "border-occupied bg-occupied text-occupied-foreground ring-4 ring-occupied/20"
+                          : "border-occupied/40 bg-occupied text-occupied-foreground"
                     }`}
                     style={{ left: desk.x, top: desk.y }}
                   >
@@ -124,6 +188,28 @@ const Index = () => {
                     <span className="block text-[11px] font-semibold opacity-90">{desk.label}</span>
                   </button>
                 ))}
+              </div>
+              <div className="mt-4 grid gap-3 rounded-lg border border-border bg-background p-4 sm:grid-cols-[1fr_auto] sm:items-center">
+                <div>
+                  <p className="text-sm font-bold text-muted-foreground">Selected booking</p>
+                  <p className="font-display text-xl font-extrabold">
+                    Desk {selectedDesk?.id ?? "—"} · {selectedSlot}
+                  </p>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    {booking
+                      ? `Confirmed: ${booking.slot} at desk ${booking.deskId} (${booking.label}).`
+                      : selectedDesk?.status === "available"
+                        ? "Available now. Booking will mark this desk occupied."
+                        : "Occupied desks cannot be booked for this slot."}
+                  </p>
+                </div>
+                <button
+                  onClick={handleCreateBooking}
+                  disabled={!selectedDesk || selectedDesk.status === "occupied"}
+                  className="focus-premium inline-flex items-center justify-center gap-2 rounded-md bg-primary px-5 py-3 font-bold text-primary-foreground shadow-glow transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground disabled:shadow-none disabled:hover:translate-y-0"
+                >
+                  <CalendarCheck className="h-5 w-5" /> Book desk
+                </button>
               </div>
             </div>
           </div>
