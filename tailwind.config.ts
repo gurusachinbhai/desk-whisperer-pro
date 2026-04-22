@@ -13,6 +13,10 @@ export default {
       },
     },
     extend: {
+      fontFamily: {
+        sans: ["Inter", "ui-sans-serif", "system-ui", "sans-serif"],
+        display: ["Manrope", "Inter", "ui-sans-serif", "system-ui", "sans-serif"],
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
@@ -47,6 +51,23 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        surface: {
+          DEFAULT: "hsl(var(--surface))",
+          raised: "hsl(var(--surface-raised))",
+          glass: "hsl(var(--surface-glass))",
+        },
+        success: {
+          DEFAULT: "hsl(var(--success))",
+          foreground: "hsl(var(--success-foreground))",
+        },
+        warning: {
+          DEFAULT: "hsl(var(--warning))",
+          foreground: "hsl(var(--warning-foreground))",
+        },
+        occupied: {
+          DEFAULT: "hsl(var(--occupied))",
+          foreground: "hsl(var(--occupied-foreground))",
+        },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",
@@ -62,6 +83,16 @@ export default {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
+      },
+      boxShadow: {
+        soft: "var(--shadow-soft)",
+        glow: "var(--shadow-glow)",
+        card: "var(--shadow-card)",
+      },
+      backgroundImage: {
+        "hero-field": "var(--gradient-hero)",
+        "panel-sheen": "var(--gradient-panel)",
+        "action-glow": "var(--gradient-action)",
       },
       keyframes: {
         "accordion-down": {
@@ -80,10 +111,21 @@ export default {
             height: "0",
           },
         },
+        "float-desk": {
+          "0%, 100%": { transform: "translate3d(0, 0, 0)" },
+          "50%": { transform: "translate3d(0, -8px, 0)" },
+        },
+        "scan-line": {
+          "0%": { transform: "translateY(-100%)", opacity: "0" },
+          "25%, 75%": { opacity: "1" },
+          "100%": { transform: "translateY(260%)", opacity: "0" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        "float-desk": "float-desk 6s ease-in-out infinite",
+        "scan-line": "scan-line 4.5s ease-in-out infinite",
       },
     },
   },
