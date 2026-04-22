@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      company_profiles: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          domain: string | null
+          id: string
+          name: string
+          organization_code: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          domain?: string | null
+          id?: string
+          name: string
+          organization_code: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          domain?: string | null
+          id?: string
+          name?: string
+          organization_code?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       deskflow_bookings: {
         Row: {
           booked_at: string
@@ -164,6 +194,76 @@ export type Database = {
           },
         ]
       }
+      employee_profiles: {
+        Row: {
+          company_id: string
+          created_at: string
+          display_name: string
+          email: string | null
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          display_name: string
+          email?: string | null
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          display_name?: string
+          email?: string | null
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_profiles_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          company_id: string | null
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          company_id?: string | null
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          company_id?: string | null
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -192,8 +292,63 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      is_company_member: { Args: { _company_id: string }; Returns: boolean }
+      join_company_profile: {
+        Args: {
+          _display_name: string
+          _email?: string
+          _organization_code: string
+        }
+        Returns: {
+          created_at: string
+          created_by: string | null
+          domain: string | null
+          id: string
+          name: string
+          organization_code: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "company_profiles"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      register_company_profile: {
+        Args: {
+          _company_name: string
+          _display_name: string
+          _domain?: string
+          _email?: string
+          _organization_code: string
+        }
+        Returns: {
+          created_at: string
+          created_by: string | null
+          domain: string | null
+          id: string
+          name: string
+          organization_code: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "company_profiles"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
     }
     Enums: {
+      app_role: "admin" | "moderator" | "user"
       deskflow_booking_status:
         | "confirmed"
         | "checked_in"
@@ -327,6 +482,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      app_role: ["admin", "moderator", "user"],
       deskflow_booking_status: [
         "confirmed",
         "checked_in",
