@@ -2,41 +2,59 @@
 @tailwind components;
 @tailwind utilities;
 
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Manrope:wght@600;700;800&display=swap');
+
 /* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
 All colors MUST be HSL.
 */
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --background: 180 22% 96%;
+    --foreground: 205 42% 13%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 205 42% 13%;
 
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 174 74% 34%;
+    --primary-foreground: 170 40% 98%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 199 78% 45%;
+    --secondary-foreground: 200 100% 98%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 178 25% 90%;
+    --muted-foreground: 200 15% 39%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: 34 94% 61%;
+    --accent-foreground: 31 65% 12%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --border: 184 22% 84%;
+    --input: 184 22% 84%;
+    --ring: 174 74% 34%;
 
-    --radius: 0.5rem;
+    --surface: 184 33% 92%;
+    --surface-raised: 0 0% 100%;
+    --surface-glass: 0 0% 100% / 0.72;
+    --success: 151 65% 40%;
+    --success-foreground: 150 60% 98%;
+    --warning: 38 95% 56%;
+    --warning-foreground: 32 65% 12%;
+    --occupied: 356 73% 56%;
+    --occupied-foreground: 0 0% 100%;
+    --gradient-hero: radial-gradient(circle at 18% 18%, hsl(174 80% 88%), transparent 30%), radial-gradient(circle at 82% 10%, hsl(34 95% 82%), transparent 28%), linear-gradient(135deg, hsl(180 35% 96%), hsl(199 72% 91%));
+    --gradient-panel: linear-gradient(135deg, hsl(0 0% 100% / 0.92), hsl(174 63% 94% / 0.78));
+    --gradient-action: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--secondary)));
+    --shadow-soft: 0 24px 70px -38px hsl(205 42% 13% / 0.35);
+    --shadow-glow: 0 18px 46px -20px hsl(var(--primary) / 0.58);
+    --shadow-card: 0 16px 42px -30px hsl(205 42% 13% / 0.45);
+
+    --radius: 0.75rem;
 
     --sidebar-background: 0 0% 98%;
 
@@ -100,6 +118,29 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+@layer utilities {
+  .desk-grid {
+    background-image: linear-gradient(hsl(var(--border) / 0.55) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--border) / 0.55) 1px, transparent 1px);
+    background-size: 42px 42px;
+  }
+
+  .focus-premium {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
   }
 }
