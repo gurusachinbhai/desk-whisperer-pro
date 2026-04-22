@@ -160,7 +160,7 @@ const Index = () => {
     }
   };
 
-  const handleCreateBooking = () => {
+  const handleCreateBooking = async () => {
     if (!selectedDesk) return;
 
     if (selectedDesk.status === "occupied") {
@@ -178,26 +178,27 @@ const Index = () => {
     }
 
     setIsBookingDesk(true);
-    supabase
-      .rpc("deskflow_book_desk", {
+    try {
+      const { error } = await supabase.rpc("deskflow_book_desk", {
         _desk_id: selectedDesk.dbId,
         _time_slot: selectedSlot,
         _client_session_id: clientSessionId,
-      })
-      .then(({ error }) => {
-        if (error) {
-          toast.error(`Desk ${selectedDesk.id} could not be booked`, {
-            description: error.message,
-          });
-          return;
-        }
+      });
 
-        setBooking({ deskId: selectedDesk.id, slot: selectedSlot, label: selectedDesk.label });
-        toast.success(`Desk ${selectedDesk.id} booked`, {
-          description: `${selectedSlot} slot confirmed and synced to every device.`,
+      if (error) {
+        toast.error(`Desk ${selectedDesk.id} could not be booked`, {
+          description: error.message,
         });
-      })
-      .finally(() => setIsBookingDesk(false));
+        return;
+      }
+
+      setBooking({ deskId: selectedDesk.id, slot: selectedSlot, label: selectedDesk.label });
+      toast.success(`Desk ${selectedDesk.id} booked`, {
+        description: `${selectedSlot} slot confirmed and synced to every device.`,
+      });
+    } finally {
+      setIsBookingDesk(false);
+    }
   };
 
   return (
