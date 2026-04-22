@@ -16,8 +16,10 @@ import {
   Smartphone,
   Users,
 } from "lucide-react";
+import { useMemo, useState } from "react";
+import { toast } from "sonner";
 
-const desks = [
+const initialDesks = [
   { id: "A1", x: "16%", y: "24%", status: "available", label: "Standing" },
   { id: "A2", x: "34%", y: "24%", status: "occupied", label: "Dual" },
   { id: "A3", x: "52%", y: "24%", status: "available", label: "Window" },
@@ -27,6 +29,8 @@ const desks = [
   { id: "C1", x: "30%", y: "74%", status: "occupied", label: "Near Mia" },
   { id: "C2", x: "56%", y: "72%", status: "available", label: "Monitor" },
 ];
+
+const timeSlots = ["Full Day", "Morning", "Afternoon"];
 
 const metrics = [
   { label: "Utilization", value: "72%", tone: "primary" },
@@ -41,6 +45,46 @@ const features = [
 ];
 
 const Index = () => {
+  const [desks, setDesks] = useState(initialDesks);
+  const [selectedDeskId, setSelectedDeskId] = useState("A1");
+  const [selectedSlot, setSelectedSlot] = useState("Morning");
+  const [booking, setBooking] = useState<{ deskId: string; slot: string; label: string } | null>(null);
+
+  const selectedDesk = useMemo(() => desks.find((desk) => desk.id === selectedDeskId), [desks, selectedDeskId]);
+
+  const handleDeskSelect = (deskId: string) => {
+    const desk = desks.find((item) => item.id === deskId);
+    if (!desk) return;
+
+    setSelectedDeskId(deskId);
+    if (desk.status === "occupied") {
+      toast.error(`Desk ${desk.id} is already occupied`, {
+        description: "Choose a green desk or change your filters.",
+      });
+    }
+  };
+
+  const handleCreateBooking = () => {
+    if (!selectedDesk) return;
+
+    if (selectedDesk.status === "occupied") {
+      toast.error(`Desk ${selectedDesk.id} cannot be booked`, {
+        description: "This desk is currently occupied for the selected slot.",
+      });
+      return;
+    }
+
+    setDesks((currentDesks) =>
+      currentDesks.map((desk) =>
+        desk.id === selectedDesk.id ? { ...desk, status: "occupied" } : desk,
+      ),
+    );
+    setBooking({ deskId: selectedDesk.id, slot: selectedSlot, label: selectedDesk.label });
+    toast.success(`Desk ${selectedDesk.id} booked`, {
+      description: `${selectedSlot} slot confirmed. QR check-in reminder scheduled.`,
+    });
+  };
+
   return (
     <main className="min-h-screen overflow-hidden bg-hero-field text-foreground">
       <section className="relative px-4 py-5 sm:px-6 lg:px-8">
