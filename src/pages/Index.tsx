@@ -273,8 +273,8 @@ const Index = () => {
                   <Building2 className="h-6 w-6" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold opacity-80">DeskFlow Android</p>
-                  <h1 className="font-display text-2xl font-extrabold">Company Login</h1>
+                  <p className="text-sm font-semibold opacity-80">Open Desk Flow</p>
+                  <h1 className="font-display text-2xl font-extrabold">Book Your Desk</h1>
                 </div>
               </div>
             </div>
@@ -433,7 +433,7 @@ const Index = () => {
             <Smartphone className="h-4 w-4" /> Android-first multi-company SaaS
           </div>
           <div>
-            <h2 className="font-display text-5xl font-extrabold leading-tight tracking-normal lg:text-7xl">DeskFlow now feels like a native mobile app.</h2>
+            <h2 className="font-display text-5xl font-extrabold leading-tight tracking-normal lg:text-7xl">Open Desk Flow helps teams book desks on Android.</h2>
             <p className="mt-5 max-w-2xl text-lg leading-8 text-muted-foreground">
               Companies can create their own profile, employees can join with an Organization ID, and bookings remain connected to the live backend.
             </p>
