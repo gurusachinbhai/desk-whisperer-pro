@@ -16,10 +16,22 @@ import {
   Smartphone,
   Users,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
-const initialDesks = [
+type Desk = {
+  dbId?: string;
+  id: string;
+  x: string;
+  y: string;
+  status: "available" | "occupied";
+  label: string;
+};
+
+type BookingSummary = { deskId: string; slot: string; label: string };
+
+const initialDesks: Desk[] = [
   { id: "A1", x: "16%", y: "24%", status: "available", label: "Standing" },
   { id: "A2", x: "34%", y: "24%", status: "occupied", label: "Dual" },
   { id: "A3", x: "52%", y: "24%", status: "available", label: "Window" },
@@ -31,6 +43,16 @@ const initialDesks = [
 ];
 
 const timeSlots = ["Full Day", "Morning", "Afternoon"];
+
+const getClientSessionId = () => {
+  const storageKey = "deskflow-client-session-id";
+  const existingSessionId = window.localStorage.getItem(storageKey);
+  if (existingSessionId) return existingSessionId;
+
+  const nextSessionId = window.crypto.randomUUID();
+  window.localStorage.setItem(storageKey, nextSessionId);
+  return nextSessionId;
+};
 
 const metrics = [
   { label: "Utilization", value: "72%", tone: "primary" },
@@ -48,9 +70,83 @@ const Index = () => {
   const [desks, setDesks] = useState(initialDesks);
   const [selectedDeskId, setSelectedDeskId] = useState("A1");
   const [selectedSlot, setSelectedSlot] = useState("Morning");
-  const [booking, setBooking] = useState<{ deskId: string; slot: string; label: string } | null>(null);
+  const [booking, setBooking] = useState<BookingSummary | null>(null);
+  const [isLoadingDesks, setIsLoadingDesks] = useState(true);
+  const [isBookingDesk, setIsBookingDesk] = useState(false);
+  const [clientSessionId] = useState(getClientSessionId);
 
   const selectedDesk = useMemo(() => desks.find((desk) => desk.id === selectedDeskId), [desks, selectedDeskId]);
+
+  useEffect(() => {
+    const loadDesks = async () => {
+      const { data, error } = await supabase
+        .from("deskflow_desks")
+        .select("id, code, label, x_position, y_position, status")
+        .order("code", { ascending: true });
+
+      if (error) {
+        toast.error("Could not load live desk availability", { description: error.message });
+        setIsLoadingDesks(false);
+        return;
+      }
+
+      const liveDesks: Desk[] = data.map((desk) => ({
+        dbId: desk.id,
+        id: desk.code,
+        label: desk.label,
+        x: desk.x_position,
+        y: desk.y_position,
+        status: desk.status,
+      }));
+
+      setDesks(liveDesks);
+      setIsLoadingDesks(false);
+    };
+
+    loadDesks();
+
+    const channel = supabase
+      .channel("deskflow-realtime-booking")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "deskflow_desks" },
+        (payload) => {
+          const liveDesk = payload.new as {
+            id: string;
+            code: string;
+            label: string;
+            x_position: string;
+            y_position: string;
+            status: "available" | "occupied";
+          };
+
+          setDesks((currentDesks) =>
+            currentDesks.map((desk) =>
+              desk.dbId === liveDesk.id || desk.id === liveDesk.code
+                ? {
+                    dbId: liveDesk.id,
+                    id: liveDesk.code,
+                    label: liveDesk.label,
+                    x: liveDesk.x_position,
+                    y: liveDesk.y_position,
+                    status: liveDesk.status,
+                  }
+                : desk,
+            ),
+          );
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "deskflow_bookings" },
+        () => toast("Desk availability synced", { description: "A booking update arrived from another device." }),
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   const handleDeskSelect = (deskId: string) => {
     const desk = desks.find((item) => item.id === deskId);
@@ -64,7 +160,7 @@ const Index = () => {
     }
   };
 
-  const handleCreateBooking = () => {
+  const handleCreateBooking = async () => {
     if (!selectedDesk) return;
 
     if (selectedDesk.status === "occupied") {
@@ -74,15 +170,35 @@ const Index = () => {
       return;
     }
 
-    setDesks((currentDesks) =>
-      currentDesks.map((desk) =>
-        desk.id === selectedDesk.id ? { ...desk, status: "occupied" } : desk,
-      ),
-    );
-    setBooking({ deskId: selectedDesk.id, slot: selectedSlot, label: selectedDesk.label });
-    toast.success(`Desk ${selectedDesk.id} booked`, {
-      description: `${selectedSlot} slot confirmed. QR check-in reminder scheduled.`,
-    });
+    if (!selectedDesk.dbId) {
+      toast.error("Live desk record is still loading", {
+        description: "Please wait for backend availability to finish syncing.",
+      });
+      return;
+    }
+
+    setIsBookingDesk(true);
+    try {
+      const { error } = await supabase.rpc("deskflow_book_desk", {
+        _desk_id: selectedDesk.dbId,
+        _time_slot: selectedSlot,
+        _client_session_id: clientSessionId,
+      });
+
+      if (error) {
+        toast.error(`Desk ${selectedDesk.id} could not be booked`, {
+          description: error.message,
+        });
+        return;
+      }
+
+      setBooking({ deskId: selectedDesk.id, slot: selectedSlot, label: selectedDesk.label });
+      toast.success(`Desk ${selectedDesk.id} booked`, {
+        description: `${selectedSlot} slot confirmed and synced to every device.`,
+      });
+    } finally {
+      setIsBookingDesk(false);
+    }
   };
 
   return (
