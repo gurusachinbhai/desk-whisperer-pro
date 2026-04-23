@@ -39,6 +39,7 @@ type CompanyForm = {
 };
 
 type AppMode = "create" | "join";
+type OnboardingStep = "company" | "employee";
 
 const initialDesks: Desk[] = [
   { id: "A1", x: "16%", y: "24%", status: "available", label: "Standing" },
@@ -73,6 +74,7 @@ const normalizeOrgCode = (value: string) => value.toUpperCase().replace(/[^A-Z0-
 
 const Index = () => {
   const [mode, setMode] = useState<AppMode>("create");
+  const [onboardingStep, setOnboardingStep] = useState<OnboardingStep>("company");
   const [form, setForm] = useState<CompanyForm>({
     companyName: "",
     orgCode: "",
@@ -169,6 +171,17 @@ const Index = () => {
     }
   };
 
+  const handleCompanyGate = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (form.orgCode.length < 3 || (mode === "create" && form.companyName.trim().length < 2)) {
+      toast.error("Complete company login", { description: mode === "create" ? "Company name and Organization ID are required." : "Organization ID is required." });
+      return;
+    }
+
+    setOnboardingStep("employee");
+  };
+
   const handleCompanySubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
@@ -178,7 +191,7 @@ const Index = () => {
       return;
     }
 
-    if (form.displayName.trim().length < 2 || form.orgCode.length < 3) {
+    if (form.displayName.trim().length < 2 || form.orgCode.length < 3 || (mode === "create" && form.companyName.trim().length < 2)) {
       toast.error("Complete the required fields", { description: "Name and organization code are required." });
       return;
     }
@@ -281,28 +294,33 @@ const Index = () => {
 
             <div className="space-y-5 px-5 py-5">
               <div className="rounded-[1.5rem] bg-surface-raised p-4 shadow-card">
-                <div className="grid grid-cols-2 rounded-2xl bg-muted p-1">
-                  {(["create", "join"] as AppMode[]).map((item) => (
-                    <button
-                      key={item}
-                      onClick={() => setMode(item)}
-                      className={`focus-premium rounded-xl py-2 text-sm font-extrabold transition-all ${
-                        mode === item ? "bg-primary text-primary-foreground shadow-glow" : "text-muted-foreground"
-                      }`}
-                    >
-                      {item === "create" ? "Create company" : "Join company"}
-                    </button>
-                  ))}
+                <div className="mb-4 flex items-center gap-3">
+                  <div className="grid h-10 w-10 place-items-center rounded-2xl bg-primary/10 text-primary">
+                    {onboardingStep === "company" ? <Building2 className="h-5 w-5" /> : <UserPlus className="h-5 w-5" />}
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Step {onboardingStep === "company" ? "1" : "2"} of 2</p>
+                    <h2 className="font-display text-xl font-extrabold">{onboardingStep === "company" ? "Company login" : "Employee login"}</h2>
+                  </div>
                 </div>
 
-                <button
-                  onClick={handleGoogleLogin}
-                  className="focus-premium mt-4 flex w-full items-center justify-center gap-2 rounded-2xl border border-border bg-background px-4 py-3 font-extrabold shadow-card transition-transform hover:-translate-y-0.5"
-                >
-                  <Mail className="h-5 w-5 text-primary" /> Continue with Google
-                </button>
+                {onboardingStep === "company" ? (
+                  <form onSubmit={handleCompanyGate} className="space-y-3">
+                    <div className="grid grid-cols-2 rounded-2xl bg-muted p-1">
+                      {(["create", "join"] as AppMode[]).map((item) => (
+                        <button
+                          type="button"
+                          key={item}
+                          onClick={() => setMode(item)}
+                          className={`focus-premium rounded-xl py-2 text-sm font-extrabold transition-all ${
+                            mode === item ? "bg-primary text-primary-foreground shadow-glow" : "text-muted-foreground"
+                          }`}
+                        >
+                          {item === "create" ? "Create" : "Join"}
+                        </button>
+                      ))}
+                    </div>
 
-                <form onSubmit={handleCompanySubmit} className="mt-4 space-y-3">
                   {mode === "create" && (
                     <label className="block">
                       <span className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Company name</span>
@@ -323,6 +341,26 @@ const Index = () => {
                       className="focus-premium mt-1 w-full rounded-2xl border border-border bg-background px-4 py-3 font-semibold text-foreground placeholder:text-muted-foreground"
                     />
                   </label>
+                    <button
+                      type="submit"
+                      className="focus-premium flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 font-extrabold text-primary-foreground shadow-glow transition-transform hover:-translate-y-0.5"
+                    >
+                      Continue to employee login <ChevronRight className="h-5 w-5" />
+                    </button>
+                  </form>
+                ) : (
+                  <form onSubmit={handleCompanySubmit} className="space-y-3">
+                    <div className="rounded-2xl bg-background p-3">
+                      <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Company</p>
+                      <p className="font-display text-lg font-extrabold">{mode === "create" ? form.companyName : form.orgCode}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleGoogleLogin}
+                      className="focus-premium flex w-full items-center justify-center gap-2 rounded-2xl border border-border bg-background px-4 py-3 font-extrabold shadow-card transition-transform hover:-translate-y-0.5"
+                    >
+                      <Mail className="h-5 w-5 text-primary" /> Continue with Google
+                    </button>
                   <label className="block">
                     <span className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Your name</span>
                     <input
@@ -346,9 +384,17 @@ const Index = () => {
                     disabled={isSubmittingCompany}
                     className="focus-premium flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 font-extrabold text-primary-foreground shadow-glow transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground disabled:shadow-none"
                   >
-                    <UserPlus className="h-5 w-5" /> {isSubmittingCompany ? "Saving..." : mode === "create" ? "Create profile" : "Join workspace"}
+                    <UserPlus className="h-5 w-5" /> {isSubmittingCompany ? "Saving..." : mode === "create" ? "Create employee profile" : "Join workspace"}
                   </button>
-                </form>
+                    <button
+                      type="button"
+                      onClick={() => setOnboardingStep("company")}
+                      className="focus-premium flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-2 text-sm font-extrabold text-muted-foreground"
+                    >
+                      <ArrowLeft className="h-4 w-4" /> Back to company login
+                    </button>
+                  </form>
+                )}
               </div>
 
               <div id="booking" className="rounded-[1.5rem] bg-surface-raised p-4 shadow-card">
