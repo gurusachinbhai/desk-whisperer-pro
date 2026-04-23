@@ -194,6 +194,59 @@ export type Database = {
           },
         ]
       }
+      employee_invites: {
+        Row: {
+          accepted_at: string | null
+          accepted_by: string | null
+          company_id: string
+          created_at: string
+          employee_email: string
+          employee_name: string
+          expires_at: string
+          id: string
+          invite_token: string
+          invited_by: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          company_id: string
+          created_at?: string
+          employee_email: string
+          employee_name: string
+          expires_at?: string
+          id?: string
+          invite_token?: string
+          invited_by: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          company_id?: string
+          created_at?: string
+          employee_email?: string
+          employee_name?: string
+          expires_at?: string
+          id?: string
+          invite_token?: string
+          invited_by?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_invites_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employee_profiles: {
         Row: {
           company_id: string
@@ -269,6 +322,51 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_employee_invite: {
+        Args: { _display_name?: string; _email?: string; _invite_token: string }
+        Returns: {
+          company_id: string
+          created_at: string
+          display_name: string
+          email: string | null
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "employee_profiles"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      create_employee_invite: {
+        Args: {
+          _company_id: string
+          _employee_email: string
+          _employee_name: string
+        }
+        Returns: {
+          accepted_at: string | null
+          accepted_by: string | null
+          company_id: string
+          created_at: string
+          employee_email: string
+          employee_name: string
+          expires_at: string
+          id: string
+          invite_token: string
+          invited_by: string
+          status: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "employee_invites"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       deskflow_book_desk: {
         Args: {
           _client_session_id: string
