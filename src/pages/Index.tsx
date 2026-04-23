@@ -656,31 +656,22 @@ const Index = () => {
   const renderHomeScreen = () => (
     <>
       <div className="rounded-[1.5rem] bg-surface-raised p-4 shadow-card">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="grid h-10 w-10 place-items-center rounded-2xl bg-primary/10 text-primary">
+            <ShieldCheck className="h-5 w-5" />
+          </div>
           <div>
-            <p className="text-sm font-bold text-primary">Home · Login</p>
+            <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Home</p>
             <h2 className="font-display text-2xl font-extrabold">Login to continue</h2>
           </div>
-          <div className="rounded-2xl bg-success px-3 py-2 text-center text-success-foreground">
-            <p className="text-2xl font-extrabold">{availableCount}</p>
-            <p className="text-[10px] font-bold uppercase">free</p>
+        </div>
+        {companyProfile && (
+          <div className="mt-4 rounded-2xl bg-background p-4">
+            <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Signed in workspace</p>
+            <p className="font-display text-xl font-extrabold">{companyProfile.name}</p>
+            <p className="mt-1 text-sm font-semibold text-muted-foreground">Organization ID · {companyProfile.organization_code}</p>
           </div>
-        </div>
-        <div className="desk-grid relative mt-4 h-[220px] overflow-hidden rounded-[1.4rem] border border-border bg-surface">
-          {desks.map((desk) => (
-            <button
-              key={desk.id}
-              onClick={() => companyProfile ? handleDeskSelect(desk.id) : toast.error("Employer login required", { description: "Login or signup first to book a desk." })}
-              className={`focus-premium absolute -translate-x-1/2 -translate-y-1/2 rounded-2xl border px-3 py-2 text-left shadow-card transition-transform hover:scale-105 ${
-                desk.status === "available" ? "border-success/40 bg-success text-success-foreground" : "border-occupied/40 bg-occupied text-occupied-foreground"
-              }`}
-              style={{ left: desk.x, top: desk.y }}
-            >
-              <span className="block text-sm font-extrabold">{desk.id}</span>
-              <span className="block text-[10px] font-bold opacity-90">{desk.label}</span>
-            </button>
-          ))}
-        </div>
+        )}
       </div>
       {companyProfile ? (
         <button onClick={() => setActiveTab("book")} className="focus-premium flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 font-extrabold text-primary-foreground shadow-glow">
