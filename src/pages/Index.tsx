@@ -61,7 +61,7 @@ type EmployeeInvite = {
 };
 
 type AppMode = "create" | "login";
-type ActiveTab = "book" | "map" | "admin" | "team";
+type ActiveTab = "home" | "book" | "map" | "admin" | "team";
 
 const initialDesks: Desk[] = [
   { id: "A1", x: "16%", y: "24%", status: "available", label: "Standing" },
@@ -76,6 +76,7 @@ const initialDesks: Desk[] = [
 
 const timeSlots = ["Full Day", "Morning", "Afternoon"];
 const bottomTabs: { id: ActiveTab; icon: typeof CalendarCheck; label: string }[] = [
+  { id: "home", icon: MapPin, label: "Home" },
   { id: "book", icon: CalendarCheck, label: "Book" },
   { id: "map", icon: MapPin, label: "Map" },
   { id: "admin", icon: BarChart3, label: "Admin" },
@@ -98,7 +99,7 @@ const createInviteUrl = (token: string) => `${window.location.origin}/?invite=${
 
 const Index = () => {
   const [mode, setMode] = useState<AppMode>("create");
-  const [activeTab, setActiveTab] = useState<ActiveTab>("admin");
+  const [activeTab, setActiveTab] = useState<ActiveTab>("home");
   const [form, setForm] = useState<CompanyForm>({
     companyName: "",
     orgCode: "",
@@ -138,7 +139,7 @@ const Index = () => {
 
     if (company) {
       setCompanyProfile(company);
-      setActiveTab("admin");
+      setActiveTab("home");
       await loadInvites(company.id);
     }
   };
@@ -651,6 +652,39 @@ const Index = () => {
     </div>
   );
 
+  const renderHomeScreen = () => (
+    <>
+      <div className="rounded-[1.5rem] bg-surface-raised p-4 shadow-card">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-bold text-primary">Home · Map login</p>
+            <h2 className="font-display text-2xl font-extrabold">Choose your desk</h2>
+          </div>
+          <div className="rounded-2xl bg-success px-3 py-2 text-center text-success-foreground">
+            <p className="text-2xl font-extrabold">{availableCount}</p>
+            <p className="text-[10px] font-bold uppercase">free</p>
+          </div>
+        </div>
+        <div className="desk-grid relative mt-4 h-[220px] overflow-hidden rounded-[1.4rem] border border-border bg-surface">
+          {desks.map((desk) => (
+            <button
+              key={desk.id}
+              onClick={() => companyProfile ? handleDeskSelect(desk.id) : toast.error("Employer login required", { description: "Login or signup first to book a desk." })}
+              className={`focus-premium absolute -translate-x-1/2 -translate-y-1/2 rounded-2xl border px-3 py-2 text-left shadow-card transition-transform hover:scale-105 ${
+                desk.status === "available" ? "border-success/40 bg-success text-success-foreground" : "border-occupied/40 bg-occupied text-occupied-foreground"
+              }`}
+              style={{ left: desk.x, top: desk.y }}
+            >
+              <span className="block text-sm font-extrabold">{desk.id}</span>
+              <span className="block text-[10px] font-bold opacity-90">{desk.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+      {companyProfile ? renderBookingPanel() : renderEmployerLogin()}
+    </>
+  );
+
   const shouldShowEmployerFirst = !companyProfile && !inviteToken;
 
   return (
@@ -678,11 +712,11 @@ const Index = () => {
 
             <div className="space-y-5 px-5 py-5">
               {inviteToken && renderTeamPanel()}
-              {shouldShowEmployerFirst && renderEmployerLogin()}
+              {shouldShowEmployerFirst && renderHomeScreen()}
+              {companyProfile && activeTab === "home" && renderHomeScreen()}
               {companyProfile && isAdmin && activeTab === "admin" && renderAdminPanel()}
               {companyProfile && activeTab === "team" && renderTeamPanel()}
               {companyProfile && (activeTab === "book" || activeTab === "map") && renderBookingPanel()}
-              {companyProfile && isAdmin && activeTab !== "admin" && activeTab !== "team" && renderBookingPanel()}
             </div>
 
             <div className="sticky bottom-0 grid grid-cols-4 border-t border-border bg-surface-raised px-3 py-2">
@@ -701,10 +735,10 @@ const Index = () => {
 
         <section className="space-y-6 py-4 lg:py-10">
           <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-surface-glass px-4 py-2 text-sm font-bold text-primary shadow-card backdrop-blur">
-            <Smartphone className="h-4 w-4" /> Android application screen
+            <Smartphone className="h-4 w-4" /> Android home map login
           </div>
           <div>
-            <h2 className="font-display text-5xl font-extrabold leading-tight tracking-normal lg:text-7xl">Employer first. Employees join by HR email link.</h2>
+            <h2 className="font-display text-5xl font-extrabold leading-tight tracking-normal lg:text-7xl">Home first with map login.</h2>
             <p className="mt-5 max-w-2xl text-lg leading-8 text-muted-foreground">
               Open Desk Flow now starts with employer login/signup, gives HR admins an invite workspace, and keeps desk booking synced through the live backend.
             </p>
