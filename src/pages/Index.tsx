@@ -567,7 +567,7 @@ const Index = () => {
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm font-bold text-primary">Book screen · London HQ</p>
-          <h2 className="font-display text-2xl font-extrabold">Book your desk</h2>
+          <h2 className="font-display text-2xl font-extrabold">Choose your desk</h2>
         </div>
         <div className="rounded-2xl bg-success px-3 py-2 text-center text-success-foreground">
           <p className="text-2xl font-extrabold">{availableCount}</p>
@@ -658,8 +658,8 @@ const Index = () => {
       <div className="rounded-[1.5rem] bg-surface-raised p-4 shadow-card">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-bold text-primary">Home · Map login</p>
-            <h2 className="font-display text-2xl font-extrabold">Choose your desk</h2>
+            <p className="text-sm font-bold text-primary">Home · Login</p>
+            <h2 className="font-display text-2xl font-extrabold">Login to continue</h2>
           </div>
           <div className="rounded-2xl bg-success px-3 py-2 text-center text-success-foreground">
             <p className="text-2xl font-extrabold">{availableCount}</p>
@@ -743,9 +743,9 @@ const Index = () => {
             <Smartphone className="h-4 w-4" /> Android home map login
           </div>
           <div>
-            <h2 className="font-display text-5xl font-extrabold leading-tight tracking-normal lg:text-7xl">Home first with map login.</h2>
+            <h2 className="font-display text-5xl font-extrabold leading-tight tracking-normal lg:text-7xl">Home is mapped to login.</h2>
             <p className="mt-5 max-w-2xl text-lg leading-8 text-muted-foreground">
-              Open Desk Flow now starts on Home, and the Book tab is the dedicated place where users select a desk, choose a time slot, and confirm booking.
+              Open Desk Flow now starts on Home for login, and the Book tab is where users choose a desk, select a time slot, and confirm booking.
             </p>
           </div>
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
