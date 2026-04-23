@@ -566,8 +566,8 @@ const Index = () => {
     <div id="booking" className="rounded-[1.5rem] bg-surface-raised p-4 shadow-card">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm font-bold text-primary">London HQ · Floor 4</p>
-          <h2 className="font-display text-2xl font-extrabold">Book a desk</h2>
+          <p className="text-sm font-bold text-primary">Book screen · London HQ</p>
+          <h2 className="font-display text-2xl font-extrabold">Book your desk</h2>
         </div>
         <div className="rounded-2xl bg-success px-3 py-2 text-center text-success-foreground">
           <p className="text-2xl font-extrabold">{availableCount}</p>
@@ -616,15 +616,16 @@ const Index = () => {
       </div>
 
       <div className="mt-4 rounded-2xl bg-background p-4">
-        <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Selected booking</p>
+        <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Ready to book</p>
         <p className="font-display text-xl font-extrabold">Desk {selectedDesk?.id ?? "—"} · {selectedSlot}</p>
-        <p className="mt-1 text-sm font-semibold text-muted-foreground">{bookingText}</p>
+        <p className="mt-1 text-sm font-semibold text-muted-foreground">Select an available desk, choose a time, then confirm your booking.</p>
+        <p className="mt-2 text-sm font-semibold text-primary">{bookingText}</p>
         <button
           onClick={handleCreateBooking}
           disabled={!selectedDesk || selectedDesk.status === "occupied" || isBookingDesk}
           className="focus-premium mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 font-extrabold text-primary-foreground shadow-glow transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground disabled:shadow-none"
         >
-          <CalendarCheck className="h-5 w-5" /> {isBookingDesk ? "Booking..." : "Book desk"}
+          <CalendarCheck className="h-5 w-5" /> {isBookingDesk ? "Booking..." : "Confirm desk booking"}
         </button>
       </div>
     </div>
@@ -681,7 +682,11 @@ const Index = () => {
           ))}
         </div>
       </div>
-      {companyProfile ? renderBookingPanel() : renderEmployerLogin()}
+      {companyProfile ? (
+        <button onClick={() => setActiveTab("book")} className="focus-premium flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 font-extrabold text-primary-foreground shadow-glow">
+          <CalendarCheck className="h-5 w-5" /> Go to Book screen
+        </button>
+      ) : renderEmployerLogin()}
     </>
   );
 
@@ -719,7 +724,7 @@ const Index = () => {
               {companyProfile && (activeTab === "book" || activeTab === "map") && renderBookingPanel()}
             </div>
 
-            <div className="sticky bottom-0 grid grid-cols-4 border-t border-border bg-surface-raised px-3 py-2">
+            <div className="sticky bottom-0 grid grid-cols-5 border-t border-border bg-surface-raised px-2 py-2">
               {bottomTabs.map((tab) => (
                 <button
                   key={tab.label}
@@ -740,7 +745,7 @@ const Index = () => {
           <div>
             <h2 className="font-display text-5xl font-extrabold leading-tight tracking-normal lg:text-7xl">Home first with map login.</h2>
             <p className="mt-5 max-w-2xl text-lg leading-8 text-muted-foreground">
-              Open Desk Flow now starts with employer login/signup, gives HR admins an invite workspace, and keeps desk booking synced through the live backend.
+              Open Desk Flow now starts on Home, and the Book tab is the dedicated place where users select a desk, choose a time slot, and confirm booking.
             </p>
           </div>
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
