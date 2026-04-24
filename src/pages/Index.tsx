@@ -77,6 +77,28 @@ const initialDesks: Desk[] = [
 ];
 
 const timeSlots = ["Full Day", "Morning", "Afternoon"];
+
+const floorOptions = [1, 2, 3, 4, 5, 6];
+const seatRows = ["A", "B", "C", "D", "E"] as const;
+const seatColumns = [1, 2, 3, 4] as const;
+const meetingRooms = ["M01", "M02", "M03", "M04", "M05"] as const;
+const hourlyTimeSlots = [
+  "08:00 AM",
+  "09:00 AM",
+  "10:00 AM",
+  "11:00 AM",
+  "12:00 PM",
+  "01:00 PM",
+  "02:00 PM",
+  "03:00 PM",
+  "04:00 PM",
+  "05:00 PM",
+  "06:00 PM",
+  "07:00 PM",
+  "08:00 PM",
+] as const;
+type BookingKind = "desk" | "room";
+
 const bottomTabs: { id: ActiveTab; icon: typeof CalendarCheck; label: string }[] = [
   { id: "home", icon: MapPin, label: "Home" },
   { id: "book", icon: CalendarCheck, label: "Book" },
