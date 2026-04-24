@@ -596,72 +596,186 @@ const Index = () => {
     </div>
   );
 
+  const handleConfirmBooking = () => {
+    const spot = bookingKind === "desk" ? selectedSeat : selectedRoom;
+    const newBooking = {
+      id: `${Date.now()}`,
+      kind: bookingKind,
+      floor: selectedFloor,
+      spot,
+      time: selectedHourlySlot,
+    };
+    setConfirmedBookings((current) => [newBooking, ...current].slice(0, 6));
+    setBookingText(
+      `${bookingKind === "desk" ? "Seat" : "Meeting room"} ${spot} · Floor ${selectedFloor} · ${selectedHourlySlot}`,
+    );
+    toast.success(
+      `${bookingKind === "desk" ? "Seat" : "Meeting room"} ${spot} booked`,
+      { description: `Floor ${selectedFloor} · ${selectedHourlySlot}` },
+    );
+  };
+
   const renderBookingPanel = () => (
     <div id="booking" className="rounded-[1.5rem] bg-surface-raised p-4 shadow-card">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm font-bold text-primary">Book screen · London HQ</p>
-          <h2 className="font-display text-2xl font-extrabold">Choose your desk</h2>
+          <p className="text-sm font-bold text-primary">Book screen</p>
+          <h2 className="font-display text-2xl font-extrabold">Choose your spot</h2>
         </div>
         <div className="rounded-2xl bg-success px-3 py-2 text-center text-success-foreground">
-          <p className="text-2xl font-extrabold">{availableCount}</p>
-          <p className="text-[10px] font-bold uppercase">free</p>
+          <p className="text-2xl font-extrabold">{confirmedBookings.length}</p>
+          <p className="text-[10px] font-bold uppercase">booked</p>
         </div>
       </div>
 
-      <div className="mt-4 grid grid-cols-3 gap-2">
-        {timeSlots.map((slot) => (
+      {/* Desk vs Meeting room toggle */}
+      <div className="mt-4 grid grid-cols-2 rounded-2xl bg-muted p-1">
+        {(["desk", "room"] as BookingKind[]).map((kind) => (
           <button
-            key={slot}
-            onClick={() => setSelectedSlot(slot)}
-            className={`focus-premium rounded-2xl px-2 py-2 text-xs font-extrabold transition-all ${
-              selectedSlot === slot ? "bg-primary text-primary-foreground shadow-glow" : "bg-muted text-muted-foreground"
+            key={kind}
+            type="button"
+            onClick={() => setBookingKind(kind)}
+            className={`focus-premium flex items-center justify-center gap-2 rounded-xl py-2 text-sm font-extrabold transition-all ${
+              bookingKind === kind ? "bg-primary text-primary-foreground shadow-glow" : "text-muted-foreground"
             }`}
           >
-            {slot}
+            {kind === "desk" ? <Sofa className="h-4 w-4" /> : <DoorOpen className="h-4 w-4" />}
+            {kind === "desk" ? "Desk seat" : "Meeting room"}
           </button>
         ))}
       </div>
 
-      <div className="mt-4 flex items-center gap-2 rounded-2xl border border-border bg-background px-4 py-3 text-muted-foreground">
-        <Search className="h-4 w-4" />
-        <span className="text-sm font-semibold">Search features or colleague</span>
+      {/* Floor selection 1 - 6 */}
+      <div className="mt-4">
+        <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Floor</p>
+        <div className="mt-2 grid grid-cols-6 gap-2">
+          {floorOptions.map((floor) => (
+            <button
+              key={floor}
+              type="button"
+              onClick={() => setSelectedFloor(floor)}
+              className={`focus-premium rounded-2xl py-2 text-sm font-extrabold transition-all ${
+                selectedFloor === floor ? "bg-primary text-primary-foreground shadow-glow" : "bg-muted text-muted-foreground"
+              }`}
+            >
+              {floor}
+            </button>
+          ))}
+        </div>
       </div>
 
-      <div className="desk-grid relative mt-4 h-[300px] overflow-hidden rounded-[1.4rem] border border-border bg-surface">
-        {isLoadingDesks && <div className="absolute inset-0 grid place-items-center text-sm font-bold text-muted-foreground">Syncing live map...</div>}
-        {desks.map((desk) => (
-          <button
-            key={desk.id}
-            onClick={() => handleDeskSelect(desk.id)}
-            className={`focus-premium absolute -translate-x-1/2 -translate-y-1/2 rounded-2xl border px-3 py-2 text-left shadow-card transition-transform hover:scale-105 ${
-              desk.status === "available"
-                ? selectedDeskId === desk.id
-                  ? "border-primary bg-primary text-primary-foreground ring-4 ring-primary/20"
-                  : "border-success/40 bg-success text-success-foreground"
-                : "border-occupied/40 bg-occupied text-occupied-foreground"
-            }`}
-            style={{ left: desk.x, top: desk.y }}
-          >
-            <span className="block text-sm font-extrabold">{desk.id}</span>
-            <span className="block text-[10px] font-bold opacity-90">{desk.label}</span>
-          </button>
-        ))}
+      {/* Seat or Room selection */}
+      {bookingKind === "desk" ? (
+        <div className="mt-4">
+          <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Seat</p>
+          <div className="mt-2 space-y-2">
+            {seatRows.map((row) => (
+              <div key={row} className="grid grid-cols-4 gap-2">
+                {seatColumns.map((col) => {
+                  const seatId = `${row}${col}`;
+                  const isSelected = selectedSeat === seatId;
+                  return (
+                    <button
+                      key={seatId}
+                      type="button"
+                      onClick={() => setSelectedSeat(seatId)}
+                      className={`focus-premium rounded-2xl border py-3 text-sm font-extrabold transition-all ${
+                        isSelected
+                          ? "border-primary bg-primary text-primary-foreground shadow-glow"
+                          : "border-border bg-background text-foreground hover:bg-muted"
+                      }`}
+                    >
+                      {seatId}
+                    </button>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div className="mt-4">
+          <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Meeting room</p>
+          <div className="mt-2 grid grid-cols-5 gap-2">
+            {meetingRooms.map((room) => (
+              <button
+                key={room}
+                type="button"
+                onClick={() => setSelectedRoom(room)}
+                className={`focus-premium rounded-2xl border py-3 text-xs font-extrabold transition-all ${
+                  selectedRoom === room
+                    ? "border-primary bg-primary text-primary-foreground shadow-glow"
+                    : "border-border bg-background text-foreground hover:bg-muted"
+                }`}
+              >
+                {room}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Hourly time slots 8 AM - 8 PM */}
+      <div className="mt-4">
+        <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Time slot · 8 AM to 8 PM</p>
+        <div className="mt-2 grid grid-cols-3 gap-2">
+          {hourlyTimeSlots.map((slot) => (
+            <button
+              key={slot}
+              type="button"
+              onClick={() => setSelectedHourlySlot(slot)}
+              className={`focus-premium rounded-2xl px-1 py-2 text-xs font-extrabold transition-all ${
+                selectedHourlySlot === slot
+                  ? "bg-primary text-primary-foreground shadow-glow"
+                  : "bg-muted text-muted-foreground"
+              }`}
+            >
+              {slot}
+            </button>
+          ))}
+        </div>
       </div>
 
+      {/* Summary + confirm */}
       <div className="mt-4 rounded-2xl bg-background p-4">
         <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Ready to book</p>
-        <p className="font-display text-xl font-extrabold">Desk {selectedDesk?.id ?? "—"} · {selectedSlot}</p>
-        <p className="mt-1 text-sm font-semibold text-muted-foreground">Select an available desk, choose a time, then confirm your booking.</p>
+        <p className="font-display text-xl font-extrabold">
+          {bookingKind === "desk" ? "Seat" : "Room"} {bookingKind === "desk" ? selectedSeat : selectedRoom} · Floor {selectedFloor}
+        </p>
+        <p className="mt-1 text-sm font-semibold text-muted-foreground">{selectedHourlySlot}</p>
         <p className="mt-2 text-sm font-semibold text-primary">{bookingText}</p>
         <button
-          onClick={handleCreateBooking}
-          disabled={!selectedDesk || selectedDesk.status === "occupied" || isBookingDesk}
-          className="focus-premium mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 font-extrabold text-primary-foreground shadow-glow transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground disabled:shadow-none"
+          type="button"
+          onClick={handleConfirmBooking}
+          className="focus-premium mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 font-extrabold text-primary-foreground shadow-glow transition-transform hover:-translate-y-0.5"
         >
-          <CalendarCheck className="h-5 w-5" /> {isBookingDesk ? "Booking..." : "Confirm desk booking"}
+          <CalendarCheck className="h-5 w-5" /> Confirm booking
         </button>
       </div>
+
+      {confirmedBookings.length > 0 && (
+        <div className="mt-4 space-y-2">
+          <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Recent bookings</p>
+          {confirmedBookings.map((booking) => (
+            <div key={booking.id} className="flex items-center justify-between gap-3 rounded-2xl bg-background p-3">
+              <div className="flex items-center gap-2">
+                {booking.kind === "desk" ? (
+                  <Sofa className="h-4 w-4 text-primary" />
+                ) : (
+                  <DoorOpen className="h-4 w-4 text-primary" />
+                )}
+                <div>
+                  <p className="text-sm font-extrabold">
+                    {booking.kind === "desk" ? "Seat" : "Room"} {booking.spot} · Floor {booking.floor}
+                  </p>
+                  <p className="text-xs font-semibold text-muted-foreground">{booking.time}</p>
+                </div>
+              </div>
+              <CheckCircle2 className="h-5 w-5 text-success" />
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 
