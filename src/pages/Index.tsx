@@ -8,6 +8,7 @@ import {
   ChevronRight,
   Clock3,
   Copy,
+  DoorOpen,
   KeyRound,
   Mail,
   MapPin,
@@ -16,6 +17,7 @@ import {
   Send,
   ShieldCheck,
   Smartphone,
+  Sofa,
   UserPlus,
   Users,
 } from "lucide-react";
