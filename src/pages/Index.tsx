@@ -855,9 +855,8 @@ const Index = () => {
             </div>
 
             <div className="space-y-5 px-5 py-5">
-              {inviteToken && renderTeamPanel()}
-              {shouldShowEmployerFirst && renderHomeScreen()}
-              {companyProfile && activeTab === "home" && renderHomeScreen()}
+              {inviteToken && activeTab === "home" && renderTeamPanel()}
+              {activeTab === "home" && renderHomeScreen()}
               {companyProfile && isAdmin && activeTab === "admin" && renderAdminPanel()}
               {companyProfile && activeTab === "team" && renderTeamPanel()}
               {(activeTab === "book" || activeTab === "map") && renderBookingPanel()}
