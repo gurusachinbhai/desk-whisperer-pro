@@ -860,7 +860,7 @@ const Index = () => {
               {companyProfile && activeTab === "home" && renderHomeScreen()}
               {companyProfile && isAdmin && activeTab === "admin" && renderAdminPanel()}
               {companyProfile && activeTab === "team" && renderTeamPanel()}
-              {companyProfile && (activeTab === "book" || activeTab === "map") && renderBookingPanel()}
+              {(activeTab === "book" || activeTab === "map") && renderBookingPanel()}
             </div>
 
             <div className="sticky bottom-0 grid grid-cols-5 border-t border-border bg-surface-raised px-2 py-2">
