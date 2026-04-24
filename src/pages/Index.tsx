@@ -145,6 +145,16 @@ const Index = () => {
   const [bookingText, setBookingText] = useState("No active booking yet");
   const [clientSessionId] = useState(getClientSessionId);
 
+  // New booking selection state (floor / seat / room / hourly slot)
+  const [bookingKind, setBookingKind] = useState<BookingKind>("desk");
+  const [selectedFloor, setSelectedFloor] = useState<number>(1);
+  const [selectedSeat, setSelectedSeat] = useState<string>("A1");
+  const [selectedRoom, setSelectedRoom] = useState<string>("M01");
+  const [selectedHourlySlot, setSelectedHourlySlot] = useState<string>("09:00 AM");
+  const [confirmedBookings, setConfirmedBookings] = useState<
+    { id: string; kind: BookingKind; floor: number; spot: string; time: string }[]
+  >([]);
+
   const selectedDesk = useMemo(() => desks.find((desk) => desk.id === selectedDeskId), [desks, selectedDeskId]);
   const availableCount = desks.filter((desk) => desk.status === "available").length;
   const inviteToken = new URLSearchParams(window.location.search).get("invite");
