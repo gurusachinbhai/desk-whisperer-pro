@@ -62,8 +62,24 @@ type EmployeeInvite = {
   expires_at: string;
 };
 
-type AppMode = "create" | "login";
+type AppMode = "signup" | "login";
 type ActiveTab = "home" | "book" | "map" | "admin" | "team";
+type LoginStep = "form" | "otp";
+type LoginIdentifier = "email" | "phone";
+
+type SignupForm = {
+  companyName: string;
+  orgCode: string;
+  displayName: string;
+  email: string;
+  phone: string;
+};
+
+type LoginForm = {
+  orgCode: string;
+  identifier: string; // email or phone
+  identifierKind: LoginIdentifier;
+};
 
 const initialDesks: Desk[] = [
   { id: "A1", x: "16%", y: "24%", status: "available", label: "Standing" },
