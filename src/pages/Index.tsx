@@ -75,10 +75,14 @@ type SignupForm = {
   phone: string;
 };
 
+type LoginMethod = "password" | "otp";
+
 type LoginForm = {
   orgCode: string;
   identifier: string; // email or phone
   identifierKind: LoginIdentifier;
+  password: string;
+  method: LoginMethod;
 };
 
 const initialDesks: Desk[] = [
@@ -148,9 +152,11 @@ const Index = () => {
     phone: "",
   });
   const [loginForm, setLoginForm] = useState<LoginForm>({
-    orgCode: "DEMO01",
+    orgCode: "",
     identifier: "",
     identifierKind: "email",
+    password: "",
+    method: "password",
   });
   const [loginStep, setLoginStep] = useState<LoginStep>("form");
   const [otpCode, setOtpCode] = useState("");
@@ -400,6 +406,69 @@ const Index = () => {
     }
   };
 
+  // Employee login with email + password + company code
+  const handleEmployeePasswordLogin = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (loginForm.orgCode.length < 3) {
+      toast.error("Enter your company code");
+      return;
+    }
+    if (loginForm.identifier.trim().length < 3) {
+      toast.error(loginForm.identifierKind === "email" ? "Enter your email" : "Enter your phone number");
+      return;
+    }
+    if (loginForm.password.length < 6) {
+      toast.error("Password must be at least 6 characters");
+      return;
+    }
+
+    setIsSendingOtp(true);
+    try {
+      const { data: lookup, error: lookupError } = await (supabase.rpc as any)("lookup_employee_for_login", {
+        _organization_code: loginForm.orgCode,
+        _identifier: loginForm.identifier.trim(),
+      });
+
+      if (lookupError) {
+        toast.error("Lookup failed", { description: lookupError.message });
+        return;
+      }
+
+      const match = Array.isArray(lookup) ? lookup[0] : lookup;
+      if (!match || !match.employee_email) {
+        toast.error("No employee found", { description: "Check your company code and email or phone." });
+        return;
+      }
+
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: match.employee_email,
+        password: loginForm.password,
+      });
+
+      if (signInError) {
+        toast.error("Sign in failed", { description: signInError.message });
+        return;
+      }
+
+      const { error: attachError } = await (supabase.rpc as any)("attach_user_to_employee_record", {
+        _organization_code: loginForm.orgCode,
+        _employee_email: match.employee_email,
+      });
+
+      if (attachError) {
+        toast.error("Could not link your employee record", { description: attachError.message });
+        return;
+      }
+
+      setCompanyProfile({ id: "", name: match.company_name, organization_code: loginForm.orgCode });
+      setActiveTab("home");
+      toast.success("Welcome", { description: `Signed in to ${match.company_name}` });
+    } finally {
+      setIsSendingOtp(false);
+    }
+  };
+
   // Employee login → look up company + employee, send OTP to their email
   const handleEmployeeLoginRequest = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -590,13 +659,7 @@ const Index = () => {
     }
   };
 
-  const demoEmployees = [
-    { name: "EMP1", email: "emp1@demo.test" },
-    { name: "Sachin", email: "sachin@demo.test" },
-    { name: "EMP2", email: "emp2@demo.test" },
-    { name: "EMP3", email: "emp3@demo.test" },
-    { name: "EMP4", email: "emp4@demo.test" },
-  ];
+
 
   const renderEmployeeAuth = () => {
     if (loginStep === "otp" && pendingLogin) {
@@ -728,17 +791,10 @@ const Index = () => {
             </button>
           </form>
         ) : (
-          <form onSubmit={handleEmployeeLoginRequest} className="space-y-3">
-            <label className="block">
-              <span className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Company code</span>
-              <input
-                value={loginForm.orgCode}
-                onChange={(event) => updateLoginForm("orgCode", event.target.value)}
-                placeholder="DEMO01"
-                className="focus-premium mt-1 w-full rounded-2xl border border-border bg-background px-4 py-3 font-semibold uppercase text-foreground placeholder:text-muted-foreground"
-              />
-            </label>
-
+          <form
+            onSubmit={loginForm.method === "password" ? handleEmployeePasswordLogin : handleEmployeeLoginRequest}
+            className="space-y-3"
+          >
             <div className="grid grid-cols-2 rounded-2xl bg-muted p-1">
               {(["email", "phone"] as LoginIdentifier[]).map((kind) => (
                 <button
@@ -768,31 +824,55 @@ const Index = () => {
               />
             </label>
 
+            {loginForm.method === "password" && (
+              <label className="block">
+                <span className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Password</span>
+                <input
+                  type="password"
+                  value={loginForm.password}
+                  onChange={(event) => updateLoginForm("password", event.target.value)}
+                  placeholder="••••••••"
+                  className="focus-premium mt-1 w-full rounded-2xl border border-border bg-background px-4 py-3 font-semibold text-foreground placeholder:text-muted-foreground"
+                />
+              </label>
+            )}
+
+            <label className="block">
+              <span className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Company code</span>
+              <input
+                value={loginForm.orgCode}
+                onChange={(event) => updateLoginForm("orgCode", event.target.value)}
+                placeholder="ACME-HQ"
+                className="focus-premium mt-1 w-full rounded-2xl border border-border bg-background px-4 py-3 font-semibold uppercase text-foreground placeholder:text-muted-foreground"
+              />
+            </label>
+
             <button
               type="submit"
               disabled={isSendingOtp}
               className="focus-premium flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 font-extrabold text-primary-foreground shadow-glow transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground disabled:shadow-none"
             >
-              <Send className="h-5 w-5" /> {isSendingOtp ? "Sending OTP..." : "Send OTP to email"}
+              {loginForm.method === "password" ? (
+                <>
+                  <ShieldCheck className="h-5 w-5" /> {isSendingOtp ? "Signing in..." : "Sign in"}
+                </>
+              ) : (
+                <>
+                  <Send className="h-5 w-5" /> {isSendingOtp ? "Sending OTP..." : "Send OTP to email"}
+                </>
+              )}
             </button>
 
-            <div className="rounded-2xl bg-background p-3">
-              <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Demo employees · code DEMO01</p>
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                {demoEmployees.map((emp) => (
-                  <button
-                    key={emp.email}
-                    type="button"
-                    onClick={() => {
-                      setLoginForm({ orgCode: "DEMO01", identifier: emp.email, identifierKind: "email" });
-                    }}
-                    className="focus-premium rounded-full bg-muted px-3 py-1 text-xs font-extrabold text-foreground hover:bg-primary/10"
-                  >
-                    {emp.name}
-                  </button>
-                ))}
-              </div>
-            </div>
+            <button
+              type="button"
+              onClick={() =>
+                updateLoginForm("method", loginForm.method === "password" ? "otp" : "password")
+              }
+              className="focus-premium flex w-full items-center justify-center gap-2 rounded-2xl border border-border bg-background px-4 py-2.5 text-xs font-extrabold text-muted-foreground hover:text-foreground"
+            >
+              <KeyRound className="h-4 w-4" />
+              {loginForm.method === "password" ? "Login with OTP instead" : "Login with password instead"}
+            </button>
           </form>
         )}
       </div>
