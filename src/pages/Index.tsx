@@ -238,8 +238,8 @@ const Index = () => {
 
       const { error } = await (supabase.rpc as any)("accept_employee_invite", {
         _invite_token: inviteToken,
-        _display_name: form.displayName || null,
-        _email: form.email || null,
+        _display_name: signupForm.displayName || null,
+        _email: signupForm.email || null,
       });
 
       if (error) {
