@@ -659,13 +659,7 @@ const Index = () => {
     }
   };
 
-  const demoEmployees = [
-    { name: "EMP1", email: "emp1@demo.test" },
-    { name: "Sachin", email: "sachin@demo.test" },
-    { name: "EMP2", email: "emp2@demo.test" },
-    { name: "EMP3", email: "emp3@demo.test" },
-    { name: "EMP4", email: "emp4@demo.test" },
-  ];
+
 
   const renderEmployeeAuth = () => {
     if (loginStep === "otp" && pendingLogin) {
