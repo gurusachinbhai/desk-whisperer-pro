@@ -75,10 +75,14 @@ type SignupForm = {
   phone: string;
 };
 
+type LoginMethod = "password" | "otp";
+
 type LoginForm = {
   orgCode: string;
   identifier: string; // email or phone
   identifierKind: LoginIdentifier;
+  password: string;
+  method: LoginMethod;
 };
 
 const initialDesks: Desk[] = [
