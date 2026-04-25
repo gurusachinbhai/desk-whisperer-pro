@@ -138,14 +138,26 @@ const normalizeOrgCode = (value: string) => value.toUpperCase().replace(/[^A-Z0-
 const createInviteUrl = (token: string) => `${window.location.origin}/?invite=${token}`;
 
 const Index = () => {
-  const [mode, setMode] = useState<AppMode>("create");
+  const [mode, setMode] = useState<AppMode>("login");
   const [activeTab, setActiveTab] = useState<ActiveTab>("home");
-  const [form, setForm] = useState<CompanyForm>({
+  const [signupForm, setSignupForm] = useState<SignupForm>({
     companyName: "",
     orgCode: "",
     displayName: "",
     email: "",
+    phone: "",
   });
+  const [loginForm, setLoginForm] = useState<LoginForm>({
+    orgCode: "DEMO01",
+    identifier: "",
+    identifierKind: "email",
+  });
+  const [loginStep, setLoginStep] = useState<LoginStep>("form");
+  const [otpCode, setOtpCode] = useState("");
+  const [pendingLogin, setPendingLogin] = useState<{ email: string; orgCode: string; companyName: string } | null>(null);
+  const [isSendingOtp, setIsSendingOtp] = useState(false);
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
+  const [isSubmittingSignup, setIsSubmittingSignup] = useState(false);
   const [inviteForm, setInviteForm] = useState<InviteForm>({ employeeName: "", employeeEmail: "" });
   const [companyProfile, setCompanyProfile] = useState<CompanyProfile | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
