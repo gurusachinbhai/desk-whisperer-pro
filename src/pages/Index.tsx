@@ -315,8 +315,15 @@ const Index = () => {
     };
   }, []);
 
-  const updateForm = (field: keyof CompanyForm, value: string) => {
-    setForm((current) => ({
+  const updateSignupForm = (field: keyof SignupForm, value: string) => {
+    setSignupForm((current) => ({
+      ...current,
+      [field]: field === "orgCode" ? normalizeOrgCode(value) : value,
+    }));
+  };
+
+  const updateLoginForm = (field: keyof LoginForm, value: string) => {
+    setLoginForm((current) => ({
       ...current,
       [field]: field === "orgCode" ? normalizeOrgCode(value) : value,
     }));
@@ -333,55 +340,170 @@ const Index = () => {
     }
   };
 
-  const handleCompanySubmit = async (event: FormEvent<HTMLFormElement>) => {
+  // Employee signup → creates directory record, then sends OTP to email
+  const handleEmployeeSignup = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    const { data: sessionData } = await supabase.auth.getSession();
-    if (!sessionData.session) {
-      toast.error("Employer sign-in required", { description: "Use Google sign-in before creating or opening an HR admin workspace." });
+    if (signupForm.companyName.trim().length < 2) {
+      toast.error("Company name required");
+      return;
+    }
+    if (signupForm.orgCode.length < 3) {
+      toast.error("Company code must be at least 3 characters");
+      return;
+    }
+    if (signupForm.displayName.trim().length < 2) {
+      toast.error("Your name is required");
+      return;
+    }
+    if (!signupForm.email.includes("@")) {
+      toast.error("Valid email is required");
       return;
     }
 
-    if (form.displayName.trim().length < 2 || form.orgCode.length < 3 || (mode === "create" && form.companyName.trim().length < 2)) {
-      toast.error("Complete employer signup", { description: "Company, Organization ID, and HR admin name are required." });
-      return;
-    }
-
-    setIsSubmittingCompany(true);
+    setIsSubmittingSignup(true);
     try {
-      const rpcCall = mode === "create"
-        ? supabase.rpc("register_company_profile", {
-            _company_name: form.companyName,
-            _organization_code: form.orgCode,
-            _display_name: form.displayName,
-            _email: form.email || null,
-            _domain: form.email.includes("@") ? form.email.split("@")[1] : null,
-          })
-        : supabase.rpc("join_company_profile", {
-            _organization_code: form.orgCode,
-            _display_name: form.displayName,
-            _email: form.email || null,
-          });
+      const { error: signupError } = await (supabase.rpc as any)("signup_employee_record", {
+        _organization_code: signupForm.orgCode,
+        _company_name: signupForm.companyName,
+        _display_name: signupForm.displayName,
+        _employee_email: signupForm.email,
+        _phone: signupForm.phone || null,
+      });
 
-      const { data, error } = await rpcCall;
-      if (error) {
-        toast.error(mode === "create" ? "Company could not be created" : "Company login failed", { description: error.message });
+      if (signupError) {
+        toast.error("Signup failed", { description: signupError.message });
         return;
       }
 
-      if (data) {
-        setCompanyProfile({ id: data.id, name: data.name, organization_code: data.organization_code });
-        setIsAdmin(mode === "create");
-        setActiveTab(mode === "create" ? "admin" : "book");
-        if (mode === "create") await loadInvites(data.id);
+      // Send OTP to the employee's email
+      const { error: otpError } = await supabase.auth.signInWithOtp({
+        email: signupForm.email.trim().toLowerCase(),
+        options: { shouldCreateUser: true },
+      });
+
+      if (otpError) {
+        toast.error("Could not send OTP", { description: otpError.message });
+        return;
       }
 
-      toast.success(mode === "create" ? "Employer admin created" : "Workspace opened", {
-        description: mode === "create" ? "You can now create employee logins and send invite links." : "You can now book desks.",
+      setPendingLogin({
+        email: signupForm.email.trim().toLowerCase(),
+        orgCode: signupForm.orgCode,
+        companyName: signupForm.companyName,
       });
+      setLoginStep("otp");
+      setMode("login");
+      toast.success("Account created", { description: `OTP sent to ${signupForm.email}` });
     } finally {
-      setIsSubmittingCompany(false);
+      setIsSubmittingSignup(false);
     }
+  };
+
+  // Employee login → look up company + employee, send OTP to their email
+  const handleEmployeeLoginRequest = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (loginForm.orgCode.length < 3) {
+      toast.error("Enter your company code");
+      return;
+    }
+    if (loginForm.identifier.trim().length < 3) {
+      toast.error(loginForm.identifierKind === "email" ? "Enter your email" : "Enter your phone number");
+      return;
+    }
+
+    setIsSendingOtp(true);
+    try {
+      const { data, error } = await (supabase.rpc as any)("lookup_employee_for_login", {
+        _organization_code: loginForm.orgCode,
+        _identifier: loginForm.identifier.trim(),
+      });
+
+      if (error) {
+        toast.error("Lookup failed", { description: error.message });
+        return;
+      }
+
+      const match = Array.isArray(data) ? data[0] : data;
+      if (!match || !match.employee_email) {
+        toast.error("No employee found", { description: "Check your company code and email or phone." });
+        return;
+      }
+
+      const { error: otpError } = await supabase.auth.signInWithOtp({
+        email: match.employee_email,
+        options: { shouldCreateUser: true },
+      });
+
+      if (otpError) {
+        toast.error("Could not send OTP", { description: otpError.message });
+        return;
+      }
+
+      setPendingLogin({
+        email: match.employee_email,
+        orgCode: loginForm.orgCode,
+        companyName: match.company_name,
+      });
+      setLoginStep("otp");
+      toast.success("OTP sent", { description: `Check ${match.employee_email} for your code.` });
+    } finally {
+      setIsSendingOtp(false);
+    }
+  };
+
+  const handleVerifyOtp = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!pendingLogin) return;
+    if (otpCode.trim().length < 6) {
+      toast.error("Enter the 6-digit code");
+      return;
+    }
+
+    setIsVerifyingOtp(true);
+    try {
+      const { error: verifyError } = await supabase.auth.verifyOtp({
+        email: pendingLogin.email,
+        token: otpCode.trim(),
+        type: "email",
+      });
+
+      if (verifyError) {
+        toast.error("OTP verification failed", { description: verifyError.message });
+        return;
+      }
+
+      // Attach this auth user to the directory record
+      const { error: attachError } = await (supabase.rpc as any)("attach_user_to_employee_record", {
+        _organization_code: pendingLogin.orgCode,
+        _employee_email: pendingLogin.email,
+      });
+
+      if (attachError) {
+        toast.error("Could not link your employee record", { description: attachError.message });
+        return;
+      }
+
+      setCompanyProfile({
+        id: "",
+        name: pendingLogin.companyName,
+        organization_code: pendingLogin.orgCode,
+      });
+      setLoginStep("form");
+      setOtpCode("");
+      setPendingLogin(null);
+      setActiveTab("home");
+      toast.success("Welcome", { description: `Signed in to ${pendingLogin.companyName}` });
+    } finally {
+      setIsVerifyingOtp(false);
+    }
+  };
+
+  const handleResetLogin = () => {
+    setLoginStep("form");
+    setOtpCode("");
+    setPendingLogin(null);
   };
 
   const handleCreateInvite = async (event: FormEvent<HTMLFormElement>) => {
