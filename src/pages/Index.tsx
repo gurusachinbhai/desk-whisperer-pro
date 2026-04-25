@@ -1095,7 +1095,7 @@ const Index = () => {
         <button onClick={() => setActiveTab("book")} className="focus-premium flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 font-extrabold text-primary-foreground shadow-glow">
           <CalendarCheck className="h-5 w-5" /> Go to Book screen
         </button>
-      ) : renderEmployerLogin()}
+      ) : renderEmployeeAuth()}
     </>
   );
 
