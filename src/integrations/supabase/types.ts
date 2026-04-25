@@ -254,8 +254,9 @@ export type Database = {
           display_name: string
           email: string | null
           id: string
+          phone: string | null
           updated_at: string
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           company_id: string
@@ -263,8 +264,9 @@ export type Database = {
           display_name: string
           email?: string | null
           id?: string
+          phone?: string | null
           updated_at?: string
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           company_id?: string
@@ -272,8 +274,9 @@ export type Database = {
           display_name?: string
           email?: string | null
           id?: string
+          phone?: string | null
           updated_at?: string
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -330,8 +333,28 @@ export type Database = {
           display_name: string
           email: string | null
           id: string
+          phone: string | null
           updated_at: string
-          user_id: string
+          user_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "employee_profiles"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      attach_user_to_employee_record: {
+        Args: { _employee_email: string; _organization_code: string }
+        Returns: {
+          company_id: string
+          created_at: string
+          display_name: string
+          email: string | null
+          id: string
+          phone: string | null
+          updated_at: string
+          user_id: string | null
         }
         SetofOptions: {
           from: "*"
@@ -420,6 +443,23 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      lookup_company_by_code: {
+        Args: { _organization_code: string }
+        Returns: {
+          id: string
+          name: string
+          organization_code: string
+        }[]
+      }
+      lookup_employee_for_login: {
+        Args: { _identifier: string; _organization_code: string }
+        Returns: {
+          company_id: string
+          company_name: string
+          display_name: string
+          employee_email: string
+        }[]
+      }
       register_company_profile: {
         Args: {
           _company_name: string
@@ -440,6 +480,31 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "company_profiles"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      signup_employee_record: {
+        Args: {
+          _company_name: string
+          _display_name: string
+          _employee_email: string
+          _organization_code: string
+          _phone?: string
+        }
+        Returns: {
+          company_id: string
+          created_at: string
+          display_name: string
+          email: string | null
+          id: string
+          phone: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "employee_profiles"
           isOneToOne: true
           isSetofReturn: false
         }

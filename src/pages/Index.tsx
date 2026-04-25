@@ -62,8 +62,24 @@ type EmployeeInvite = {
   expires_at: string;
 };
 
-type AppMode = "create" | "login";
+type AppMode = "signup" | "login";
 type ActiveTab = "home" | "book" | "map" | "admin" | "team";
+type LoginStep = "form" | "otp";
+type LoginIdentifier = "email" | "phone";
+
+type SignupForm = {
+  companyName: string;
+  orgCode: string;
+  displayName: string;
+  email: string;
+  phone: string;
+};
+
+type LoginForm = {
+  orgCode: string;
+  identifier: string; // email or phone
+  identifierKind: LoginIdentifier;
+};
 
 const initialDesks: Desk[] = [
   { id: "A1", x: "16%", y: "24%", status: "available", label: "Standing" },
@@ -122,14 +138,26 @@ const normalizeOrgCode = (value: string) => value.toUpperCase().replace(/[^A-Z0-
 const createInviteUrl = (token: string) => `${window.location.origin}/?invite=${token}`;
 
 const Index = () => {
-  const [mode, setMode] = useState<AppMode>("create");
+  const [mode, setMode] = useState<AppMode>("login");
   const [activeTab, setActiveTab] = useState<ActiveTab>("home");
-  const [form, setForm] = useState<CompanyForm>({
+  const [signupForm, setSignupForm] = useState<SignupForm>({
     companyName: "",
     orgCode: "",
     displayName: "",
     email: "",
+    phone: "",
   });
+  const [loginForm, setLoginForm] = useState<LoginForm>({
+    orgCode: "DEMO01",
+    identifier: "",
+    identifierKind: "email",
+  });
+  const [loginStep, setLoginStep] = useState<LoginStep>("form");
+  const [otpCode, setOtpCode] = useState("");
+  const [pendingLogin, setPendingLogin] = useState<{ email: string; orgCode: string; companyName: string } | null>(null);
+  const [isSendingOtp, setIsSendingOtp] = useState(false);
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
+  const [isSubmittingSignup, setIsSubmittingSignup] = useState(false);
   const [inviteForm, setInviteForm] = useState<InviteForm>({ employeeName: "", employeeEmail: "" });
   const [companyProfile, setCompanyProfile] = useState<CompanyProfile | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -210,8 +238,8 @@ const Index = () => {
 
       const { error } = await (supabase.rpc as any)("accept_employee_invite", {
         _invite_token: inviteToken,
-        _display_name: form.displayName || null,
-        _email: form.email || null,
+        _display_name: signupForm.displayName || null,
+        _email: signupForm.email || null,
       });
 
       if (error) {
@@ -287,8 +315,15 @@ const Index = () => {
     };
   }, []);
 
-  const updateForm = (field: keyof CompanyForm, value: string) => {
-    setForm((current) => ({
+  const updateSignupForm = (field: keyof SignupForm, value: string) => {
+    setSignupForm((current) => ({
+      ...current,
+      [field]: field === "orgCode" ? normalizeOrgCode(value) : value,
+    }));
+  };
+
+  const updateLoginForm = (field: keyof LoginForm, value: string) => {
+    setLoginForm((current) => ({
       ...current,
       [field]: field === "orgCode" ? normalizeOrgCode(value) : value,
     }));
@@ -305,55 +340,170 @@ const Index = () => {
     }
   };
 
-  const handleCompanySubmit = async (event: FormEvent<HTMLFormElement>) => {
+  // Employee signup → creates directory record, then sends OTP to email
+  const handleEmployeeSignup = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    const { data: sessionData } = await supabase.auth.getSession();
-    if (!sessionData.session) {
-      toast.error("Employer sign-in required", { description: "Use Google sign-in before creating or opening an HR admin workspace." });
+    if (signupForm.companyName.trim().length < 2) {
+      toast.error("Company name required");
+      return;
+    }
+    if (signupForm.orgCode.length < 3) {
+      toast.error("Company code must be at least 3 characters");
+      return;
+    }
+    if (signupForm.displayName.trim().length < 2) {
+      toast.error("Your name is required");
+      return;
+    }
+    if (!signupForm.email.includes("@")) {
+      toast.error("Valid email is required");
       return;
     }
 
-    if (form.displayName.trim().length < 2 || form.orgCode.length < 3 || (mode === "create" && form.companyName.trim().length < 2)) {
-      toast.error("Complete employer signup", { description: "Company, Organization ID, and HR admin name are required." });
-      return;
-    }
-
-    setIsSubmittingCompany(true);
+    setIsSubmittingSignup(true);
     try {
-      const rpcCall = mode === "create"
-        ? supabase.rpc("register_company_profile", {
-            _company_name: form.companyName,
-            _organization_code: form.orgCode,
-            _display_name: form.displayName,
-            _email: form.email || null,
-            _domain: form.email.includes("@") ? form.email.split("@")[1] : null,
-          })
-        : supabase.rpc("join_company_profile", {
-            _organization_code: form.orgCode,
-            _display_name: form.displayName,
-            _email: form.email || null,
-          });
+      const { error: signupError } = await (supabase.rpc as any)("signup_employee_record", {
+        _organization_code: signupForm.orgCode,
+        _company_name: signupForm.companyName,
+        _display_name: signupForm.displayName,
+        _employee_email: signupForm.email,
+        _phone: signupForm.phone || null,
+      });
 
-      const { data, error } = await rpcCall;
-      if (error) {
-        toast.error(mode === "create" ? "Company could not be created" : "Company login failed", { description: error.message });
+      if (signupError) {
+        toast.error("Signup failed", { description: signupError.message });
         return;
       }
 
-      if (data) {
-        setCompanyProfile({ id: data.id, name: data.name, organization_code: data.organization_code });
-        setIsAdmin(mode === "create");
-        setActiveTab(mode === "create" ? "admin" : "book");
-        if (mode === "create") await loadInvites(data.id);
+      // Send OTP to the employee's email
+      const { error: otpError } = await supabase.auth.signInWithOtp({
+        email: signupForm.email.trim().toLowerCase(),
+        options: { shouldCreateUser: true },
+      });
+
+      if (otpError) {
+        toast.error("Could not send OTP", { description: otpError.message });
+        return;
       }
 
-      toast.success(mode === "create" ? "Employer admin created" : "Workspace opened", {
-        description: mode === "create" ? "You can now create employee logins and send invite links." : "You can now book desks.",
+      setPendingLogin({
+        email: signupForm.email.trim().toLowerCase(),
+        orgCode: signupForm.orgCode,
+        companyName: signupForm.companyName,
       });
+      setLoginStep("otp");
+      setMode("login");
+      toast.success("Account created", { description: `OTP sent to ${signupForm.email}` });
     } finally {
-      setIsSubmittingCompany(false);
+      setIsSubmittingSignup(false);
     }
+  };
+
+  // Employee login → look up company + employee, send OTP to their email
+  const handleEmployeeLoginRequest = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (loginForm.orgCode.length < 3) {
+      toast.error("Enter your company code");
+      return;
+    }
+    if (loginForm.identifier.trim().length < 3) {
+      toast.error(loginForm.identifierKind === "email" ? "Enter your email" : "Enter your phone number");
+      return;
+    }
+
+    setIsSendingOtp(true);
+    try {
+      const { data, error } = await (supabase.rpc as any)("lookup_employee_for_login", {
+        _organization_code: loginForm.orgCode,
+        _identifier: loginForm.identifier.trim(),
+      });
+
+      if (error) {
+        toast.error("Lookup failed", { description: error.message });
+        return;
+      }
+
+      const match = Array.isArray(data) ? data[0] : data;
+      if (!match || !match.employee_email) {
+        toast.error("No employee found", { description: "Check your company code and email or phone." });
+        return;
+      }
+
+      const { error: otpError } = await supabase.auth.signInWithOtp({
+        email: match.employee_email,
+        options: { shouldCreateUser: true },
+      });
+
+      if (otpError) {
+        toast.error("Could not send OTP", { description: otpError.message });
+        return;
+      }
+
+      setPendingLogin({
+        email: match.employee_email,
+        orgCode: loginForm.orgCode,
+        companyName: match.company_name,
+      });
+      setLoginStep("otp");
+      toast.success("OTP sent", { description: `Check ${match.employee_email} for your code.` });
+    } finally {
+      setIsSendingOtp(false);
+    }
+  };
+
+  const handleVerifyOtp = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!pendingLogin) return;
+    if (otpCode.trim().length < 6) {
+      toast.error("Enter the 6-digit code");
+      return;
+    }
+
+    setIsVerifyingOtp(true);
+    try {
+      const { error: verifyError } = await supabase.auth.verifyOtp({
+        email: pendingLogin.email,
+        token: otpCode.trim(),
+        type: "email",
+      });
+
+      if (verifyError) {
+        toast.error("OTP verification failed", { description: verifyError.message });
+        return;
+      }
+
+      // Attach this auth user to the directory record
+      const { error: attachError } = await (supabase.rpc as any)("attach_user_to_employee_record", {
+        _organization_code: pendingLogin.orgCode,
+        _employee_email: pendingLogin.email,
+      });
+
+      if (attachError) {
+        toast.error("Could not link your employee record", { description: attachError.message });
+        return;
+      }
+
+      setCompanyProfile({
+        id: "",
+        name: pendingLogin.companyName,
+        organization_code: pendingLogin.orgCode,
+      });
+      setLoginStep("form");
+      setOtpCode("");
+      setPendingLogin(null);
+      setActiveTab("home");
+      toast.success("Welcome", { description: `Signed in to ${pendingLogin.companyName}` });
+    } finally {
+      setIsVerifyingOtp(false);
+    }
+  };
+
+  const handleResetLogin = () => {
+    setLoginStep("form");
+    setOtpCode("");
+    setPendingLogin(null);
   };
 
   const handleCreateInvite = async (event: FormEvent<HTMLFormElement>) => {
@@ -440,21 +590,73 @@ const Index = () => {
     }
   };
 
-  const renderEmployerLogin = () => (
-    <div className="rounded-[1.5rem] bg-surface-raised p-4 shadow-card">
-      <div className="mb-4 flex items-center gap-3">
-        <div className="grid h-10 w-10 place-items-center rounded-2xl bg-primary/10 text-primary">
-          <Building2 className="h-5 w-5" />
-        </div>
-        <div>
-          <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">First screen</p>
-          <h2 className="font-display text-xl font-extrabold">Employer login & signup</h2>
-        </div>
-      </div>
+  const demoEmployees = [
+    { name: "EMP1", email: "emp1@demo.test" },
+    { name: "Sachin", email: "sachin@demo.test" },
+    { name: "EMP2", email: "emp2@demo.test" },
+    { name: "EMP3", email: "emp3@demo.test" },
+    { name: "EMP4", email: "emp4@demo.test" },
+  ];
 
-      <form onSubmit={handleCompanySubmit} className="space-y-3">
-        <div className="grid grid-cols-2 rounded-2xl bg-muted p-1">
-          {(["create", "login"] as AppMode[]).map((item) => (
+  const renderEmployeeAuth = () => {
+    if (loginStep === "otp" && pendingLogin) {
+      return (
+        <div className="rounded-[1.5rem] bg-surface-raised p-4 shadow-card">
+          <div className="mb-4 flex items-center gap-3">
+            <div className="grid h-10 w-10 place-items-center rounded-2xl bg-primary/10 text-primary">
+              <KeyRound className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Verify OTP</p>
+              <h2 className="font-display text-xl font-extrabold">Enter your code</h2>
+            </div>
+          </div>
+          <p className="text-sm font-semibold text-muted-foreground">
+            We sent a 6-digit code to <span className="font-extrabold text-foreground">{pendingLogin.email}</span>.
+          </p>
+          <form onSubmit={handleVerifyOtp} className="mt-4 space-y-3">
+            <input
+              autoFocus
+              inputMode="numeric"
+              maxLength={6}
+              value={otpCode}
+              onChange={(event) => setOtpCode(event.target.value.replace(/[^0-9]/g, "").slice(0, 6))}
+              placeholder="123456"
+              className="focus-premium w-full rounded-2xl border border-border bg-background px-4 py-4 text-center font-display text-2xl font-extrabold tracking-[0.5em] text-foreground placeholder:tracking-normal placeholder:text-muted-foreground"
+            />
+            <button
+              type="submit"
+              disabled={isVerifyingOtp}
+              className="focus-premium flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 font-extrabold text-primary-foreground shadow-glow transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground disabled:shadow-none"
+            >
+              <ShieldCheck className="h-5 w-5" /> {isVerifyingOtp ? "Verifying..." : "Verify & enter Home"}
+            </button>
+            <button
+              type="button"
+              onClick={handleResetLogin}
+              className="focus-premium flex w-full items-center justify-center gap-2 rounded-2xl border border-border bg-background px-4 py-3 text-sm font-extrabold text-muted-foreground"
+            >
+              <ArrowLeft className="h-4 w-4" /> Use a different account
+            </button>
+          </form>
+        </div>
+      );
+    }
+
+    return (
+      <div className="rounded-[1.5rem] bg-surface-raised p-4 shadow-card">
+        <div className="mb-4 flex items-center gap-3">
+          <div className="grid h-10 w-10 place-items-center rounded-2xl bg-primary/10 text-primary">
+            <Building2 className="h-5 w-5" />
+          </div>
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Employee access</p>
+            <h2 className="font-display text-xl font-extrabold">{mode === "signup" ? "Create your account" : "Sign in to continue"}</h2>
+          </div>
+        </div>
+
+        <div className="mb-3 grid grid-cols-2 rounded-2xl bg-muted p-1">
+          {(["login", "signup"] as AppMode[]).map((item) => (
             <button
               type="button"
               key={item}
@@ -463,71 +665,139 @@ const Index = () => {
                 mode === item ? "bg-primary text-primary-foreground shadow-glow" : "text-muted-foreground"
               }`}
             >
-              {item === "create" ? "Signup" : "Login"}
+              {item === "signup" ? "Signup" : "Login"}
             </button>
           ))}
         </div>
 
-        {mode === "create" && (
-          <label className="block">
-            <span className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Company name</span>
-            <input
-              value={form.companyName}
-              onChange={(event) => updateForm("companyName", event.target.value)}
-              placeholder="Acme Workspace"
-              className="focus-premium mt-1 w-full rounded-2xl border border-border bg-background px-4 py-3 font-semibold text-foreground placeholder:text-muted-foreground"
-            />
-          </label>
+        {mode === "signup" ? (
+          <form onSubmit={handleEmployeeSignup} className="space-y-3">
+            <label className="block">
+              <span className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Company name</span>
+              <input
+                value={signupForm.companyName}
+                onChange={(event) => updateSignupForm("companyName", event.target.value)}
+                placeholder="Acme Workspace"
+                className="focus-premium mt-1 w-full rounded-2xl border border-border bg-background px-4 py-3 font-semibold text-foreground placeholder:text-muted-foreground"
+              />
+            </label>
+            <label className="block">
+              <span className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Company code (unique)</span>
+              <input
+                value={signupForm.orgCode}
+                onChange={(event) => updateSignupForm("orgCode", event.target.value)}
+                placeholder="ACME-HQ"
+                className="focus-premium mt-1 w-full rounded-2xl border border-border bg-background px-4 py-3 font-semibold uppercase text-foreground placeholder:text-muted-foreground"
+              />
+            </label>
+            <label className="block">
+              <span className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Your name</span>
+              <input
+                value={signupForm.displayName}
+                onChange={(event) => updateSignupForm("displayName", event.target.value)}
+                placeholder="Sachin Kumar"
+                className="focus-premium mt-1 w-full rounded-2xl border border-border bg-background px-4 py-3 font-semibold text-foreground placeholder:text-muted-foreground"
+              />
+            </label>
+            <label className="block">
+              <span className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Contact email (unique)</span>
+              <input
+                type="email"
+                value={signupForm.email}
+                onChange={(event) => updateSignupForm("email", event.target.value)}
+                placeholder="you@company.com"
+                className="focus-premium mt-1 w-full rounded-2xl border border-border bg-background px-4 py-3 font-semibold text-foreground placeholder:text-muted-foreground"
+              />
+            </label>
+            <label className="block">
+              <span className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Mobile (optional)</span>
+              <input
+                type="tel"
+                value={signupForm.phone}
+                onChange={(event) => updateSignupForm("phone", event.target.value)}
+                placeholder="+91 98xxxxxxxx"
+                className="focus-premium mt-1 w-full rounded-2xl border border-border bg-background px-4 py-3 font-semibold text-foreground placeholder:text-muted-foreground"
+              />
+            </label>
+            <button
+              type="submit"
+              disabled={isSubmittingSignup}
+              className="focus-premium flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 font-extrabold text-primary-foreground shadow-glow transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground disabled:shadow-none"
+            >
+              <UserPlus className="h-5 w-5" /> {isSubmittingSignup ? "Creating..." : "Sign up & send OTP"}
+            </button>
+          </form>
+        ) : (
+          <form onSubmit={handleEmployeeLoginRequest} className="space-y-3">
+            <label className="block">
+              <span className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Company code</span>
+              <input
+                value={loginForm.orgCode}
+                onChange={(event) => updateLoginForm("orgCode", event.target.value)}
+                placeholder="DEMO01"
+                className="focus-premium mt-1 w-full rounded-2xl border border-border bg-background px-4 py-3 font-semibold uppercase text-foreground placeholder:text-muted-foreground"
+              />
+            </label>
+
+            <div className="grid grid-cols-2 rounded-2xl bg-muted p-1">
+              {(["email", "phone"] as LoginIdentifier[]).map((kind) => (
+                <button
+                  key={kind}
+                  type="button"
+                  onClick={() => updateLoginForm("identifierKind", kind)}
+                  className={`focus-premium flex items-center justify-center gap-2 rounded-xl py-2 text-xs font-extrabold transition-all ${
+                    loginForm.identifierKind === kind ? "bg-primary text-primary-foreground shadow-glow" : "text-muted-foreground"
+                  }`}
+                >
+                  {kind === "email" ? <Mail className="h-4 w-4" /> : <Smartphone className="h-4 w-4" />}
+                  {kind === "email" ? "Email" : "Mobile"}
+                </button>
+              ))}
+            </div>
+
+            <label className="block">
+              <span className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                {loginForm.identifierKind === "email" ? "Email address" : "Mobile number"}
+              </span>
+              <input
+                type={loginForm.identifierKind === "email" ? "email" : "tel"}
+                value={loginForm.identifier}
+                onChange={(event) => updateLoginForm("identifier", event.target.value)}
+                placeholder={loginForm.identifierKind === "email" ? "you@company.com" : "+91 98xxxxxxxx"}
+                className="focus-premium mt-1 w-full rounded-2xl border border-border bg-background px-4 py-3 font-semibold text-foreground placeholder:text-muted-foreground"
+              />
+            </label>
+
+            <button
+              type="submit"
+              disabled={isSendingOtp}
+              className="focus-premium flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 font-extrabold text-primary-foreground shadow-glow transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground disabled:shadow-none"
+            >
+              <Send className="h-5 w-5" /> {isSendingOtp ? "Sending OTP..." : "Send OTP to email"}
+            </button>
+
+            <div className="rounded-2xl bg-background p-3">
+              <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Demo employees · code DEMO01</p>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {demoEmployees.map((emp) => (
+                  <button
+                    key={emp.email}
+                    type="button"
+                    onClick={() => {
+                      setLoginForm({ orgCode: "DEMO01", identifier: emp.email, identifierKind: "email" });
+                    }}
+                    className="focus-premium rounded-full bg-muted px-3 py-1 text-xs font-extrabold text-foreground hover:bg-primary/10"
+                  >
+                    {emp.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </form>
         )}
-
-        <label className="block">
-          <span className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Organization ID</span>
-          <input
-            value={form.orgCode}
-            onChange={(event) => updateForm("orgCode", event.target.value)}
-            placeholder="ACME-HQ"
-            className="focus-premium mt-1 w-full rounded-2xl border border-border bg-background px-4 py-3 font-semibold text-foreground placeholder:text-muted-foreground"
-          />
-        </label>
-
-        <button
-          type="button"
-          onClick={handleGoogleLogin}
-          className="focus-premium flex w-full items-center justify-center gap-2 rounded-2xl border border-border bg-background px-4 py-3 font-extrabold shadow-card transition-transform hover:-translate-y-0.5"
-        >
-          <Mail className="h-5 w-5 text-primary" /> Continue with Google
-        </button>
-
-        <label className="block">
-          <span className="text-xs font-bold uppercase tracking-wide text-muted-foreground">HR admin name</span>
-          <input
-            value={form.displayName}
-            onChange={(event) => updateForm("displayName", event.target.value)}
-            placeholder="Priya Sharma"
-            className="focus-premium mt-1 w-full rounded-2xl border border-border bg-background px-4 py-3 font-semibold text-foreground placeholder:text-muted-foreground"
-          />
-        </label>
-
-        <label className="block">
-          <span className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Work email</span>
-          <input
-            value={form.email}
-            onChange={(event) => updateForm("email", event.target.value)}
-            placeholder="hr@company.com"
-            className="focus-premium mt-1 w-full rounded-2xl border border-border bg-background px-4 py-3 font-semibold text-foreground placeholder:text-muted-foreground"
-          />
-        </label>
-
-        <button
-          type="submit"
-          disabled={isSubmittingCompany}
-          className="focus-premium flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 font-extrabold text-primary-foreground shadow-glow transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground disabled:shadow-none"
-        >
-          <ShieldCheck className="h-5 w-5" /> {isSubmittingCompany ? "Opening..." : mode === "create" ? "Create HR admin" : "Open employer account"}
-        </button>
-      </form>
-    </div>
-  );
+      </div>
+    );
+  };
 
   const renderAdminPanel = () => (
     <div className="rounded-[1.5rem] bg-surface-raised p-4 shadow-card">
@@ -825,7 +1095,7 @@ const Index = () => {
         <button onClick={() => setActiveTab("book")} className="focus-premium flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 font-extrabold text-primary-foreground shadow-glow">
           <CalendarCheck className="h-5 w-5" /> Go to Book screen
         </button>
-      ) : renderEmployerLogin()}
+      ) : renderEmployeeAuth()}
     </>
   );
 
