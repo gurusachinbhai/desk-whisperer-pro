@@ -406,6 +406,69 @@ const Index = () => {
     }
   };
 
+  // Employee login with email + password + company code
+  const handleEmployeePasswordLogin = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (loginForm.orgCode.length < 3) {
+      toast.error("Enter your company code");
+      return;
+    }
+    if (loginForm.identifier.trim().length < 3) {
+      toast.error(loginForm.identifierKind === "email" ? "Enter your email" : "Enter your phone number");
+      return;
+    }
+    if (loginForm.password.length < 6) {
+      toast.error("Password must be at least 6 characters");
+      return;
+    }
+
+    setIsSendingOtp(true);
+    try {
+      const { data: lookup, error: lookupError } = await (supabase.rpc as any)("lookup_employee_for_login", {
+        _organization_code: loginForm.orgCode,
+        _identifier: loginForm.identifier.trim(),
+      });
+
+      if (lookupError) {
+        toast.error("Lookup failed", { description: lookupError.message });
+        return;
+      }
+
+      const match = Array.isArray(lookup) ? lookup[0] : lookup;
+      if (!match || !match.employee_email) {
+        toast.error("No employee found", { description: "Check your company code and email or phone." });
+        return;
+      }
+
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: match.employee_email,
+        password: loginForm.password,
+      });
+
+      if (signInError) {
+        toast.error("Sign in failed", { description: signInError.message });
+        return;
+      }
+
+      const { error: attachError } = await (supabase.rpc as any)("attach_user_to_employee_record", {
+        _organization_code: loginForm.orgCode,
+        _employee_email: match.employee_email,
+      });
+
+      if (attachError) {
+        toast.error("Could not link your employee record", { description: attachError.message });
+        return;
+      }
+
+      setCompanyProfile({ id: "", name: match.company_name, organization_code: loginForm.orgCode });
+      setActiveTab("home");
+      toast.success("Welcome", { description: `Signed in to ${match.company_name}` });
+    } finally {
+      setIsSendingOtp(false);
+    }
+  };
+
   // Employee login → look up company + employee, send OTP to their email
   const handleEmployeeLoginRequest = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
