@@ -590,21 +590,73 @@ const Index = () => {
     }
   };
 
-  const renderEmployerLogin = () => (
-    <div className="rounded-[1.5rem] bg-surface-raised p-4 shadow-card">
-      <div className="mb-4 flex items-center gap-3">
-        <div className="grid h-10 w-10 place-items-center rounded-2xl bg-primary/10 text-primary">
-          <Building2 className="h-5 w-5" />
-        </div>
-        <div>
-          <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">First screen</p>
-          <h2 className="font-display text-xl font-extrabold">Employer login & signup</h2>
-        </div>
-      </div>
+  const demoEmployees = [
+    { name: "EMP1", email: "emp1@demo.test" },
+    { name: "Sachin", email: "sachin@demo.test" },
+    { name: "EMP2", email: "emp2@demo.test" },
+    { name: "EMP3", email: "emp3@demo.test" },
+    { name: "EMP4", email: "emp4@demo.test" },
+  ];
 
-      <form onSubmit={handleCompanySubmit} className="space-y-3">
-        <div className="grid grid-cols-2 rounded-2xl bg-muted p-1">
-          {(["create", "login"] as AppMode[]).map((item) => (
+  const renderEmployeeAuth = () => {
+    if (loginStep === "otp" && pendingLogin) {
+      return (
+        <div className="rounded-[1.5rem] bg-surface-raised p-4 shadow-card">
+          <div className="mb-4 flex items-center gap-3">
+            <div className="grid h-10 w-10 place-items-center rounded-2xl bg-primary/10 text-primary">
+              <KeyRound className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Verify OTP</p>
+              <h2 className="font-display text-xl font-extrabold">Enter your code</h2>
+            </div>
+          </div>
+          <p className="text-sm font-semibold text-muted-foreground">
+            We sent a 6-digit code to <span className="font-extrabold text-foreground">{pendingLogin.email}</span>.
+          </p>
+          <form onSubmit={handleVerifyOtp} className="mt-4 space-y-3">
+            <input
+              autoFocus
+              inputMode="numeric"
+              maxLength={6}
+              value={otpCode}
+              onChange={(event) => setOtpCode(event.target.value.replace(/[^0-9]/g, "").slice(0, 6))}
+              placeholder="123456"
+              className="focus-premium w-full rounded-2xl border border-border bg-background px-4 py-4 text-center font-display text-2xl font-extrabold tracking-[0.5em] text-foreground placeholder:tracking-normal placeholder:text-muted-foreground"
+            />
+            <button
+              type="submit"
+              disabled={isVerifyingOtp}
+              className="focus-premium flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 font-extrabold text-primary-foreground shadow-glow transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground disabled:shadow-none"
+            >
+              <ShieldCheck className="h-5 w-5" /> {isVerifyingOtp ? "Verifying..." : "Verify & enter Home"}
+            </button>
+            <button
+              type="button"
+              onClick={handleResetLogin}
+              className="focus-premium flex w-full items-center justify-center gap-2 rounded-2xl border border-border bg-background px-4 py-3 text-sm font-extrabold text-muted-foreground"
+            >
+              <ArrowLeft className="h-4 w-4" /> Use a different account
+            </button>
+          </form>
+        </div>
+      );
+    }
+
+    return (
+      <div className="rounded-[1.5rem] bg-surface-raised p-4 shadow-card">
+        <div className="mb-4 flex items-center gap-3">
+          <div className="grid h-10 w-10 place-items-center rounded-2xl bg-primary/10 text-primary">
+            <Building2 className="h-5 w-5" />
+          </div>
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Employee access</p>
+            <h2 className="font-display text-xl font-extrabold">{mode === "signup" ? "Create your account" : "Sign in to continue"}</h2>
+          </div>
+        </div>
+
+        <div className="mb-3 grid grid-cols-2 rounded-2xl bg-muted p-1">
+          {(["login", "signup"] as AppMode[]).map((item) => (
             <button
               type="button"
               key={item}
@@ -613,71 +665,139 @@ const Index = () => {
                 mode === item ? "bg-primary text-primary-foreground shadow-glow" : "text-muted-foreground"
               }`}
             >
-              {item === "create" ? "Signup" : "Login"}
+              {item === "signup" ? "Signup" : "Login"}
             </button>
           ))}
         </div>
 
-        {mode === "create" && (
-          <label className="block">
-            <span className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Company name</span>
-            <input
-              value={form.companyName}
-              onChange={(event) => updateForm("companyName", event.target.value)}
-              placeholder="Acme Workspace"
-              className="focus-premium mt-1 w-full rounded-2xl border border-border bg-background px-4 py-3 font-semibold text-foreground placeholder:text-muted-foreground"
-            />
-          </label>
+        {mode === "signup" ? (
+          <form onSubmit={handleEmployeeSignup} className="space-y-3">
+            <label className="block">
+              <span className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Company name</span>
+              <input
+                value={signupForm.companyName}
+                onChange={(event) => updateSignupForm("companyName", event.target.value)}
+                placeholder="Acme Workspace"
+                className="focus-premium mt-1 w-full rounded-2xl border border-border bg-background px-4 py-3 font-semibold text-foreground placeholder:text-muted-foreground"
+              />
+            </label>
+            <label className="block">
+              <span className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Company code (unique)</span>
+              <input
+                value={signupForm.orgCode}
+                onChange={(event) => updateSignupForm("orgCode", event.target.value)}
+                placeholder="ACME-HQ"
+                className="focus-premium mt-1 w-full rounded-2xl border border-border bg-background px-4 py-3 font-semibold uppercase text-foreground placeholder:text-muted-foreground"
+              />
+            </label>
+            <label className="block">
+              <span className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Your name</span>
+              <input
+                value={signupForm.displayName}
+                onChange={(event) => updateSignupForm("displayName", event.target.value)}
+                placeholder="Sachin Kumar"
+                className="focus-premium mt-1 w-full rounded-2xl border border-border bg-background px-4 py-3 font-semibold text-foreground placeholder:text-muted-foreground"
+              />
+            </label>
+            <label className="block">
+              <span className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Contact email (unique)</span>
+              <input
+                type="email"
+                value={signupForm.email}
+                onChange={(event) => updateSignupForm("email", event.target.value)}
+                placeholder="you@company.com"
+                className="focus-premium mt-1 w-full rounded-2xl border border-border bg-background px-4 py-3 font-semibold text-foreground placeholder:text-muted-foreground"
+              />
+            </label>
+            <label className="block">
+              <span className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Mobile (optional)</span>
+              <input
+                type="tel"
+                value={signupForm.phone}
+                onChange={(event) => updateSignupForm("phone", event.target.value)}
+                placeholder="+91 98xxxxxxxx"
+                className="focus-premium mt-1 w-full rounded-2xl border border-border bg-background px-4 py-3 font-semibold text-foreground placeholder:text-muted-foreground"
+              />
+            </label>
+            <button
+              type="submit"
+              disabled={isSubmittingSignup}
+              className="focus-premium flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 font-extrabold text-primary-foreground shadow-glow transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground disabled:shadow-none"
+            >
+              <UserPlus className="h-5 w-5" /> {isSubmittingSignup ? "Creating..." : "Sign up & send OTP"}
+            </button>
+          </form>
+        ) : (
+          <form onSubmit={handleEmployeeLoginRequest} className="space-y-3">
+            <label className="block">
+              <span className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Company code</span>
+              <input
+                value={loginForm.orgCode}
+                onChange={(event) => updateLoginForm("orgCode", event.target.value)}
+                placeholder="DEMO01"
+                className="focus-premium mt-1 w-full rounded-2xl border border-border bg-background px-4 py-3 font-semibold uppercase text-foreground placeholder:text-muted-foreground"
+              />
+            </label>
+
+            <div className="grid grid-cols-2 rounded-2xl bg-muted p-1">
+              {(["email", "phone"] as LoginIdentifier[]).map((kind) => (
+                <button
+                  key={kind}
+                  type="button"
+                  onClick={() => updateLoginForm("identifierKind", kind)}
+                  className={`focus-premium flex items-center justify-center gap-2 rounded-xl py-2 text-xs font-extrabold transition-all ${
+                    loginForm.identifierKind === kind ? "bg-primary text-primary-foreground shadow-glow" : "text-muted-foreground"
+                  }`}
+                >
+                  {kind === "email" ? <Mail className="h-4 w-4" /> : <Smartphone className="h-4 w-4" />}
+                  {kind === "email" ? "Email" : "Mobile"}
+                </button>
+              ))}
+            </div>
+
+            <label className="block">
+              <span className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                {loginForm.identifierKind === "email" ? "Email address" : "Mobile number"}
+              </span>
+              <input
+                type={loginForm.identifierKind === "email" ? "email" : "tel"}
+                value={loginForm.identifier}
+                onChange={(event) => updateLoginForm("identifier", event.target.value)}
+                placeholder={loginForm.identifierKind === "email" ? "you@company.com" : "+91 98xxxxxxxx"}
+                className="focus-premium mt-1 w-full rounded-2xl border border-border bg-background px-4 py-3 font-semibold text-foreground placeholder:text-muted-foreground"
+              />
+            </label>
+
+            <button
+              type="submit"
+              disabled={isSendingOtp}
+              className="focus-premium flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 font-extrabold text-primary-foreground shadow-glow transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground disabled:shadow-none"
+            >
+              <Send className="h-5 w-5" /> {isSendingOtp ? "Sending OTP..." : "Send OTP to email"}
+            </button>
+
+            <div className="rounded-2xl bg-background p-3">
+              <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Demo employees · code DEMO01</p>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {demoEmployees.map((emp) => (
+                  <button
+                    key={emp.email}
+                    type="button"
+                    onClick={() => {
+                      setLoginForm({ orgCode: "DEMO01", identifier: emp.email, identifierKind: "email" });
+                    }}
+                    className="focus-premium rounded-full bg-muted px-3 py-1 text-xs font-extrabold text-foreground hover:bg-primary/10"
+                  >
+                    {emp.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </form>
         )}
-
-        <label className="block">
-          <span className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Organization ID</span>
-          <input
-            value={form.orgCode}
-            onChange={(event) => updateForm("orgCode", event.target.value)}
-            placeholder="ACME-HQ"
-            className="focus-premium mt-1 w-full rounded-2xl border border-border bg-background px-4 py-3 font-semibold text-foreground placeholder:text-muted-foreground"
-          />
-        </label>
-
-        <button
-          type="button"
-          onClick={handleGoogleLogin}
-          className="focus-premium flex w-full items-center justify-center gap-2 rounded-2xl border border-border bg-background px-4 py-3 font-extrabold shadow-card transition-transform hover:-translate-y-0.5"
-        >
-          <Mail className="h-5 w-5 text-primary" /> Continue with Google
-        </button>
-
-        <label className="block">
-          <span className="text-xs font-bold uppercase tracking-wide text-muted-foreground">HR admin name</span>
-          <input
-            value={form.displayName}
-            onChange={(event) => updateForm("displayName", event.target.value)}
-            placeholder="Priya Sharma"
-            className="focus-premium mt-1 w-full rounded-2xl border border-border bg-background px-4 py-3 font-semibold text-foreground placeholder:text-muted-foreground"
-          />
-        </label>
-
-        <label className="block">
-          <span className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Work email</span>
-          <input
-            value={form.email}
-            onChange={(event) => updateForm("email", event.target.value)}
-            placeholder="hr@company.com"
-            className="focus-premium mt-1 w-full rounded-2xl border border-border bg-background px-4 py-3 font-semibold text-foreground placeholder:text-muted-foreground"
-          />
-        </label>
-
-        <button
-          type="submit"
-          disabled={isSubmittingCompany}
-          className="focus-premium flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 font-extrabold text-primary-foreground shadow-glow transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground disabled:shadow-none"
-        >
-          <ShieldCheck className="h-5 w-5" /> {isSubmittingCompany ? "Opening..." : mode === "create" ? "Create HR admin" : "Open employer account"}
-        </button>
-      </form>
-    </div>
-  );
+      </div>
+    );
+  };
 
   const renderAdminPanel = () => (
     <div className="rounded-[1.5rem] bg-surface-raised p-4 shadow-card">
