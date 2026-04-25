@@ -152,9 +152,11 @@ const Index = () => {
     phone: "",
   });
   const [loginForm, setLoginForm] = useState<LoginForm>({
-    orgCode: "DEMO01",
+    orgCode: "",
     identifier: "",
     identifierKind: "email",
+    password: "",
+    method: "password",
   });
   const [loginStep, setLoginStep] = useState<LoginStep>("form");
   const [otpCode, setOtpCode] = useState("");
