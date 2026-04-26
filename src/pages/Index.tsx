@@ -31,6 +31,13 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { lovable } from "@/integrations/lovable";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 type Desk = {
   dbId?: string;
@@ -106,24 +113,39 @@ const initialDesks: Desk[] = [
 const timeSlots = ["Full Day", "Morning", "Afternoon"];
 
 const floorOptions = [1, 2, 3, 4, 5, 6];
+const areaOptions = ["AREA-01", "AREA-02", "AREA-03", "AREA-04", "AREA-05", "AREA-06"] as const;
 const seatRows = ["A", "B", "C", "D", "E"] as const;
 const seatColumns = [1, 2, 3, 4] as const;
 const meetingRooms = ["M01", "M02", "M03", "M04", "M05"] as const;
-const hourlyTimeSlots = [
-  "08:00 AM",
-  "09:00 AM",
-  "10:00 AM",
-  "11:00 AM",
-  "12:00 PM",
-  "01:00 PM",
-  "02:00 PM",
-  "03:00 PM",
-  "04:00 PM",
-  "05:00 PM",
-  "06:00 PM",
-  "07:00 PM",
-  "08:00 PM",
-] as const;
+
+type ShiftKey = "morning" | "day" | "afternoon" | "night";
+
+const shiftDefinitions: { id: ShiftKey; label: string; range: string; times: string[] }[] = [
+  {
+    id: "morning",
+    label: "Morning",
+    range: "6 AM – 2 PM",
+    times: ["06:00 AM", "07:00 AM", "08:00 AM", "09:00 AM", "10:00 AM", "11:00 AM", "12:00 PM", "01:00 PM"],
+  },
+  {
+    id: "day",
+    label: "Day",
+    range: "9 AM – 5 PM",
+    times: ["09:00 AM", "10:00 AM", "11:00 AM", "12:00 PM", "01:00 PM", "02:00 PM", "03:00 PM", "04:00 PM"],
+  },
+  {
+    id: "afternoon",
+    label: "Afternoon",
+    range: "2 PM – 10 PM",
+    times: ["02:00 PM", "03:00 PM", "04:00 PM", "05:00 PM", "06:00 PM", "07:00 PM", "08:00 PM", "09:00 PM"],
+  },
+  {
+    id: "night",
+    label: "Night",
+    range: "10 PM – 6 AM",
+    times: ["10:00 PM", "11:00 PM", "12:00 AM", "01:00 AM", "02:00 AM", "03:00 AM", "04:00 AM", "05:00 AM"],
+  },
+];
 type BookingKind = "desk" | "room";
 
 const bottomTabs: { id: ActiveTab; icon: typeof CalendarCheck; label: string }[] = [
@@ -213,14 +235,16 @@ const Index = () => {
     toast.success("Signed out");
   };
 
-  // New booking selection state (floor / seat / room / hourly slot)
+  // New booking selection state (floor / area / seat / room / shift / hourly slot)
   const [bookingKind, setBookingKind] = useState<BookingKind>("desk");
   const [selectedFloor, setSelectedFloor] = useState<number>(1);
+  const [selectedArea, setSelectedArea] = useState<string>(areaOptions[0]);
   const [selectedSeat, setSelectedSeat] = useState<string>("A1");
   const [selectedRoom, setSelectedRoom] = useState<string>("M01");
-  const [selectedHourlySlot, setSelectedHourlySlot] = useState<string>("09:00 AM");
+  const [selectedShift, setSelectedShift] = useState<ShiftKey>("morning");
+  const [selectedHourlySlot, setSelectedHourlySlot] = useState<string>("06:00 AM");
   const [confirmedBookings, setConfirmedBookings] = useState<
-    { id: string; kind: BookingKind; floor: number; spot: string; time: string }[]
+    { id: string; kind: BookingKind; floor: number; area: string; spot: string; time: string; shift: string }[]
   >([]);
 
   const selectedDesk = useMemo(() => desks.find((desk) => desk.id === selectedDeskId), [desks, selectedDeskId]);
@@ -987,22 +1011,29 @@ const Index = () => {
     </div>
   );
 
+  const currentShift = useMemo(
+    () => shiftDefinitions.find((s) => s.id === selectedShift) ?? shiftDefinitions[0],
+    [selectedShift],
+  );
+
   const handleConfirmBooking = () => {
     const spot = bookingKind === "desk" ? selectedSeat : selectedRoom;
     const newBooking = {
       id: `${Date.now()}`,
       kind: bookingKind,
       floor: selectedFloor,
+      area: selectedArea,
       spot,
       time: selectedHourlySlot,
+      shift: currentShift.label,
     };
     setConfirmedBookings((current) => [newBooking, ...current].slice(0, 6));
     setBookingText(
-      `${bookingKind === "desk" ? "Seat" : "Meeting room"} ${spot} · Floor ${selectedFloor} · ${selectedHourlySlot}`,
+      `${bookingKind === "desk" ? "Seat" : "Meeting room"} ${spot} · Floor ${selectedFloor} · ${selectedArea} · ${currentShift.label} ${selectedHourlySlot}`,
     );
     toast.success(
       `${bookingKind === "desk" ? "Seat" : "Meeting room"} ${spot} booked`,
-      { description: `Floor ${selectedFloor} · ${selectedHourlySlot}` },
+      { description: `Floor ${selectedFloor} · ${selectedArea} · ${currentShift.label} · ${selectedHourlySlot}` },
     );
   };
 
@@ -1050,6 +1081,27 @@ const Index = () => {
               }`}
             >
               {floor}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Area selection AREA-01 to AREA-06 */}
+      <div className="mt-4">
+        <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Area</p>
+        <div className="mt-2 grid grid-cols-3 gap-2">
+          {areaOptions.map((area) => (
+            <button
+              key={area}
+              type="button"
+              onClick={() => setSelectedArea(area)}
+              className={`focus-premium rounded-2xl py-2 text-xs font-extrabold transition-all ${
+                selectedArea === area
+                  ? "bg-primary text-primary-foreground shadow-glow"
+                  : "bg-muted text-muted-foreground"
+              }`}
+            >
+              {area}
             </button>
           ))}
         </div>
@@ -1106,34 +1158,60 @@ const Index = () => {
         </div>
       )}
 
-      {/* Hourly time slots 8 AM - 8 PM */}
+      {/* Shift selection */}
       <div className="mt-4">
-        <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Time slot · 8 AM to 8 PM</p>
-        <div className="mt-2 grid grid-cols-3 gap-2">
-          {hourlyTimeSlots.map((slot) => (
+        <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Shift</p>
+        <div className="mt-2 grid grid-cols-2 gap-2">
+          {shiftDefinitions.map((shift) => (
             <button
-              key={slot}
+              key={shift.id}
               type="button"
-              onClick={() => setSelectedHourlySlot(slot)}
-              className={`focus-premium rounded-2xl px-1 py-2 text-xs font-extrabold transition-all ${
-                selectedHourlySlot === slot
+              onClick={() => {
+                setSelectedShift(shift.id);
+                setSelectedHourlySlot(shift.times[0]);
+              }}
+              className={`focus-premium rounded-2xl py-2 text-xs font-extrabold transition-all ${
+                selectedShift === shift.id
                   ? "bg-primary text-primary-foreground shadow-glow"
                   : "bg-muted text-muted-foreground"
               }`}
             >
-              {slot}
+              <span className="block">{shift.label}</span>
+              <span className="block text-[10px] font-semibold opacity-80">{shift.range}</span>
             </button>
           ))}
         </div>
+      </div>
+
+      {/* Time dropdown — based on selected shift */}
+      <div className="mt-4">
+        <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+          Time · {currentShift.label} ({currentShift.range})
+        </p>
+        <Select
+          value={selectedHourlySlot}
+          onValueChange={(value) => setSelectedHourlySlot(value)}
+        >
+          <SelectTrigger className="mt-2 h-12 rounded-2xl border-border bg-background text-sm font-extrabold">
+            <SelectValue placeholder="Select time" />
+          </SelectTrigger>
+          <SelectContent className="rounded-2xl">
+            {currentShift.times.map((slot) => (
+              <SelectItem key={slot} value={slot} className="text-sm font-bold">
+                {slot}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Summary + confirm */}
       <div className="mt-4 rounded-2xl bg-background p-4">
         <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Ready to book</p>
         <p className="font-display text-xl font-extrabold">
-          {bookingKind === "desk" ? "Seat" : "Room"} {bookingKind === "desk" ? selectedSeat : selectedRoom} · Floor {selectedFloor}
+          {bookingKind === "desk" ? "Seat" : "Room"} {bookingKind === "desk" ? selectedSeat : selectedRoom} · Floor {selectedFloor} · {selectedArea}
         </p>
-        <p className="mt-1 text-sm font-semibold text-muted-foreground">{selectedHourlySlot}</p>
+        <p className="mt-1 text-sm font-semibold text-muted-foreground">{currentShift.label} · {selectedHourlySlot}</p>
         <p className="mt-2 text-sm font-semibold text-primary">{bookingText}</p>
         <button
           type="button"
