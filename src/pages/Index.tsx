@@ -113,24 +113,39 @@ const initialDesks: Desk[] = [
 const timeSlots = ["Full Day", "Morning", "Afternoon"];
 
 const floorOptions = [1, 2, 3, 4, 5, 6];
+const areaOptions = ["AREA-01", "AREA-02", "AREA-03", "AREA-04", "AREA-05", "AREA-06"] as const;
 const seatRows = ["A", "B", "C", "D", "E"] as const;
 const seatColumns = [1, 2, 3, 4] as const;
 const meetingRooms = ["M01", "M02", "M03", "M04", "M05"] as const;
-const hourlyTimeSlots = [
-  "08:00 AM",
-  "09:00 AM",
-  "10:00 AM",
-  "11:00 AM",
-  "12:00 PM",
-  "01:00 PM",
-  "02:00 PM",
-  "03:00 PM",
-  "04:00 PM",
-  "05:00 PM",
-  "06:00 PM",
-  "07:00 PM",
-  "08:00 PM",
-] as const;
+
+type ShiftKey = "morning" | "day" | "afternoon" | "night";
+
+const shiftDefinitions: { id: ShiftKey; label: string; range: string; times: string[] }[] = [
+  {
+    id: "morning",
+    label: "Morning",
+    range: "6 AM – 2 PM",
+    times: ["06:00 AM", "07:00 AM", "08:00 AM", "09:00 AM", "10:00 AM", "11:00 AM", "12:00 PM", "01:00 PM"],
+  },
+  {
+    id: "day",
+    label: "Day",
+    range: "9 AM – 5 PM",
+    times: ["09:00 AM", "10:00 AM", "11:00 AM", "12:00 PM", "01:00 PM", "02:00 PM", "03:00 PM", "04:00 PM"],
+  },
+  {
+    id: "afternoon",
+    label: "Afternoon",
+    range: "2 PM – 10 PM",
+    times: ["02:00 PM", "03:00 PM", "04:00 PM", "05:00 PM", "06:00 PM", "07:00 PM", "08:00 PM", "09:00 PM"],
+  },
+  {
+    id: "night",
+    label: "Night",
+    range: "10 PM – 6 AM",
+    times: ["10:00 PM", "11:00 PM", "12:00 AM", "01:00 AM", "02:00 AM", "03:00 AM", "04:00 AM", "05:00 AM"],
+  },
+];
 type BookingKind = "desk" | "room";
 
 const bottomTabs: { id: ActiveTab; icon: typeof CalendarCheck; label: string }[] = [
