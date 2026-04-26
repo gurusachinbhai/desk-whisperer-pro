@@ -494,6 +494,7 @@ const Index = () => {
       }
 
       setCompanyProfile({ id: "", name: match.company_name, organization_code: loginForm.orgCode });
+      setCurrentUser({ displayName: match.display_name ?? "Employee", email: match.employee_email });
       setActiveTab("home");
       toast.success("Welcome", { description: `Signed in to ${match.company_name}` });
     } finally {
