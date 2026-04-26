@@ -400,6 +400,10 @@ const Index = () => {
       toast.error("Valid email is required");
       return;
     }
+    if (signupForm.password.length < 6) {
+      toast.error("Password must be at least 6 characters");
+      return;
+    }
 
     setIsSubmittingSignup(true);
     try {
@@ -416,25 +420,31 @@ const Index = () => {
         return;
       }
 
-      // Send OTP to the employee's email
-      const { error: otpError } = await supabase.auth.signInWithOtp({
+      // Create the auth user with the chosen password
+      const { error: authError } = await supabase.auth.signUp({
         email: signupForm.email.trim().toLowerCase(),
-        options: { shouldCreateUser: true },
+        password: signupForm.password,
+        options: { emailRedirectTo: `${window.location.origin}/` },
       });
 
-      if (otpError) {
-        toast.error("Could not send OTP", { description: otpError.message });
+      if (authError) {
+        toast.error("Could not create login", { description: authError.message });
         return;
       }
 
-      setPendingLogin({
-        email: signupForm.email.trim().toLowerCase(),
+      // Pre-fill login form so the user can sign in immediately with their password
+      setLoginForm({
         orgCode: signupForm.orgCode,
-        companyName: signupForm.companyName,
+        identifier: signupForm.email.trim().toLowerCase(),
+        identifierKind: "email",
+        password: "",
+        method: "password",
       });
-      setLoginStep("otp");
       setMode("login");
-      toast.success("Account created", { description: `OTP sent to ${signupForm.email}` });
+      setLoginStep("form");
+      toast.success("Account created", {
+        description: "You can now sign in with your email, password, and company code.",
+      });
     } finally {
       setIsSubmittingSignup(false);
     }
