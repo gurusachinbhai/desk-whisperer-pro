@@ -795,31 +795,16 @@ const Index = () => {
             onSubmit={loginForm.method === "password" ? handleEmployeePasswordLogin : handleEmployeeLoginRequest}
             className="space-y-3"
           >
-            <div className="grid grid-cols-2 rounded-2xl bg-muted p-1">
-              {(["email", "phone"] as LoginIdentifier[]).map((kind) => (
-                <button
-                  key={kind}
-                  type="button"
-                  onClick={() => updateLoginForm("identifierKind", kind)}
-                  className={`focus-premium flex items-center justify-center gap-2 rounded-xl py-2 text-xs font-extrabold transition-all ${
-                    loginForm.identifierKind === kind ? "bg-primary text-primary-foreground shadow-glow" : "text-muted-foreground"
-                  }`}
-                >
-                  {kind === "email" ? <Mail className="h-4 w-4" /> : <Smartphone className="h-4 w-4" />}
-                  {kind === "email" ? "Email" : "Mobile"}
-                </button>
-              ))}
-            </div>
-
             <label className="block">
-              <span className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
-                {loginForm.identifierKind === "email" ? "Email address" : "Mobile number"}
-              </span>
+              <span className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Email address</span>
               <input
-                type={loginForm.identifierKind === "email" ? "email" : "tel"}
+                type="email"
                 value={loginForm.identifier}
-                onChange={(event) => updateLoginForm("identifier", event.target.value)}
-                placeholder={loginForm.identifierKind === "email" ? "you@company.com" : "+91 98xxxxxxxx"}
+                onChange={(event) => {
+                  updateLoginForm("identifier", event.target.value);
+                  if (loginForm.identifierKind !== "email") updateLoginForm("identifierKind", "email");
+                }}
+                placeholder="you@company.com"
                 className="focus-premium mt-1 w-full rounded-2xl border border-border bg-background px-4 py-3 font-semibold text-foreground placeholder:text-muted-foreground"
               />
             </label>
