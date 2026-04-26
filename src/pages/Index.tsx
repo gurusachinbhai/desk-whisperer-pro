@@ -157,6 +157,7 @@ const Index = () => {
     displayName: "",
     email: "",
     phone: "",
+    password: "",
   });
   const [loginForm, setLoginForm] = useState<LoginForm>({
     orgCode: "",
