@@ -1011,22 +1011,29 @@ const Index = () => {
     </div>
   );
 
+  const currentShift = useMemo(
+    () => shiftDefinitions.find((s) => s.id === selectedShift) ?? shiftDefinitions[0],
+    [selectedShift],
+  );
+
   const handleConfirmBooking = () => {
     const spot = bookingKind === "desk" ? selectedSeat : selectedRoom;
     const newBooking = {
       id: `${Date.now()}`,
       kind: bookingKind,
       floor: selectedFloor,
+      area: selectedArea,
       spot,
       time: selectedHourlySlot,
+      shift: currentShift.label,
     };
     setConfirmedBookings((current) => [newBooking, ...current].slice(0, 6));
     setBookingText(
-      `${bookingKind === "desk" ? "Seat" : "Meeting room"} ${spot} · Floor ${selectedFloor} · ${selectedHourlySlot}`,
+      `${bookingKind === "desk" ? "Seat" : "Meeting room"} ${spot} · Floor ${selectedFloor} · ${selectedArea} · ${currentShift.label} ${selectedHourlySlot}`,
     );
     toast.success(
       `${bookingKind === "desk" ? "Seat" : "Meeting room"} ${spot} booked`,
-      { description: `Floor ${selectedFloor} · ${selectedHourlySlot}` },
+      { description: `Floor ${selectedFloor} · ${selectedArea} · ${currentShift.label} · ${selectedHourlySlot}` },
     );
   };
 
