@@ -184,6 +184,32 @@ const Index = () => {
   const [isBookingDesk, setIsBookingDesk] = useState(false);
   const [bookingText, setBookingText] = useState("No active booking yet");
   const [clientSessionId] = useState(getClientSessionId);
+  const [currentUser, setCurrentUser] = useState<{ displayName: string; email: string } | null>(null);
+  const [theme, setTheme] = useState<"light" | "dark">(() =>
+    (typeof window !== "undefined" && window.localStorage.getItem("deskflow-theme") === "dark") ? "dark" : "light"
+  );
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    document.documentElement.classList.toggle("dark", theme === "dark");
+    window.localStorage.setItem("deskflow-theme", theme);
+  }, [theme]);
+
+  const isAuthenticated = Boolean(currentUser && companyProfile);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setCurrentUser(null);
+    setCompanyProfile(null);
+    setIsAdmin(false);
+    setInvites([]);
+    setActiveTab("home");
+    setLoginStep("form");
+    setOtpCode("");
+    setPendingLogin(null);
+    setLoginForm({ orgCode: "", identifier: "", identifierKind: "email", password: "", method: "password" });
+    toast.success("Signed out");
+  };
 
   // New booking selection state (floor / seat / room / hourly slot)
   const [bookingKind, setBookingKind] = useState<BookingKind>("desk");
