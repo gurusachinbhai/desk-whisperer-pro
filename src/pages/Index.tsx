@@ -1086,6 +1086,27 @@ const Index = () => {
         </div>
       </div>
 
+      {/* Area selection AREA-01 to AREA-06 */}
+      <div className="mt-4">
+        <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Area</p>
+        <div className="mt-2 grid grid-cols-3 gap-2">
+          {areaOptions.map((area) => (
+            <button
+              key={area}
+              type="button"
+              onClick={() => setSelectedArea(area)}
+              className={`focus-premium rounded-2xl py-2 text-xs font-extrabold transition-all ${
+                selectedArea === area
+                  ? "bg-primary text-primary-foreground shadow-glow"
+                  : "bg-muted text-muted-foreground"
+              }`}
+            >
+              {area}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Seat or Room selection */}
       {bookingKind === "desk" ? (
         <div className="mt-4">
