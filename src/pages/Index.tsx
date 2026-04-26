@@ -235,14 +235,16 @@ const Index = () => {
     toast.success("Signed out");
   };
 
-  // New booking selection state (floor / seat / room / hourly slot)
+  // New booking selection state (floor / area / seat / room / shift / hourly slot)
   const [bookingKind, setBookingKind] = useState<BookingKind>("desk");
   const [selectedFloor, setSelectedFloor] = useState<number>(1);
+  const [selectedArea, setSelectedArea] = useState<string>(areaOptions[0]);
   const [selectedSeat, setSelectedSeat] = useState<string>("A1");
   const [selectedRoom, setSelectedRoom] = useState<string>("M01");
-  const [selectedHourlySlot, setSelectedHourlySlot] = useState<string>("09:00 AM");
+  const [selectedShift, setSelectedShift] = useState<ShiftKey>("morning");
+  const [selectedHourlySlot, setSelectedHourlySlot] = useState<string>("06:00 AM");
   const [confirmedBookings, setConfirmedBookings] = useState<
-    { id: string; kind: BookingKind; floor: number; spot: string; time: string }[]
+    { id: string; kind: BookingKind; floor: number; area: string; spot: string; time: string; shift: string }[]
   >([]);
 
   const selectedDesk = useMemo(() => desks.find((desk) => desk.id === selectedDeskId), [desks, selectedDeskId]);
