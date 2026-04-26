@@ -79,6 +79,7 @@ type SignupForm = {
   displayName: string;
   email: string;
   phone: string;
+  password: string;
 };
 
 type LoginMethod = "password" | "otp";
