@@ -592,6 +592,7 @@ const Index = () => {
         name: pendingLogin.companyName,
         organization_code: pendingLogin.orgCode,
       });
+      setCurrentUser({ displayName: pendingLogin.email.split("@")[0], email: pendingLogin.email });
       setLoginStep("form");
       setOtpCode("");
       setPendingLogin(null);
