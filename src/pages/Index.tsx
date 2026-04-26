@@ -79,6 +79,7 @@ type SignupForm = {
   displayName: string;
   email: string;
   phone: string;
+  password: string;
 };
 
 type LoginMethod = "password" | "otp";
@@ -156,6 +157,7 @@ const Index = () => {
     displayName: "",
     email: "",
     phone: "",
+    password: "",
   });
   const [loginForm, setLoginForm] = useState<LoginForm>({
     orgCode: "",
@@ -398,6 +400,10 @@ const Index = () => {
       toast.error("Valid email is required");
       return;
     }
+    if (signupForm.password.length < 6) {
+      toast.error("Password must be at least 6 characters");
+      return;
+    }
 
     setIsSubmittingSignup(true);
     try {
@@ -414,25 +420,31 @@ const Index = () => {
         return;
       }
 
-      // Send OTP to the employee's email
-      const { error: otpError } = await supabase.auth.signInWithOtp({
+      // Create the auth user with the chosen password
+      const { error: authError } = await supabase.auth.signUp({
         email: signupForm.email.trim().toLowerCase(),
-        options: { shouldCreateUser: true },
+        password: signupForm.password,
+        options: { emailRedirectTo: `${window.location.origin}/` },
       });
 
-      if (otpError) {
-        toast.error("Could not send OTP", { description: otpError.message });
+      if (authError) {
+        toast.error("Could not create login", { description: authError.message });
         return;
       }
 
-      setPendingLogin({
-        email: signupForm.email.trim().toLowerCase(),
+      // Pre-fill login form so the user can sign in immediately with their password
+      setLoginForm({
         orgCode: signupForm.orgCode,
-        companyName: signupForm.companyName,
+        identifier: signupForm.email.trim().toLowerCase(),
+        identifierKind: "email",
+        password: "",
+        method: "password",
       });
-      setLoginStep("otp");
       setMode("login");
-      toast.success("Account created", { description: `OTP sent to ${signupForm.email}` });
+      setLoginStep("form");
+      toast.success("Account created", {
+        description: "You can now sign in with your email, password, and company code.",
+      });
     } finally {
       setIsSubmittingSignup(false);
     }
@@ -816,12 +828,22 @@ const Index = () => {
                 className="focus-premium mt-1 w-full rounded-2xl border border-border bg-background px-4 py-3 font-semibold text-foreground placeholder:text-muted-foreground"
               />
             </label>
+            <label className="block">
+              <span className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Password (min 6 chars)</span>
+              <input
+                type="password"
+                value={signupForm.password}
+                onChange={(event) => updateSignupForm("password", event.target.value)}
+                placeholder="••••••••"
+                className="focus-premium mt-1 w-full rounded-2xl border border-border bg-background px-4 py-3 font-semibold text-foreground placeholder:text-muted-foreground"
+              />
+            </label>
             <button
               type="submit"
               disabled={isSubmittingSignup}
               className="focus-premium flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 font-extrabold text-primary-foreground shadow-glow transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground disabled:shadow-none"
             >
-              <UserPlus className="h-5 w-5" /> {isSubmittingSignup ? "Creating..." : "Sign up & send OTP"}
+              <UserPlus className="h-5 w-5" /> {isSubmittingSignup ? "Creating..." : "Create account"}
             </button>
           </form>
         ) : (
