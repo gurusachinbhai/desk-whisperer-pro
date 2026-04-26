@@ -9,15 +9,21 @@ import {
   Clock3,
   Copy,
   DoorOpen,
+  History,
   KeyRound,
+  LogOut,
   Mail,
   MapPin,
+  Moon,
   QrCode,
   Search,
   Send,
+  Settings as SettingsIcon,
   ShieldCheck,
   Smartphone,
   Sofa,
+  Sun,
+  User as UserIcon,
   UserPlus,
   Users,
 } from "lucide-react";
@@ -178,6 +184,32 @@ const Index = () => {
   const [isBookingDesk, setIsBookingDesk] = useState(false);
   const [bookingText, setBookingText] = useState("No active booking yet");
   const [clientSessionId] = useState(getClientSessionId);
+  const [currentUser, setCurrentUser] = useState<{ displayName: string; email: string } | null>(null);
+  const [theme, setTheme] = useState<"light" | "dark">(() =>
+    (typeof window !== "undefined" && window.localStorage.getItem("deskflow-theme") === "dark") ? "dark" : "light"
+  );
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    document.documentElement.classList.toggle("dark", theme === "dark");
+    window.localStorage.setItem("deskflow-theme", theme);
+  }, [theme]);
+
+  const isAuthenticated = Boolean(currentUser && companyProfile);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setCurrentUser(null);
+    setCompanyProfile(null);
+    setIsAdmin(false);
+    setInvites([]);
+    setActiveTab("home");
+    setLoginStep("form");
+    setOtpCode("");
+    setPendingLogin(null);
+    setLoginForm({ orgCode: "", identifier: "", identifierKind: "email", password: "", method: "password" });
+    toast.success("Signed out");
+  };
 
   // New booking selection state (floor / seat / room / hourly slot)
   const [bookingKind, setBookingKind] = useState<BookingKind>("desk");
@@ -462,6 +494,7 @@ const Index = () => {
       }
 
       setCompanyProfile({ id: "", name: match.company_name, organization_code: loginForm.orgCode });
+      setCurrentUser({ displayName: match.display_name ?? "Employee", email: match.employee_email });
       setActiveTab("home");
       toast.success("Welcome", { description: `Signed in to ${match.company_name}` });
     } finally {
@@ -559,6 +592,7 @@ const Index = () => {
         name: pendingLogin.companyName,
         organization_code: pendingLogin.orgCode,
       });
+      setCurrentUser({ displayName: pendingLogin.email.split("@")[0], email: pendingLogin.email });
       setLoginStep("form");
       setOtpCode("");
       setPendingLogin(null);
@@ -1136,40 +1170,209 @@ const Index = () => {
     </div>
   );
 
-  const renderHomeScreen = () => (
-    <>
-      <div className="rounded-[1.5rem] bg-surface-raised p-4 shadow-card">
-        <div className="flex items-center gap-3">
-          <div className="grid h-10 w-10 place-items-center rounded-2xl bg-primary/10 text-primary">
-            <ShieldCheck className="h-5 w-5" />
+  const renderHomeScreen = () => {
+    if (!isAuthenticated) return null;
+    const initials = (currentUser?.displayName ?? "E")
+      .split(/\s+/)
+      .map((part) => part.charAt(0).toUpperCase())
+      .slice(0, 2)
+      .join("");
+
+    const recentActivities = [
+      ...confirmedBookings.slice(0, 3).map((booking) => ({
+        id: `act-${booking.id}`,
+        icon: booking.kind === "desk" ? Sofa : DoorOpen,
+        title: `${booking.kind === "desk" ? "Seat" : "Room"} ${booking.spot} · Floor ${booking.floor}`,
+        meta: booking.time,
+      })),
+      { id: "act-login", icon: ShieldCheck, title: "Signed in to workspace", meta: "Just now" },
+    ].slice(0, 4);
+
+    return (
+      <>
+        {/* Profile header */}
+        <div className="rounded-[1.5rem] bg-surface-raised p-4 shadow-card">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="grid h-14 w-14 place-items-center rounded-full bg-primary text-primary-foreground shadow-glow">
+                <span className="font-display text-xl font-extrabold">{initials || "E"}</span>
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Welcome back</p>
+                <h2 className="truncate font-display text-xl font-extrabold">{currentUser?.displayName}</h2>
+                <p className="truncate text-xs font-semibold text-muted-foreground">{currentUser?.email}</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="focus-premium grid h-10 w-10 place-items-center rounded-2xl bg-muted text-muted-foreground hover:text-destructive"
+              aria-label="Sign out"
+            >
+              <LogOut className="h-4 w-4" />
+            </button>
           </div>
-          <div>
-            <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Home</p>
-            <h2 className="font-display text-2xl font-extrabold">Login to continue</h2>
+
+          {companyProfile && (
+            <div className="mt-4 flex items-center gap-3 rounded-2xl bg-background p-3">
+              <div className="grid h-10 w-10 place-items-center rounded-2xl bg-primary/10 text-primary">
+                <Building2 className="h-5 w-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Company</p>
+                <p className="truncate font-display text-base font-extrabold">{companyProfile.name}</p>
+                <p className="truncate text-xs font-semibold text-muted-foreground">Code · {companyProfile.organization_code}</p>
+              </div>
+            </div>
+          )}
+
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <div className="rounded-2xl bg-primary/10 p-3">
+              <p className="text-2xl font-extrabold text-primary">{confirmedBookings.length}</p>
+              <p className="text-[10px] font-bold uppercase text-muted-foreground">Bookings</p>
+            </div>
+            <div className="rounded-2xl bg-success/15 p-3">
+              <p className="text-2xl font-extrabold text-success">{availableCount}</p>
+              <p className="text-[10px] font-bold uppercase text-muted-foreground">Desks free</p>
+            </div>
           </div>
         </div>
-        {companyProfile && (
-          <div className="mt-4 rounded-2xl bg-background p-4">
-            <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Signed in workspace</p>
-            <p className="font-display text-xl font-extrabold">{companyProfile.name}</p>
-            <p className="mt-1 text-sm font-semibold text-muted-foreground">Organization ID · {companyProfile.organization_code}</p>
-          </div>
-        )}
-      </div>
-      {companyProfile ? (
-        <button onClick={() => setActiveTab("book")} className="focus-premium flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 font-extrabold text-primary-foreground shadow-glow">
-          <CalendarCheck className="h-5 w-5" /> Go to Book screen
-        </button>
-      ) : renderEmployeeAuth()}
-    </>
-  );
 
-  const shouldShowEmployerFirst = !companyProfile && !inviteToken;
+        {/* Activities */}
+        <div className="rounded-[1.5rem] bg-surface-raised p-4 shadow-card">
+          <div className="mb-3 flex items-center gap-2">
+            <History className="h-4 w-4 text-primary" />
+            <h3 className="font-display text-base font-extrabold">Recent activity</h3>
+          </div>
+          <div className="space-y-2">
+            {recentActivities.map((item) => (
+              <div key={item.id} className="flex items-center gap-3 rounded-2xl bg-background p-3">
+                <div className="grid h-9 w-9 place-items-center rounded-2xl bg-primary/10 text-primary">
+                  <item.icon className="h-4 w-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-extrabold">{item.title}</p>
+                  <p className="text-xs font-semibold text-muted-foreground">{item.meta}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Booking history */}
+        <div className="rounded-[1.5rem] bg-surface-raised p-4 shadow-card">
+          <div className="mb-3 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <CalendarCheck className="h-4 w-4 text-primary" />
+              <h3 className="font-display text-base font-extrabold">Booking history</h3>
+            </div>
+            <button
+              type="button"
+              onClick={() => setActiveTab("book")}
+              className="focus-premium text-xs font-extrabold text-primary"
+            >
+              New booking
+            </button>
+          </div>
+          {confirmedBookings.length === 0 ? (
+            <p className="rounded-2xl bg-background p-4 text-center text-xs font-semibold text-muted-foreground">
+              No bookings yet. Tap Book to reserve a desk or meeting room.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {confirmedBookings.map((booking) => (
+                <div key={booking.id} className="flex items-center justify-between gap-3 rounded-2xl bg-background p-3">
+                  <div className="flex items-center gap-2">
+                    {booking.kind === "desk" ? (
+                      <Sofa className="h-4 w-4 text-primary" />
+                    ) : (
+                      <DoorOpen className="h-4 w-4 text-primary" />
+                    )}
+                    <div>
+                      <p className="text-sm font-extrabold">
+                        {booking.kind === "desk" ? "Seat" : "Room"} {booking.spot} · Floor {booking.floor}
+                      </p>
+                      <p className="text-xs font-semibold text-muted-foreground">{booking.time}</p>
+                    </div>
+                  </div>
+                  <CheckCircle2 className="h-5 w-5 text-success" />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Settings */}
+        <div className="rounded-[1.5rem] bg-surface-raised p-4 shadow-card">
+          <div className="mb-3 flex items-center gap-2">
+            <SettingsIcon className="h-4 w-4 text-primary" />
+            <h3 className="font-display text-base font-extrabold">Settings</h3>
+          </div>
+          <div className="rounded-2xl bg-background p-3">
+            <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Theme</p>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              {(["light", "dark"] as const).map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => setTheme(option)}
+                  className={`focus-premium flex items-center justify-center gap-2 rounded-2xl py-2 text-sm font-extrabold transition-all ${
+                    theme === option
+                      ? "bg-primary text-primary-foreground shadow-glow"
+                      : "bg-muted text-muted-foreground"
+                  }`}
+                >
+                  {option === "light" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                  {option === "light" ? "Light" : "Dark"}
+                </button>
+              ))}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="focus-premium mt-3 flex w-full items-center justify-center gap-2 rounded-2xl border border-border bg-background px-4 py-3 text-sm font-extrabold text-destructive"
+          >
+            <LogOut className="h-4 w-4" /> Sign out
+          </button>
+        </div>
+      </>
+    );
+  };
+
+  // Login-only view: full screen, no bottom nav, no marketing column
+  if (!isAuthenticated) {
+    return (
+      <main className="min-h-screen bg-hero-field px-4 py-6 text-foreground">
+        <div className="mx-auto flex min-h-[calc(100vh-3rem)] w-full max-w-[460px] items-center justify-center">
+          <section className="w-full rounded-[2.25rem] border-[10px] border-foreground bg-foreground p-2 shadow-soft">
+            <div className="overflow-hidden rounded-[1.65rem] bg-background">
+              <div className="bg-primary px-5 pb-6 pt-6 text-primary-foreground">
+                <div className="flex items-center gap-3">
+                  <div className="grid h-12 w-12 place-items-center rounded-2xl bg-primary-foreground/15">
+                    <Building2 className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold opacity-80">Open Desk Flow</p>
+                    <h1 className="font-display text-2xl font-extrabold">Sign in to your workspace</h1>
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-5 px-5 py-5">
+                {inviteToken && renderTeamPanel()}
+                {renderEmployeeAuth()}
+              </div>
+            </div>
+          </section>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-hero-field px-4 py-6 text-foreground">
-      <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[420px_1fr] lg:items-start">
-        <section className="mx-auto w-full max-w-[420px] rounded-[2.25rem] border-[10px] border-foreground bg-foreground p-2 shadow-soft">
+      <div className="mx-auto flex w-full max-w-[460px] justify-center">
+        <section className="w-full rounded-[2.25rem] border-[10px] border-foreground bg-foreground p-2 shadow-soft">
           <div className="min-h-[820px] overflow-hidden rounded-[1.65rem] bg-background">
             <div className="flex items-center justify-between bg-primary px-5 pb-4 pt-5 text-primary-foreground">
               <ArrowLeft className="h-5 w-5" />
@@ -1180,20 +1383,19 @@ const Index = () => {
             <div className="bg-primary px-5 pb-6 text-primary-foreground">
               <div className="flex items-center gap-3">
                 <div className="grid h-12 w-12 place-items-center rounded-2xl bg-primary-foreground/15">
-                  <Building2 className="h-6 w-6" />
+                  <UserIcon className="h-6 w-6" />
                 </div>
-                <div>
-                  <p className="text-sm font-semibold opacity-80">Open Desk Flow</p>
-                  <h1 className="font-display text-2xl font-extrabold">Book Your Desk</h1>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold opacity-80">{companyProfile?.name}</p>
+                  <h1 className="truncate font-display text-2xl font-extrabold">Hi, {currentUser?.displayName}</h1>
                 </div>
               </div>
             </div>
 
             <div className="space-y-5 px-5 py-5">
-              {inviteToken && activeTab === "home" && renderTeamPanel()}
               {activeTab === "home" && renderHomeScreen()}
-              {companyProfile && isAdmin && activeTab === "admin" && renderAdminPanel()}
-              {companyProfile && activeTab === "team" && renderTeamPanel()}
+              {isAdmin && activeTab === "admin" && renderAdminPanel()}
+              {activeTab === "team" && renderTeamPanel()}
               {(activeTab === "book" || activeTab === "map") && renderBookingPanel()}
             </div>
 
@@ -1208,35 +1410,6 @@ const Index = () => {
                 </button>
               ))}
             </div>
-          </div>
-        </section>
-
-        <section className="space-y-6 py-4 lg:py-10">
-          <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-surface-glass px-4 py-2 text-sm font-bold text-primary shadow-card backdrop-blur">
-            <Smartphone className="h-4 w-4" /> Android home map login
-          </div>
-          <div>
-            <h2 className="font-display text-5xl font-extrabold leading-tight tracking-normal lg:text-7xl">Home is mapped to login.</h2>
-            <p className="mt-5 max-w-2xl text-lg leading-8 text-muted-foreground">
-              Open Desk Flow now starts on Home for login, and the Book tab is where users choose a desk, select a time slot, and confirm booking.
-            </p>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {[
-              { icon: Building2, title: "Employer signup", text: "Company admins create the organization profile before employees can access booking." },
-              { icon: ShieldCheck, title: "HR admin role", text: "Admins are stored securely in the role table and can manage company invitations." },
-              { icon: Send, title: "Employee links", text: "HR can create employee login links and open an email draft addressed to the employee." },
-              { icon: KeyRound, title: "Google login", text: "Managed Google sign-in is available for employers and invited employees." },
-              { icon: Clock3, title: "Real-time sync", text: "Desk occupancy updates persist and sync across different devices." },
-              { icon: CheckCircle2, title: "Android-ready", text: "The app stays in a phone-shell layout with bottom tabs and mobile-first controls." },
-              { icon: QrCode, title: "Invite token", text: "Employee access is tied to a secure invitation token that expires automatically." },
-            ].map((item) => (
-              <article key={item.title} className="rounded-[1.5rem] border border-border bg-panel-sheen p-5 shadow-card transition-transform hover:-translate-y-1">
-                <item.icon className="h-8 w-8 text-primary" />
-                <h3 className="mt-4 font-display text-xl font-extrabold">{item.title}</h3>
-                <p className="mt-2 text-sm leading-6 text-muted-foreground">{item.text}</p>
-              </article>
-            ))}
           </div>
         </section>
       </div>
