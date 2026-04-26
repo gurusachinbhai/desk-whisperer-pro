@@ -1158,25 +1158,51 @@ const Index = () => {
         </div>
       )}
 
-      {/* Hourly time slots 8 AM - 8 PM */}
+      {/* Shift selection */}
       <div className="mt-4">
-        <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Time slot · 8 AM to 8 PM</p>
-        <div className="mt-2 grid grid-cols-3 gap-2">
-          {hourlyTimeSlots.map((slot) => (
+        <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Shift</p>
+        <div className="mt-2 grid grid-cols-2 gap-2">
+          {shiftDefinitions.map((shift) => (
             <button
-              key={slot}
+              key={shift.id}
               type="button"
-              onClick={() => setSelectedHourlySlot(slot)}
-              className={`focus-premium rounded-2xl px-1 py-2 text-xs font-extrabold transition-all ${
-                selectedHourlySlot === slot
+              onClick={() => {
+                setSelectedShift(shift.id);
+                setSelectedHourlySlot(shift.times[0]);
+              }}
+              className={`focus-premium rounded-2xl py-2 text-xs font-extrabold transition-all ${
+                selectedShift === shift.id
                   ? "bg-primary text-primary-foreground shadow-glow"
                   : "bg-muted text-muted-foreground"
               }`}
             >
-              {slot}
+              <span className="block">{shift.label}</span>
+              <span className="block text-[10px] font-semibold opacity-80">{shift.range}</span>
             </button>
           ))}
         </div>
+      </div>
+
+      {/* Time dropdown — based on selected shift */}
+      <div className="mt-4">
+        <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+          Time · {currentShift.label} ({currentShift.range})
+        </p>
+        <Select
+          value={selectedHourlySlot}
+          onValueChange={(value) => setSelectedHourlySlot(value)}
+        >
+          <SelectTrigger className="mt-2 h-12 rounded-2xl border-border bg-background text-sm font-extrabold">
+            <SelectValue placeholder="Select time" />
+          </SelectTrigger>
+          <SelectContent className="rounded-2xl">
+            {currentShift.times.map((slot) => (
+              <SelectItem key={slot} value={slot} className="text-sm font-bold">
+                {slot}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Summary + confirm */}
