@@ -1239,11 +1239,11 @@ const Index = () => {
         ))}
       </div>
 
-      {/* Floor selection 1 - 6 */}
+      {/* Floor selection (admin-managed) */}
       <div className="mt-4">
         <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Floor</p>
         <div className="mt-2 grid grid-cols-6 gap-2">
-          {floorOptions.map((floor) => (
+          {companyFloors.map((floor) => (
             <button
               key={floor}
               type="button"
@@ -1258,11 +1258,11 @@ const Index = () => {
         </div>
       </div>
 
-      {/* Area selection AREA-01 to AREA-06 */}
+      {/* Area selection (admin-managed) */}
       <div className="mt-4">
         <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Area</p>
         <div className="mt-2 grid grid-cols-3 gap-2">
-          {areaOptions.map((area) => (
+          {companyAreas.map((area) => (
             <button
               key={area}
               type="button"
