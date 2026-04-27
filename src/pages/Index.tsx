@@ -1572,6 +1572,76 @@ const Index = () => {
           </div>
         </div>
 
+        {/* Timezone — commit forever */}
+        <div className="rounded-[1.5rem] bg-surface-raised p-4 shadow-card">
+          <div className="mb-3 flex items-center gap-2">
+            <Globe2 className="h-4 w-4 text-primary" />
+            <h3 className="font-display text-base font-extrabold">Your timezone</h3>
+            {userTimezone && (
+              <span className="ml-auto flex items-center gap-1 rounded-full bg-success/15 px-2 py-0.5 text-[10px] font-extrabold uppercase text-success">
+                <Lock className="h-3 w-3" /> Locked
+              </span>
+            )}
+          </div>
+          {userTimezone ? (
+            <div className="rounded-2xl bg-background p-3">
+              <p className="text-xs font-semibold text-muted-foreground">Committed timezone</p>
+              <p className="font-display text-base font-extrabold">{userTimezone}</p>
+              <p className="mt-1 text-[10px] font-semibold text-muted-foreground">
+                This selection is permanent. Contact the Open Desk Flow team to change it.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-muted-foreground">
+                Pick your timezone — once committed, it cannot be changed from here.
+              </p>
+              <Select value={draftTimezone} onValueChange={(v) => setDraftTimezone(v)}>
+                <SelectTrigger className="h-12 rounded-2xl border-border bg-background text-sm font-extrabold">
+                  <SelectValue placeholder="Select timezone" />
+                </SelectTrigger>
+                <SelectContent className="rounded-2xl">
+                  {TIMEZONE_OPTIONS.map((tz) => (
+                    <SelectItem key={tz} value={tz} className="text-sm font-bold">
+                      {tz}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <button
+                type="button"
+                onClick={handleCommitTimezone}
+                className="focus-premium flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-extrabold text-primary-foreground shadow-glow"
+              >
+                <Lock className="h-4 w-4" /> Commit timezone forever
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Become an Admin (only show for non-admins) */}
+        {!isAdmin && (
+          <div className="rounded-[1.5rem] bg-surface-raised p-4 shadow-card">
+            <div className="mb-3 flex items-center gap-2">
+              <ShieldCheck className="h-4 w-4 text-primary" />
+              <h3 className="font-display text-base font-extrabold">Become an Admin</h3>
+            </div>
+            <p className="text-xs font-semibold leading-5 text-muted-foreground">
+              To become an admin for {companyProfile?.name ?? "your company"}, send a request email to the Open Desk Flow team. Once approved, the Admin tab and company management tools will appear here.
+            </p>
+            <a
+              href={`mailto:Opendeskflow2026@gmail.com?cc=Admin@Opendeskflow.team&subject=${encodeURIComponent(
+                `Admin access request — ${companyProfile?.name ?? ""} (${companyProfile?.organization_code ?? ""})`,
+              )}&body=${encodeURIComponent(
+                `Hi Open Desk Flow team,\n\nPlease grant admin access to:\nName: ${currentUser?.displayName ?? ""}\nEmail: ${currentUser?.email ?? ""}\nCompany: ${companyProfile?.name ?? ""}\nCompany code: ${companyProfile?.organization_code ?? ""}\n\nThanks.`,
+              )}`}
+              className="focus-premium mt-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-extrabold text-primary-foreground shadow-glow"
+            >
+              <Mail className="h-4 w-4" /> Email request to Open Desk Flow
+            </a>
+          </div>
+        )}
+
         {/* Booking history */}
         <div className="rounded-[1.5rem] bg-surface-raised p-4 shadow-card">
           <div className="mb-3 flex items-center justify-between">
@@ -1593,24 +1663,41 @@ const Index = () => {
             </p>
           ) : (
             <div className="space-y-2">
-              {confirmedBookings.map((booking) => (
-                <div key={booking.id} className="flex items-center justify-between gap-3 rounded-2xl bg-background p-3">
-                  <div className="flex items-center gap-2">
-                    {booking.kind === "desk" ? (
-                      <Sofa className="h-4 w-4 text-primary" />
-                    ) : (
-                      <DoorOpen className="h-4 w-4 text-primary" />
-                    )}
-                    <div>
-                      <p className="text-sm font-extrabold">
-                        {booking.kind === "desk" ? "Seat" : "Room"} {booking.spot} · Floor {booking.floor}
-                      </p>
-                      <p className="text-xs font-semibold text-muted-foreground">{booking.time}</p>
+              {confirmedBookings.map((booking) => {
+                const isActive = !booking.released && booking.endsAt > nowTs;
+                return (
+                  <div key={booking.id} className="flex items-center justify-between gap-3 rounded-2xl bg-background p-3">
+                    <div className="flex min-w-0 items-center gap-2">
+                      {booking.kind === "desk" ? (
+                        <Sofa className="h-4 w-4 shrink-0 text-primary" />
+                      ) : (
+                        <DoorOpen className="h-4 w-4 shrink-0 text-primary" />
+                      )}
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-extrabold">
+                          {booking.kind === "desk" ? "Seat" : "Room"} {booking.spot} · Floor {booking.floor} · {booking.area}
+                        </p>
+                        <p className="truncate text-xs font-semibold text-muted-foreground">
+                          {booking.date} · {booking.shift} ({booking.shiftRange})
+                        </p>
+                      </div>
                     </div>
+                    {isActive ? (
+                      <button
+                        type="button"
+                        onClick={() => handleReleaseBooking(booking.id)}
+                        className="focus-premium flex shrink-0 items-center gap-1 rounded-2xl bg-destructive px-3 py-2 text-xs font-extrabold text-destructive-foreground shadow-md ring-2 ring-destructive/40 transition-transform hover:-translate-y-0.5"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" /> Release
+                      </button>
+                    ) : (
+                      <span className="shrink-0 rounded-full bg-muted px-2 py-1 text-[10px] font-extrabold uppercase text-muted-foreground">
+                        {booking.released ? "Released" : "Ended"}
+                      </span>
+                    )}
                   </div>
-                  <CheckCircle2 className="h-5 w-5 text-success" />
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
