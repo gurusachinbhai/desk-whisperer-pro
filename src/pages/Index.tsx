@@ -284,8 +284,10 @@ const Index = () => {
 
   // New booking selection state (floor / area / seat / room / shift / hourly slot)
   const [bookingKind, setBookingKind] = useState<BookingKind>("desk");
+  const [companyFloors, setCompanyFloors] = useState<number[]>(DEFAULT_FLOORS);
+  const [companyAreas, setCompanyAreas] = useState<string[]>(DEFAULT_AREAS);
   const [selectedFloor, setSelectedFloor] = useState<number>(1);
-  const [selectedArea, setSelectedArea] = useState<string>(areaOptions[0]);
+  const [selectedArea, setSelectedArea] = useState<string>(DEFAULT_AREAS[0]);
   const [selectedSeat, setSelectedSeat] = useState<string>("A1");
   const [selectedRoom, setSelectedRoom] = useState<string>("M01");
   const [selectedShift, setSelectedShift] = useState<ShiftKey>("morning");
