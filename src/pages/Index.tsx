@@ -4,13 +4,16 @@ import {
   Bell,
   Building2,
   CalendarCheck,
+  CalendarIcon,
   CheckCircle2,
   ChevronRight,
   Clock3,
   Copy,
   DoorOpen,
+  Globe2,
   History,
   KeyRound,
+  Lock,
   LogOut,
   Mail,
   MapPin,
@@ -23,12 +26,14 @@ import {
   Smartphone,
   Sofa,
   Sun,
+  Trash2,
   User as UserIcon,
   UserPlus,
   Users,
 } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { format } from "date-fns";
 import { lovable } from "@/integrations/lovable";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -38,6 +43,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 
 type Desk = {
   dbId?: string;
@@ -120,32 +128,64 @@ const meetingRooms = ["M01", "M02", "M03", "M04", "M05"] as const;
 
 type ShiftKey = "morning" | "day" | "afternoon" | "night";
 
-const shiftDefinitions: { id: ShiftKey; label: string; range: string; times: string[] }[] = [
+const shiftDefinitions: { id: ShiftKey; label: string; range: string; startHour: number; endHour: number; times: string[] }[] = [
   {
     id: "morning",
     label: "Morning",
     range: "6 AM – 2 PM",
+    startHour: 6,
+    endHour: 14,
     times: ["06:00 AM", "07:00 AM", "08:00 AM", "09:00 AM", "10:00 AM", "11:00 AM", "12:00 PM", "01:00 PM"],
   },
   {
     id: "day",
     label: "Day",
     range: "9 AM – 5 PM",
+    startHour: 9,
+    endHour: 17,
     times: ["09:00 AM", "10:00 AM", "11:00 AM", "12:00 PM", "01:00 PM", "02:00 PM", "03:00 PM", "04:00 PM"],
   },
   {
     id: "afternoon",
     label: "Afternoon",
     range: "2 PM – 10 PM",
+    startHour: 14,
+    endHour: 22,
     times: ["02:00 PM", "03:00 PM", "04:00 PM", "05:00 PM", "06:00 PM", "07:00 PM", "08:00 PM", "09:00 PM"],
   },
   {
     id: "night",
     label: "Night",
     range: "10 PM – 6 AM",
+    startHour: 22,
+    endHour: 30, // wraps to next-day 6 AM (24 + 6)
     times: ["10:00 PM", "11:00 PM", "12:00 AM", "01:00 AM", "02:00 AM", "03:00 AM", "04:00 AM", "05:00 AM"],
   },
 ];
+
+// Common IANA timezones
+const TIMEZONE_OPTIONS = [
+  "Asia/Kolkata", "Asia/Dubai", "Asia/Singapore", "Asia/Tokyo", "Asia/Hong_Kong",
+  "Europe/London", "Europe/Paris", "Europe/Berlin", "Europe/Moscow",
+  "America/New_York", "America/Chicago", "America/Denver", "America/Los_Angeles",
+  "America/Sao_Paulo", "Australia/Sydney", "Pacific/Auckland", "UTC",
+];
+
+type ConfirmedBooking = {
+  id: string;
+  kind: BookingKind;
+  floor: number;
+  area: string;
+  spot: string;
+  time: string;
+  shift: string;
+  shiftKey: ShiftKey;
+  shiftRange: string;
+  date: string; // yyyy-MM-dd
+  endsAt: number; // epoch ms when shift ends, used for auto-release
+  released: boolean;
+};
+
 type BookingKind = "desk" | "room";
 
 const bottomTabs: { id: ActiveTab; icon: typeof CalendarCheck; label: string }[] = [
@@ -155,6 +195,13 @@ const bottomTabs: { id: ActiveTab; icon: typeof CalendarCheck; label: string }[]
   { id: "admin", icon: BarChart3, label: "Admin" },
   { id: "team", icon: Users, label: "Team" },
 ];
+
+// Compute the epoch ms when a shift ends on a given date (handles night-shift wrap)
+const computeShiftEnd = (date: Date, shift: typeof shiftDefinitions[number]) => {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  return d.getTime() + shift.endHour * 60 * 60 * 1000;
+};
 
 const getClientSessionId = () => {
   const storageKey = "deskflow-client-session-id";
@@ -243,9 +290,43 @@ const Index = () => {
   const [selectedRoom, setSelectedRoom] = useState<string>("M01");
   const [selectedShift, setSelectedShift] = useState<ShiftKey>("morning");
   const [selectedHourlySlot, setSelectedHourlySlot] = useState<string>("06:00 AM");
-  const [confirmedBookings, setConfirmedBookings] = useState<
-    { id: string; kind: BookingKind; floor: number; area: string; spot: string; time: string; shift: string }[]
-  >([]);
+  const [bookingDate, setBookingDate] = useState<Date>(() => new Date());
+  const [confirmedBookings, setConfirmedBookings] = useState<ConfirmedBooking[]>([]);
+
+  // Timezone — committed once, then locked forever (per device)
+  const [userTimezone, setUserTimezone] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    return window.localStorage.getItem("deskflow-user-timezone");
+  });
+  const [draftTimezone, setDraftTimezone] = useState<string>(
+    () =>
+      (typeof window !== "undefined" && window.localStorage.getItem("deskflow-user-timezone")) ||
+      Intl.DateTimeFormat().resolvedOptions().timeZone ||
+      "UTC",
+  );
+
+  // Tick clock every 30s so the auto-release sweep runs and the home greeting stays fresh
+  const [nowTs, setNowTs] = useState<number>(() => Date.now());
+  useEffect(() => {
+    const id = window.setInterval(() => setNowTs(Date.now()), 30_000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  // Auto-release any booking whose shift end has passed
+  useEffect(() => {
+    setConfirmedBookings((current) => {
+      let changed = false;
+      const next = current.map((b) => {
+        if (!b.released && b.endsAt <= nowTs) {
+          changed = true;
+          return { ...b, released: true };
+        }
+        return b;
+      });
+      return changed ? next : current;
+    });
+  }, [nowTs]);
+
 
   const selectedDesk = useMemo(() => desks.find((desk) => desk.id === selectedDeskId), [desks, selectedDeskId]);
   const availableCount = desks.filter((desk) => desk.status === "available").length;
@@ -1016,9 +1097,28 @@ const Index = () => {
     [selectedShift],
   );
 
+  const activeBookings = useMemo(
+    () => confirmedBookings.filter((b) => !b.released && b.endsAt > nowTs),
+    [confirmedBookings, nowTs],
+  );
+
   const handleConfirmBooking = () => {
+    if (bookingKind === "desk") {
+      const dateKey = format(bookingDate, "yyyy-MM-dd");
+      const conflict = activeBookings.find(
+        (b) => b.kind === "desk" && b.shiftKey === selectedShift && b.date === dateKey,
+      );
+      if (conflict) {
+        toast.error("You already have a seat for this shift", {
+          description: `Release ${conflict.spot} first if you want a different seat.`,
+        });
+        return;
+      }
+    }
+
     const spot = bookingKind === "desk" ? selectedSeat : selectedRoom;
-    const newBooking = {
+    const dateKey = format(bookingDate, "yyyy-MM-dd");
+    const newBooking: ConfirmedBooking = {
       id: `${Date.now()}`,
       kind: bookingKind,
       floor: selectedFloor,
@@ -1026,15 +1126,34 @@ const Index = () => {
       spot,
       time: selectedHourlySlot,
       shift: currentShift.label,
+      shiftKey: currentShift.id,
+      shiftRange: currentShift.range,
+      date: dateKey,
+      endsAt: computeShiftEnd(bookingDate, currentShift),
+      released: false,
     };
-    setConfirmedBookings((current) => [newBooking, ...current].slice(0, 6));
+    setConfirmedBookings((current) => [newBooking, ...current].slice(0, 12));
     setBookingText(
-      `${bookingKind === "desk" ? "Seat" : "Meeting room"} ${spot} · Floor ${selectedFloor} · ${selectedArea} · ${currentShift.label} ${selectedHourlySlot}`,
+      `${bookingKind === "desk" ? "Seat" : "Meeting room"} ${spot} · Floor ${selectedFloor} · ${selectedArea} · ${currentShift.label} (${currentShift.range})`,
     );
     toast.success(
       `${bookingKind === "desk" ? "Seat" : "Meeting room"} ${spot} booked`,
-      { description: `Floor ${selectedFloor} · ${selectedArea} · ${currentShift.label} · ${selectedHourlySlot}` },
+      { description: `Floor ${selectedFloor} · ${selectedArea} · ${currentShift.label} · ${currentShift.range}` },
     );
+  };
+
+  const handleReleaseBooking = (id: string) => {
+    setConfirmedBookings((current) =>
+      current.map((b) => (b.id === id ? { ...b, released: true } : b)),
+    );
+    toast.success("Desk released", { description: "Seat is now available for others." });
+  };
+
+  const handleCommitTimezone = () => {
+    if (!draftTimezone) return;
+    window.localStorage.setItem("deskflow-user-timezone", draftTimezone);
+    setUserTimezone(draftTimezone);
+    toast.success("Timezone locked", { description: `Set to ${draftTimezone}. This is permanent.` });
   };
 
   const renderBookingPanel = () => (
@@ -1048,6 +1167,57 @@ const Index = () => {
           <p className="text-2xl font-extrabold">{confirmedBookings.length}</p>
           <p className="text-[10px] font-bold uppercase">booked</p>
         </div>
+      </div>
+
+      {/* Company header */}
+      {companyProfile && (
+        <div className="mt-4 flex items-center gap-3 rounded-2xl bg-primary/10 p-3">
+          <div className="grid h-10 w-10 place-items-center rounded-2xl bg-primary text-primary-foreground">
+            <Building2 className="h-5 w-5" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="truncate font-display text-base font-extrabold">{companyProfile.name}</p>
+            <p className="truncate text-xs font-semibold text-muted-foreground">
+              Code · {companyProfile.organization_code}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Booking date */}
+      <div className="mt-4">
+        <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Booking date</p>
+        <Popover>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              className={cn(
+                "focus-premium mt-2 flex w-full items-center justify-between rounded-2xl border border-border bg-background px-4 py-3 text-left font-semibold",
+                !bookingDate && "text-muted-foreground",
+              )}
+            >
+              <span className="flex items-center gap-2">
+                <CalendarIcon className="h-4 w-4 text-primary" />
+                {bookingDate ? format(bookingDate, "EEE, MMM d, yyyy") : "Pick a date"}
+              </span>
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar
+              mode="single"
+              selected={bookingDate}
+              onSelect={(d) => d && setBookingDate(d)}
+              disabled={(date) => {
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                return date < today;
+              }}
+              initialFocus
+              className={cn("p-3 pointer-events-auto")}
+            />
+          </PopoverContent>
+        </Popover>
       </div>
 
       {/* Desk vs Meeting room toggle */}
@@ -1211,7 +1381,9 @@ const Index = () => {
         <p className="font-display text-xl font-extrabold">
           {bookingKind === "desk" ? "Seat" : "Room"} {bookingKind === "desk" ? selectedSeat : selectedRoom} · Floor {selectedFloor} · {selectedArea}
         </p>
-        <p className="mt-1 text-sm font-semibold text-muted-foreground">{currentShift.label} · {selectedHourlySlot}</p>
+        <p className="mt-1 text-sm font-semibold text-muted-foreground">
+          {format(bookingDate, "EEE, MMM d")} · {currentShift.label} ({currentShift.range}) · {selectedHourlySlot}
+        </p>
         <p className="mt-2 text-sm font-semibold text-primary">{bookingText}</p>
         <button
           type="button"
@@ -1225,24 +1397,42 @@ const Index = () => {
       {confirmedBookings.length > 0 && (
         <div className="mt-4 space-y-2">
           <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Recent bookings</p>
-          {confirmedBookings.map((booking) => (
-            <div key={booking.id} className="flex items-center justify-between gap-3 rounded-2xl bg-background p-3">
-              <div className="flex items-center gap-2">
-                {booking.kind === "desk" ? (
-                  <Sofa className="h-4 w-4 text-primary" />
-                ) : (
-                  <DoorOpen className="h-4 w-4 text-primary" />
-                )}
-                <div>
-                  <p className="text-sm font-extrabold">
-                    {booking.kind === "desk" ? "Seat" : "Room"} {booking.spot} · Floor {booking.floor}
-                  </p>
-                  <p className="text-xs font-semibold text-muted-foreground">{booking.time}</p>
+          {confirmedBookings.map((booking) => {
+            const isActive = !booking.released && booking.endsAt > nowTs;
+            return (
+              <div key={booking.id} className="flex items-center justify-between gap-3 rounded-2xl bg-background p-3">
+                <div className="flex min-w-0 items-center gap-2">
+                  {booking.kind === "desk" ? (
+                    <Sofa className="h-4 w-4 shrink-0 text-primary" />
+                  ) : (
+                    <DoorOpen className="h-4 w-4 shrink-0 text-primary" />
+                  )}
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-extrabold">
+                      {booking.kind === "desk" ? "Seat" : "Room"} {booking.spot} · Floor {booking.floor} · {booking.area}
+                    </p>
+                    <p className="truncate text-xs font-semibold text-muted-foreground">
+                      {booking.date} · {booking.shift} ({booking.shiftRange})
+                    </p>
+                  </div>
                 </div>
+                {isActive ? (
+                  <button
+                    type="button"
+                    onClick={() => handleReleaseBooking(booking.id)}
+                    className="focus-premium flex shrink-0 items-center gap-1 rounded-2xl bg-destructive px-3 py-2 text-xs font-extrabold text-destructive-foreground shadow-md ring-2 ring-destructive/40 transition-transform hover:-translate-y-0.5"
+                    aria-label="Release desk"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" /> Release
+                  </button>
+                ) : (
+                  <span className="shrink-0 rounded-full bg-muted px-2 py-1 text-[10px] font-extrabold uppercase text-muted-foreground">
+                    {booking.released ? "Released" : "Ended"}
+                  </span>
+                )}
               </div>
-              <CheckCircle2 className="h-5 w-5 text-success" />
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
@@ -1299,8 +1489,23 @@ const Index = () => {
               </div>
               <div className="min-w-0">
                 <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Welcome back</p>
-                <h2 className="truncate font-display text-xl font-extrabold">{currentUser?.displayName}</h2>
+                <h2 className="truncate font-display text-xl font-extrabold">
+                  {currentUser?.displayName}
+                  {companyProfile && (
+                    <span className="ml-1 text-sm font-bold text-muted-foreground">· {companyProfile.name}</span>
+                  )}
+                </h2>
                 <p className="truncate text-xs font-semibold text-muted-foreground">{currentUser?.email}</p>
+                <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                  <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-primary">
+                    Employee
+                  </span>
+                  {isAdmin && (
+                    <span className="rounded-full bg-success px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-success-foreground shadow-glow ring-2 ring-success/40">
+                      Admin
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
             <button
@@ -1318,11 +1523,19 @@ const Index = () => {
               <div className="grid h-10 w-10 place-items-center rounded-2xl bg-primary/10 text-primary">
                 <Building2 className="h-5 w-5" />
               </div>
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Company</p>
                 <p className="truncate font-display text-base font-extrabold">{companyProfile.name}</p>
                 <p className="truncate text-xs font-semibold text-muted-foreground">Code · {companyProfile.organization_code}</p>
               </div>
+              <span className={cn(
+                "shrink-0 rounded-full px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide",
+                isAdmin
+                  ? "bg-success text-success-foreground shadow-glow"
+                  : "bg-primary/15 text-primary",
+              )}>
+                {isAdmin ? "Admin" : "Employee"}
+              </span>
             </div>
           )}
 
@@ -1359,6 +1572,76 @@ const Index = () => {
           </div>
         </div>
 
+        {/* Timezone — commit forever */}
+        <div className="rounded-[1.5rem] bg-surface-raised p-4 shadow-card">
+          <div className="mb-3 flex items-center gap-2">
+            <Globe2 className="h-4 w-4 text-primary" />
+            <h3 className="font-display text-base font-extrabold">Your timezone</h3>
+            {userTimezone && (
+              <span className="ml-auto flex items-center gap-1 rounded-full bg-success/15 px-2 py-0.5 text-[10px] font-extrabold uppercase text-success">
+                <Lock className="h-3 w-3" /> Locked
+              </span>
+            )}
+          </div>
+          {userTimezone ? (
+            <div className="rounded-2xl bg-background p-3">
+              <p className="text-xs font-semibold text-muted-foreground">Committed timezone</p>
+              <p className="font-display text-base font-extrabold">{userTimezone}</p>
+              <p className="mt-1 text-[10px] font-semibold text-muted-foreground">
+                This selection is permanent. Contact the Open Desk Flow team to change it.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-muted-foreground">
+                Pick your timezone — once committed, it cannot be changed from here.
+              </p>
+              <Select value={draftTimezone} onValueChange={(v) => setDraftTimezone(v)}>
+                <SelectTrigger className="h-12 rounded-2xl border-border bg-background text-sm font-extrabold">
+                  <SelectValue placeholder="Select timezone" />
+                </SelectTrigger>
+                <SelectContent className="rounded-2xl">
+                  {TIMEZONE_OPTIONS.map((tz) => (
+                    <SelectItem key={tz} value={tz} className="text-sm font-bold">
+                      {tz}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <button
+                type="button"
+                onClick={handleCommitTimezone}
+                className="focus-premium flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-extrabold text-primary-foreground shadow-glow"
+              >
+                <Lock className="h-4 w-4" /> Commit timezone forever
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Become an Admin (only show for non-admins) */}
+        {!isAdmin && (
+          <div className="rounded-[1.5rem] bg-surface-raised p-4 shadow-card">
+            <div className="mb-3 flex items-center gap-2">
+              <ShieldCheck className="h-4 w-4 text-primary" />
+              <h3 className="font-display text-base font-extrabold">Become an Admin</h3>
+            </div>
+            <p className="text-xs font-semibold leading-5 text-muted-foreground">
+              To become an admin for {companyProfile?.name ?? "your company"}, send a request email to the Open Desk Flow team. Once approved, the Admin tab and company management tools will appear here.
+            </p>
+            <a
+              href={`mailto:Opendeskflow2026@gmail.com?cc=Admin@Opendeskflow.team&subject=${encodeURIComponent(
+                `Admin access request — ${companyProfile?.name ?? ""} (${companyProfile?.organization_code ?? ""})`,
+              )}&body=${encodeURIComponent(
+                `Hi Open Desk Flow team,\n\nPlease grant admin access to:\nName: ${currentUser?.displayName ?? ""}\nEmail: ${currentUser?.email ?? ""}\nCompany: ${companyProfile?.name ?? ""}\nCompany code: ${companyProfile?.organization_code ?? ""}\n\nThanks.`,
+              )}`}
+              className="focus-premium mt-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-extrabold text-primary-foreground shadow-glow"
+            >
+              <Mail className="h-4 w-4" /> Email request to Open Desk Flow
+            </a>
+          </div>
+        )}
+
         {/* Booking history */}
         <div className="rounded-[1.5rem] bg-surface-raised p-4 shadow-card">
           <div className="mb-3 flex items-center justify-between">
@@ -1380,24 +1663,41 @@ const Index = () => {
             </p>
           ) : (
             <div className="space-y-2">
-              {confirmedBookings.map((booking) => (
-                <div key={booking.id} className="flex items-center justify-between gap-3 rounded-2xl bg-background p-3">
-                  <div className="flex items-center gap-2">
-                    {booking.kind === "desk" ? (
-                      <Sofa className="h-4 w-4 text-primary" />
-                    ) : (
-                      <DoorOpen className="h-4 w-4 text-primary" />
-                    )}
-                    <div>
-                      <p className="text-sm font-extrabold">
-                        {booking.kind === "desk" ? "Seat" : "Room"} {booking.spot} · Floor {booking.floor}
-                      </p>
-                      <p className="text-xs font-semibold text-muted-foreground">{booking.time}</p>
+              {confirmedBookings.map((booking) => {
+                const isActive = !booking.released && booking.endsAt > nowTs;
+                return (
+                  <div key={booking.id} className="flex items-center justify-between gap-3 rounded-2xl bg-background p-3">
+                    <div className="flex min-w-0 items-center gap-2">
+                      {booking.kind === "desk" ? (
+                        <Sofa className="h-4 w-4 shrink-0 text-primary" />
+                      ) : (
+                        <DoorOpen className="h-4 w-4 shrink-0 text-primary" />
+                      )}
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-extrabold">
+                          {booking.kind === "desk" ? "Seat" : "Room"} {booking.spot} · Floor {booking.floor} · {booking.area}
+                        </p>
+                        <p className="truncate text-xs font-semibold text-muted-foreground">
+                          {booking.date} · {booking.shift} ({booking.shiftRange})
+                        </p>
+                      </div>
                     </div>
+                    {isActive ? (
+                      <button
+                        type="button"
+                        onClick={() => handleReleaseBooking(booking.id)}
+                        className="focus-premium flex shrink-0 items-center gap-1 rounded-2xl bg-destructive px-3 py-2 text-xs font-extrabold text-destructive-foreground shadow-md ring-2 ring-destructive/40 transition-transform hover:-translate-y-0.5"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" /> Release
+                      </button>
+                    ) : (
+                      <span className="shrink-0 rounded-full bg-muted px-2 py-1 text-[10px] font-extrabold uppercase text-muted-foreground">
+                        {booking.released ? "Released" : "Ended"}
+                      </span>
+                    )}
                   </div>
-                  <CheckCircle2 className="h-5 w-5 text-success" />
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
