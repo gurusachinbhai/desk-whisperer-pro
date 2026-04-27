@@ -332,8 +332,54 @@ const Index = () => {
     });
   }, [nowTs]);
 
+  // Load admin-managed floors/areas + roster whenever the company changes
+  useEffect(() => {
+    if (!companyProfile) return;
+    try {
+      const fRaw = window.localStorage.getItem(`deskflow-floors-${companyProfile.id}`);
+      const aRaw = window.localStorage.getItem(`deskflow-areas-${companyProfile.id}`);
+      if (fRaw) {
+        const parsed = JSON.parse(fRaw) as number[];
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setCompanyFloors(parsed);
+          if (!parsed.includes(selectedFloor)) setSelectedFloor(parsed[0]);
+        }
+      }
+      if (aRaw) {
+        const parsed = JSON.parse(aRaw) as string[];
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setCompanyAreas(parsed);
+          if (!parsed.includes(selectedArea)) setSelectedArea(parsed[0]);
+        }
+      }
+    } catch {
+      // ignore corrupt storage
+    }
+
+    // Fetch employees for this company (roster) — admin can see all members
+    (async () => {
+      const { data } = await supabase
+        .from("employee_profiles")
+        .select("id, display_name, email")
+        .eq("company_id", companyProfile.id)
+        .order("display_name", { ascending: true });
+      setEmployees((data ?? []) as Array<{ id: string; display_name: string; email: string | null }>);
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [companyProfile?.id]);
+
+  // Persist admin-managed floors/areas
+  useEffect(() => {
+    if (!companyProfile) return;
+    window.localStorage.setItem(`deskflow-floors-${companyProfile.id}`, JSON.stringify(companyFloors));
+  }, [companyFloors, companyProfile?.id]);
+  useEffect(() => {
+    if (!companyProfile) return;
+    window.localStorage.setItem(`deskflow-areas-${companyProfile.id}`, JSON.stringify(companyAreas));
+  }, [companyAreas, companyProfile?.id]);
 
   const selectedDesk = useMemo(() => desks.find((desk) => desk.id === selectedDeskId), [desks, selectedDeskId]);
+
   const availableCount = desks.filter((desk) => desk.status === "available").length;
   const inviteToken = new URLSearchParams(window.location.search).get("invite");
 
