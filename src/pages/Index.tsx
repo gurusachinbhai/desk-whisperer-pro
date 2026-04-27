@@ -4,13 +4,16 @@ import {
   Bell,
   Building2,
   CalendarCheck,
+  CalendarIcon,
   CheckCircle2,
   ChevronRight,
   Clock3,
   Copy,
   DoorOpen,
+  Globe2,
   History,
   KeyRound,
+  Lock,
   LogOut,
   Mail,
   MapPin,
@@ -23,12 +26,14 @@ import {
   Smartphone,
   Sofa,
   Sun,
+  Trash2,
   User as UserIcon,
   UserPlus,
   Users,
 } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { format } from "date-fns";
 import { lovable } from "@/integrations/lovable";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -38,6 +43,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 
 type Desk = {
   dbId?: string;
