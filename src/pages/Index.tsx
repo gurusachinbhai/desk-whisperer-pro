@@ -128,32 +128,64 @@ const meetingRooms = ["M01", "M02", "M03", "M04", "M05"] as const;
 
 type ShiftKey = "morning" | "day" | "afternoon" | "night";
 
-const shiftDefinitions: { id: ShiftKey; label: string; range: string; times: string[] }[] = [
+const shiftDefinitions: { id: ShiftKey; label: string; range: string; startHour: number; endHour: number; times: string[] }[] = [
   {
     id: "morning",
     label: "Morning",
     range: "6 AM – 2 PM",
+    startHour: 6,
+    endHour: 14,
     times: ["06:00 AM", "07:00 AM", "08:00 AM", "09:00 AM", "10:00 AM", "11:00 AM", "12:00 PM", "01:00 PM"],
   },
   {
     id: "day",
     label: "Day",
     range: "9 AM – 5 PM",
+    startHour: 9,
+    endHour: 17,
     times: ["09:00 AM", "10:00 AM", "11:00 AM", "12:00 PM", "01:00 PM", "02:00 PM", "03:00 PM", "04:00 PM"],
   },
   {
     id: "afternoon",
     label: "Afternoon",
     range: "2 PM – 10 PM",
+    startHour: 14,
+    endHour: 22,
     times: ["02:00 PM", "03:00 PM", "04:00 PM", "05:00 PM", "06:00 PM", "07:00 PM", "08:00 PM", "09:00 PM"],
   },
   {
     id: "night",
     label: "Night",
     range: "10 PM – 6 AM",
+    startHour: 22,
+    endHour: 30, // wraps to next-day 6 AM (24 + 6)
     times: ["10:00 PM", "11:00 PM", "12:00 AM", "01:00 AM", "02:00 AM", "03:00 AM", "04:00 AM", "05:00 AM"],
   },
 ];
+
+// Common IANA timezones
+const TIMEZONE_OPTIONS = [
+  "Asia/Kolkata", "Asia/Dubai", "Asia/Singapore", "Asia/Tokyo", "Asia/Hong_Kong",
+  "Europe/London", "Europe/Paris", "Europe/Berlin", "Europe/Moscow",
+  "America/New_York", "America/Chicago", "America/Denver", "America/Los_Angeles",
+  "America/Sao_Paulo", "Australia/Sydney", "Pacific/Auckland", "UTC",
+];
+
+type ConfirmedBooking = {
+  id: string;
+  kind: BookingKind;
+  floor: number;
+  area: string;
+  spot: string;
+  time: string;
+  shift: string;
+  shiftKey: ShiftKey;
+  shiftRange: string;
+  date: string; // yyyy-MM-dd
+  endsAt: number; // epoch ms when shift ends, used for auto-release
+  released: boolean;
+};
+
 type BookingKind = "desk" | "room";
 
 const bottomTabs: { id: ActiveTab; icon: typeof CalendarCheck; label: string }[] = [
@@ -163,6 +195,13 @@ const bottomTabs: { id: ActiveTab; icon: typeof CalendarCheck; label: string }[]
   { id: "admin", icon: BarChart3, label: "Admin" },
   { id: "team", icon: Users, label: "Team" },
 ];
+
+// Compute the epoch ms when a shift ends on a given date (handles night-shift wrap)
+const computeShiftEnd = (date: Date, shift: typeof shiftDefinitions[number]) => {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  return d.getTime() + shift.endHour * 60 * 60 * 1000;
+};
 
 const getClientSessionId = () => {
   const storageKey = "deskflow-client-session-id";
