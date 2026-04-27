@@ -1489,8 +1489,23 @@ const Index = () => {
               </div>
               <div className="min-w-0">
                 <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Welcome back</p>
-                <h2 className="truncate font-display text-xl font-extrabold">{currentUser?.displayName}</h2>
+                <h2 className="truncate font-display text-xl font-extrabold">
+                  {currentUser?.displayName}
+                  {companyProfile && (
+                    <span className="ml-1 text-sm font-bold text-muted-foreground">· {companyProfile.name}</span>
+                  )}
+                </h2>
                 <p className="truncate text-xs font-semibold text-muted-foreground">{currentUser?.email}</p>
+                <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                  <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-primary">
+                    Employee
+                  </span>
+                  {isAdmin && (
+                    <span className="rounded-full bg-success px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-success-foreground shadow-glow ring-2 ring-success/40">
+                      Admin
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
             <button
@@ -1508,11 +1523,19 @@ const Index = () => {
               <div className="grid h-10 w-10 place-items-center rounded-2xl bg-primary/10 text-primary">
                 <Building2 className="h-5 w-5" />
               </div>
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Company</p>
                 <p className="truncate font-display text-base font-extrabold">{companyProfile.name}</p>
                 <p className="truncate text-xs font-semibold text-muted-foreground">Code · {companyProfile.organization_code}</p>
               </div>
+              <span className={cn(
+                "shrink-0 rounded-full px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide",
+                isAdmin
+                  ? "bg-success text-success-foreground shadow-glow"
+                  : "bg-primary/15 text-primary",
+              )}>
+                {isAdmin ? "Admin" : "Employee"}
+              </span>
             </div>
           )}
 
