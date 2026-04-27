@@ -1097,9 +1097,28 @@ const Index = () => {
     [selectedShift],
   );
 
+  const activeBookings = useMemo(
+    () => confirmedBookings.filter((b) => !b.released && b.endsAt > nowTs),
+    [confirmedBookings, nowTs],
+  );
+
   const handleConfirmBooking = () => {
+    if (bookingKind === "desk") {
+      const dateKey = format(bookingDate, "yyyy-MM-dd");
+      const conflict = activeBookings.find(
+        (b) => b.kind === "desk" && b.shiftKey === selectedShift && b.date === dateKey,
+      );
+      if (conflict) {
+        toast.error("You already have a seat for this shift", {
+          description: `Release ${conflict.spot} first if you want a different seat.`,
+        });
+        return;
+      }
+    }
+
     const spot = bookingKind === "desk" ? selectedSeat : selectedRoom;
-    const newBooking = {
+    const dateKey = format(bookingDate, "yyyy-MM-dd");
+    const newBooking: ConfirmedBooking = {
       id: `${Date.now()}`,
       kind: bookingKind,
       floor: selectedFloor,
@@ -1107,15 +1126,34 @@ const Index = () => {
       spot,
       time: selectedHourlySlot,
       shift: currentShift.label,
+      shiftKey: currentShift.id,
+      shiftRange: currentShift.range,
+      date: dateKey,
+      endsAt: computeShiftEnd(bookingDate, currentShift),
+      released: false,
     };
-    setConfirmedBookings((current) => [newBooking, ...current].slice(0, 6));
+    setConfirmedBookings((current) => [newBooking, ...current].slice(0, 12));
     setBookingText(
-      `${bookingKind === "desk" ? "Seat" : "Meeting room"} ${spot} · Floor ${selectedFloor} · ${selectedArea} · ${currentShift.label} ${selectedHourlySlot}`,
+      `${bookingKind === "desk" ? "Seat" : "Meeting room"} ${spot} · Floor ${selectedFloor} · ${selectedArea} · ${currentShift.label} (${currentShift.range})`,
     );
     toast.success(
       `${bookingKind === "desk" ? "Seat" : "Meeting room"} ${spot} booked`,
-      { description: `Floor ${selectedFloor} · ${selectedArea} · ${currentShift.label} · ${selectedHourlySlot}` },
+      { description: `Floor ${selectedFloor} · ${selectedArea} · ${currentShift.label} · ${currentShift.range}` },
     );
+  };
+
+  const handleReleaseBooking = (id: string) => {
+    setConfirmedBookings((current) =>
+      current.map((b) => (b.id === id ? { ...b, released: true } : b)),
+    );
+    toast.success("Desk released", { description: "Seat is now available for others." });
+  };
+
+  const handleCommitTimezone = () => {
+    if (!draftTimezone) return;
+    window.localStorage.setItem("deskflow-user-timezone", draftTimezone);
+    setUserTimezone(draftTimezone);
+    toast.success("Timezone locked", { description: `Set to ${draftTimezone}. This is permanent.` });
   };
 
   const renderBookingPanel = () => (
