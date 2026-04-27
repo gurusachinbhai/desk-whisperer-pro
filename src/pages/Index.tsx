@@ -120,8 +120,8 @@ const initialDesks: Desk[] = [
 
 const timeSlots = ["Full Day", "Morning", "Afternoon"];
 
-const floorOptions = [1, 2, 3, 4, 5, 6];
-const areaOptions = ["AREA-01", "AREA-02", "AREA-03", "AREA-04", "AREA-05", "AREA-06"] as const;
+const DEFAULT_FLOORS = [1, 2, 3, 4, 5, 6];
+const DEFAULT_AREAS = ["AREA-01", "AREA-02", "AREA-03", "AREA-04", "AREA-05", "AREA-06"];
 const seatRows = ["A", "B", "C", "D", "E"] as const;
 const seatColumns = [1, 2, 3, 4] as const;
 const meetingRooms = ["M01", "M02", "M03", "M04", "M05"] as const;
