@@ -1397,24 +1397,42 @@ const Index = () => {
       {confirmedBookings.length > 0 && (
         <div className="mt-4 space-y-2">
           <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Recent bookings</p>
-          {confirmedBookings.map((booking) => (
-            <div key={booking.id} className="flex items-center justify-between gap-3 rounded-2xl bg-background p-3">
-              <div className="flex items-center gap-2">
-                {booking.kind === "desk" ? (
-                  <Sofa className="h-4 w-4 text-primary" />
-                ) : (
-                  <DoorOpen className="h-4 w-4 text-primary" />
-                )}
-                <div>
-                  <p className="text-sm font-extrabold">
-                    {booking.kind === "desk" ? "Seat" : "Room"} {booking.spot} · Floor {booking.floor}
-                  </p>
-                  <p className="text-xs font-semibold text-muted-foreground">{booking.time}</p>
+          {confirmedBookings.map((booking) => {
+            const isActive = !booking.released && booking.endsAt > nowTs;
+            return (
+              <div key={booking.id} className="flex items-center justify-between gap-3 rounded-2xl bg-background p-3">
+                <div className="flex min-w-0 items-center gap-2">
+                  {booking.kind === "desk" ? (
+                    <Sofa className="h-4 w-4 shrink-0 text-primary" />
+                  ) : (
+                    <DoorOpen className="h-4 w-4 shrink-0 text-primary" />
+                  )}
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-extrabold">
+                      {booking.kind === "desk" ? "Seat" : "Room"} {booking.spot} · Floor {booking.floor} · {booking.area}
+                    </p>
+                    <p className="truncate text-xs font-semibold text-muted-foreground">
+                      {booking.date} · {booking.shift} ({booking.shiftRange})
+                    </p>
+                  </div>
                 </div>
+                {isActive ? (
+                  <button
+                    type="button"
+                    onClick={() => handleReleaseBooking(booking.id)}
+                    className="focus-premium flex shrink-0 items-center gap-1 rounded-2xl bg-destructive px-3 py-2 text-xs font-extrabold text-destructive-foreground shadow-md ring-2 ring-destructive/40 transition-transform hover:-translate-y-0.5"
+                    aria-label="Release desk"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" /> Release
+                  </button>
+                ) : (
+                  <span className="shrink-0 rounded-full bg-muted px-2 py-1 text-[10px] font-extrabold uppercase text-muted-foreground">
+                    {booking.released ? "Released" : "Ended"}
+                  </span>
+                )}
               </div>
-              <CheckCircle2 className="h-5 w-5 text-success" />
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
