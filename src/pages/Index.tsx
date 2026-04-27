@@ -120,8 +120,8 @@ const initialDesks: Desk[] = [
 
 const timeSlots = ["Full Day", "Morning", "Afternoon"];
 
-const floorOptions = [1, 2, 3, 4, 5, 6];
-const areaOptions = ["AREA-01", "AREA-02", "AREA-03", "AREA-04", "AREA-05", "AREA-06"] as const;
+const DEFAULT_FLOORS = [1, 2, 3, 4, 5, 6];
+const DEFAULT_AREAS = ["AREA-01", "AREA-02", "AREA-03", "AREA-04", "AREA-05", "AREA-06"];
 const seatRows = ["A", "B", "C", "D", "E"] as const;
 const seatColumns = [1, 2, 3, 4] as const;
 const meetingRooms = ["M01", "M02", "M03", "M04", "M05"] as const;
@@ -245,6 +245,9 @@ const Index = () => {
   const [companyProfile, setCompanyProfile] = useState<CompanyProfile | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [invites, setInvites] = useState<EmployeeInvite[]>([]);
+  const [employees, setEmployees] = useState<Array<{ id: string; display_name: string; email: string | null }>>([]);
+  const [floorDraft, setFloorDraft] = useState<string>("");
+  const [areaDraft, setAreaDraft] = useState<string>("");
   const [latestInviteUrl, setLatestInviteUrl] = useState("");
   const [isSubmittingCompany, setIsSubmittingCompany] = useState(false);
   const [isCreatingInvite, setIsCreatingInvite] = useState(false);
@@ -284,8 +287,10 @@ const Index = () => {
 
   // New booking selection state (floor / area / seat / room / shift / hourly slot)
   const [bookingKind, setBookingKind] = useState<BookingKind>("desk");
+  const [companyFloors, setCompanyFloors] = useState<number[]>(DEFAULT_FLOORS);
+  const [companyAreas, setCompanyAreas] = useState<string[]>(DEFAULT_AREAS);
   const [selectedFloor, setSelectedFloor] = useState<number>(1);
-  const [selectedArea, setSelectedArea] = useState<string>(areaOptions[0]);
+  const [selectedArea, setSelectedArea] = useState<string>(DEFAULT_AREAS[0]);
   const [selectedSeat, setSelectedSeat] = useState<string>("A1");
   const [selectedRoom, setSelectedRoom] = useState<string>("M01");
   const [selectedShift, setSelectedShift] = useState<ShiftKey>("morning");
@@ -327,8 +332,54 @@ const Index = () => {
     });
   }, [nowTs]);
 
+  // Load admin-managed floors/areas + roster whenever the company changes
+  useEffect(() => {
+    if (!companyProfile) return;
+    try {
+      const fRaw = window.localStorage.getItem(`deskflow-floors-${companyProfile.id}`);
+      const aRaw = window.localStorage.getItem(`deskflow-areas-${companyProfile.id}`);
+      if (fRaw) {
+        const parsed = JSON.parse(fRaw) as number[];
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setCompanyFloors(parsed);
+          if (!parsed.includes(selectedFloor)) setSelectedFloor(parsed[0]);
+        }
+      }
+      if (aRaw) {
+        const parsed = JSON.parse(aRaw) as string[];
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setCompanyAreas(parsed);
+          if (!parsed.includes(selectedArea)) setSelectedArea(parsed[0]);
+        }
+      }
+    } catch {
+      // ignore corrupt storage
+    }
+
+    // Fetch employees for this company (roster) — admin can see all members
+    (async () => {
+      const { data } = await supabase
+        .from("employee_profiles")
+        .select("id, display_name, email")
+        .eq("company_id", companyProfile.id)
+        .order("display_name", { ascending: true });
+      setEmployees((data ?? []) as Array<{ id: string; display_name: string; email: string | null }>);
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [companyProfile?.id]);
+
+  // Persist admin-managed floors/areas
+  useEffect(() => {
+    if (!companyProfile) return;
+    window.localStorage.setItem(`deskflow-floors-${companyProfile.id}`, JSON.stringify(companyFloors));
+  }, [companyFloors, companyProfile?.id]);
+  useEffect(() => {
+    if (!companyProfile) return;
+    window.localStorage.setItem(`deskflow-areas-${companyProfile.id}`, JSON.stringify(companyAreas));
+  }, [companyAreas, companyProfile?.id]);
 
   const selectedDesk = useMemo(() => desks.find((desk) => desk.id === selectedDeskId), [desks, selectedDeskId]);
+
   const availableCount = desks.filter((desk) => desk.status === "available").length;
   const inviteToken = new URLSearchParams(window.location.search).get("invite");
 
@@ -1025,72 +1076,252 @@ const Index = () => {
     );
   };
 
+  const handleAddFloor = () => {
+    const n = Number(floorDraft.trim());
+    if (!Number.isInteger(n) || n < 1 || n > 200) {
+      toast.error("Floor must be a whole number between 1 and 200");
+      return;
+    }
+    if (companyFloors.includes(n)) {
+      toast.error(`Floor ${n} already exists`);
+      return;
+    }
+    setCompanyFloors((current) => [...current, n].sort((a, b) => a - b));
+    setFloorDraft("");
+    toast.success(`Floor ${n} added`);
+  };
+
+  const handleRemoveFloor = (n: number) => {
+    if (companyFloors.length <= 1) {
+      toast.error("Keep at least one floor");
+      return;
+    }
+    setCompanyFloors((current) => current.filter((f) => f !== n));
+    if (selectedFloor === n) setSelectedFloor(companyFloors.find((f) => f !== n) ?? 1);
+  };
+
+  const handleAddArea = () => {
+    const raw = areaDraft.trim().toUpperCase().replace(/\s+/g, "-");
+    if (raw.length < 2 || raw.length > 24) {
+      toast.error("Area code must be 2-24 characters");
+      return;
+    }
+    if (companyAreas.includes(raw)) {
+      toast.error(`${raw} already exists`);
+      return;
+    }
+    setCompanyAreas((current) => [...current, raw]);
+    setAreaDraft("");
+    toast.success(`${raw} added`);
+  };
+
+  const handleRemoveArea = (a: string) => {
+    if (companyAreas.length <= 1) {
+      toast.error("Keep at least one area");
+      return;
+    }
+    setCompanyAreas((current) => current.filter((x) => x !== a));
+    if (selectedArea === a) setSelectedArea(companyAreas.find((x) => x !== a) ?? DEFAULT_AREAS[0]);
+  };
+
   const renderAdminPanel = () => (
-    <div className="rounded-[1.5rem] bg-surface-raised p-4 shadow-card">
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <div>
-          <p className="text-sm font-bold text-primary">{companyProfile?.name ?? "Employer workspace"}</p>
-          <h2 className="font-display text-2xl font-extrabold">HR admin</h2>
-        </div>
-        <div className="rounded-2xl bg-success px-3 py-2 text-center text-success-foreground">
-          <p className="text-2xl font-extrabold">{invites.length}</p>
-          <p className="text-[10px] font-bold uppercase">links</p>
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="rounded-[1.5rem] bg-surface-raised p-4 shadow-card">
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-sm font-bold text-primary">{companyProfile?.name ?? "Employer workspace"}</p>
+            <h2 className="font-display text-2xl font-extrabold">Admin console</h2>
+            <p className="mt-1 truncate text-xs font-semibold text-muted-foreground">
+              Code · {companyProfile?.organization_code} · Scoped to your company
+            </p>
+          </div>
+          <div className="rounded-2xl bg-success px-3 py-2 text-center text-success-foreground">
+            <p className="text-2xl font-extrabold">{employees.length}</p>
+            <p className="text-[10px] font-bold uppercase">staff</p>
+          </div>
         </div>
       </div>
 
-      <form onSubmit={handleCreateInvite} className="space-y-3">
-        <label className="block">
-          <span className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Employee name</span>
+      {/* Floors management */}
+      <div className="rounded-[1.5rem] bg-surface-raised p-4 shadow-card">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h3 className="font-display text-lg font-extrabold">Floors</h3>
+            <p className="text-xs font-semibold text-muted-foreground">Floors employees can pick when booking</p>
+          </div>
+          <span className="rounded-full bg-muted px-3 py-1 text-xs font-extrabold">{companyFloors.length}</span>
+        </div>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {companyFloors.map((floor) => (
+            <span key={floor} className="flex items-center gap-2 rounded-2xl bg-muted px-3 py-2 text-sm font-extrabold">
+              Floor {floor}
+              <button
+                type="button"
+                onClick={() => handleRemoveFloor(floor)}
+                className="grid h-6 w-6 place-items-center rounded-full bg-background text-destructive"
+                aria-label={`Remove floor ${floor}`}
+              >
+                <Trash2 className="h-3 w-3" />
+              </button>
+            </span>
+          ))}
+        </div>
+        <div className="mt-3 flex gap-2">
           <input
-            value={inviteForm.employeeName}
-            onChange={(event) => setInviteForm((current) => ({ ...current, employeeName: event.target.value }))}
-            placeholder="Employee full name"
-            className="focus-premium mt-1 w-full rounded-2xl border border-border bg-background px-4 py-3 font-semibold text-foreground placeholder:text-muted-foreground"
+            value={floorDraft}
+            onChange={(e) => setFloorDraft(e.target.value)}
+            type="number"
+            min={1}
+            max={200}
+            placeholder="Floor number"
+            className="focus-premium flex-1 rounded-2xl border border-border bg-background px-4 py-3 font-semibold"
           />
-        </label>
-        <label className="block">
-          <span className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Employee email</span>
-          <input
-            value={inviteForm.employeeEmail}
-            onChange={(event) => setInviteForm((current) => ({ ...current, employeeEmail: event.target.value }))}
-            placeholder="employee@company.com"
-            className="focus-premium mt-1 w-full rounded-2xl border border-border bg-background px-4 py-3 font-semibold text-foreground placeholder:text-muted-foreground"
-          />
-        </label>
-        <button
-          type="submit"
-          disabled={isCreatingInvite || !companyProfile}
-          className="focus-premium flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 font-extrabold text-primary-foreground shadow-glow transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground disabled:shadow-none"
-        >
-          <Send className="h-5 w-5" /> {isCreatingInvite ? "Creating link..." : "Create login & send email link"}
-        </button>
-      </form>
-
-      {latestInviteUrl && (
-        <div className="mt-4 rounded-2xl bg-background p-3">
-          <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Latest employee link</p>
-          <p className="mt-1 break-all text-sm font-semibold text-foreground">{latestInviteUrl}</p>
-          <button onClick={() => copyInviteUrl(latestInviteUrl)} className="focus-premium mt-3 flex items-center gap-2 rounded-2xl bg-muted px-3 py-2 text-sm font-extrabold text-foreground">
-            <Copy className="h-4 w-4" /> Copy link
+          <button
+            type="button"
+            onClick={handleAddFloor}
+            className="focus-premium rounded-2xl bg-primary px-4 py-3 text-sm font-extrabold text-primary-foreground"
+          >
+            Add
           </button>
         </div>
-      )}
+      </div>
 
-      <div className="mt-4 space-y-2">
-        {invites.slice(0, 4).map((invite) => (
-          <div key={invite.id} className="flex items-center justify-between gap-3 rounded-2xl bg-background p-3">
-            <div className="min-w-0">
-              <p className="truncate font-bold">{invite.employee_name}</p>
-              <p className="truncate text-xs font-semibold text-muted-foreground">{invite.employee_email}</p>
-            </div>
-            <button onClick={() => copyInviteUrl(createInviteUrl(invite.invite_token))} className="focus-premium grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-muted text-primary">
-              <Copy className="h-4 w-4" />
+      {/* Areas management */}
+      <div className="rounded-[1.5rem] bg-surface-raised p-4 shadow-card">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h3 className="font-display text-lg font-extrabold">Areas</h3>
+            <p className="text-xs font-semibold text-muted-foreground">Zones (e.g. AREA-01) within a floor</p>
+          </div>
+          <span className="rounded-full bg-muted px-3 py-1 text-xs font-extrabold">{companyAreas.length}</span>
+        </div>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {companyAreas.map((area) => (
+            <span key={area} className="flex items-center gap-2 rounded-2xl bg-muted px-3 py-2 text-xs font-extrabold">
+              {area}
+              <button
+                type="button"
+                onClick={() => handleRemoveArea(area)}
+                className="grid h-6 w-6 place-items-center rounded-full bg-background text-destructive"
+                aria-label={`Remove ${area}`}
+              >
+                <Trash2 className="h-3 w-3" />
+              </button>
+            </span>
+          ))}
+        </div>
+        <div className="mt-3 flex gap-2">
+          <input
+            value={areaDraft}
+            onChange={(e) => setAreaDraft(e.target.value)}
+            placeholder="AREA-07"
+            className="focus-premium flex-1 rounded-2xl border border-border bg-background px-4 py-3 font-semibold uppercase"
+          />
+          <button
+            type="button"
+            onClick={handleAddArea}
+            className="focus-premium rounded-2xl bg-primary px-4 py-3 text-sm font-extrabold text-primary-foreground"
+          >
+            Add
+          </button>
+        </div>
+      </div>
+
+      {/* Employee invites */}
+      <div className="rounded-[1.5rem] bg-surface-raised p-4 shadow-card">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <div>
+            <h3 className="font-display text-lg font-extrabold">Add employees</h3>
+            <p className="text-xs font-semibold text-muted-foreground">Send a one-click email link</p>
+          </div>
+          <span className="rounded-full bg-muted px-3 py-1 text-xs font-extrabold">{invites.length} links</span>
+        </div>
+        <form onSubmit={handleCreateInvite} className="space-y-3">
+          <label className="block">
+            <span className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Employee name</span>
+            <input
+              value={inviteForm.employeeName}
+              onChange={(event) => setInviteForm((current) => ({ ...current, employeeName: event.target.value }))}
+              placeholder="Employee full name"
+              className="focus-premium mt-1 w-full rounded-2xl border border-border bg-background px-4 py-3 font-semibold text-foreground placeholder:text-muted-foreground"
+            />
+          </label>
+          <label className="block">
+            <span className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Employee email</span>
+            <input
+              value={inviteForm.employeeEmail}
+              onChange={(event) => setInviteForm((current) => ({ ...current, employeeEmail: event.target.value }))}
+              placeholder="employee@company.com"
+              className="focus-premium mt-1 w-full rounded-2xl border border-border bg-background px-4 py-3 font-semibold text-foreground placeholder:text-muted-foreground"
+            />
+          </label>
+          <button
+            type="submit"
+            disabled={isCreatingInvite || !companyProfile}
+            className="focus-premium flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 font-extrabold text-primary-foreground shadow-glow transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground disabled:shadow-none"
+          >
+            <Send className="h-5 w-5" /> {isCreatingInvite ? "Creating link..." : "Create login & send email link"}
+          </button>
+        </form>
+
+        {latestInviteUrl && (
+          <div className="mt-4 rounded-2xl bg-background p-3">
+            <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Latest employee link</p>
+            <p className="mt-1 break-all text-sm font-semibold text-foreground">{latestInviteUrl}</p>
+            <button onClick={() => copyInviteUrl(latestInviteUrl)} className="focus-premium mt-3 flex items-center gap-2 rounded-2xl bg-muted px-3 py-2 text-sm font-extrabold text-foreground">
+              <Copy className="h-4 w-4" /> Copy link
             </button>
           </div>
-        ))}
+        )}
+
+        <div className="mt-4 space-y-2">
+          {invites.slice(0, 4).map((invite) => (
+            <div key={invite.id} className="flex items-center justify-between gap-3 rounded-2xl bg-background p-3">
+              <div className="min-w-0">
+                <p className="truncate font-bold">{invite.employee_name}</p>
+                <p className="truncate text-xs font-semibold text-muted-foreground">{invite.employee_email}</p>
+              </div>
+              <button onClick={() => copyInviteUrl(createInviteUrl(invite.invite_token))} className="focus-premium grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-muted text-primary">
+                <Copy className="h-4 w-4" />
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Company roster */}
+      <div className="rounded-[1.5rem] bg-surface-raised p-4 shadow-card">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <div>
+            <h3 className="font-display text-lg font-extrabold">Company roster</h3>
+            <p className="text-xs font-semibold text-muted-foreground">All employees in {companyProfile?.name}</p>
+          </div>
+          <span className="rounded-full bg-muted px-3 py-1 text-xs font-extrabold">{employees.length}</span>
+        </div>
+        {employees.length === 0 ? (
+          <p className="rounded-2xl bg-background p-4 text-center text-sm font-semibold text-muted-foreground">
+            No employees yet. Send an invite link above.
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {employees.map((emp) => (
+              <div key={emp.id} className="flex items-center gap-3 rounded-2xl bg-background p-3">
+                <div className="grid h-10 w-10 place-items-center rounded-2xl bg-primary/10 text-primary">
+                  <UserIcon className="h-5 w-5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-bold">{emp.display_name}</p>
+                  <p className="truncate text-xs font-semibold text-muted-foreground">{emp.email ?? "—"}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
+
 
   const currentShift = useMemo(
     () => shiftDefinitions.find((s) => s.id === selectedShift) ?? shiftDefinitions[0],
@@ -1237,11 +1468,11 @@ const Index = () => {
         ))}
       </div>
 
-      {/* Floor selection 1 - 6 */}
+      {/* Floor selection (admin-managed) */}
       <div className="mt-4">
         <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Floor</p>
         <div className="mt-2 grid grid-cols-6 gap-2">
-          {floorOptions.map((floor) => (
+          {companyFloors.map((floor) => (
             <button
               key={floor}
               type="button"
@@ -1256,11 +1487,11 @@ const Index = () => {
         </div>
       </div>
 
-      {/* Area selection AREA-01 to AREA-06 */}
+      {/* Area selection (admin-managed) */}
       <div className="mt-4">
         <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Area</p>
         <div className="mt-2 grid grid-cols-3 gap-2">
-          {areaOptions.map((area) => (
+          {companyAreas.map((area) => (
             <button
               key={area}
               type="button"
