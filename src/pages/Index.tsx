@@ -1169,6 +1169,57 @@ const Index = () => {
         </div>
       </div>
 
+      {/* Company header */}
+      {companyProfile && (
+        <div className="mt-4 flex items-center gap-3 rounded-2xl bg-primary/10 p-3">
+          <div className="grid h-10 w-10 place-items-center rounded-2xl bg-primary text-primary-foreground">
+            <Building2 className="h-5 w-5" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="truncate font-display text-base font-extrabold">{companyProfile.name}</p>
+            <p className="truncate text-xs font-semibold text-muted-foreground">
+              Code · {companyProfile.organization_code}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Booking date */}
+      <div className="mt-4">
+        <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Booking date</p>
+        <Popover>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              className={cn(
+                "focus-premium mt-2 flex w-full items-center justify-between rounded-2xl border border-border bg-background px-4 py-3 text-left font-semibold",
+                !bookingDate && "text-muted-foreground",
+              )}
+            >
+              <span className="flex items-center gap-2">
+                <CalendarIcon className="h-4 w-4 text-primary" />
+                {bookingDate ? format(bookingDate, "EEE, MMM d, yyyy") : "Pick a date"}
+              </span>
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar
+              mode="single"
+              selected={bookingDate}
+              onSelect={(d) => d && setBookingDate(d)}
+              disabled={(date) => {
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                return date < today;
+              }}
+              initialFocus
+              className={cn("p-3 pointer-events-auto")}
+            />
+          </PopoverContent>
+        </Popover>
+      </div>
+
       {/* Desk vs Meeting room toggle */}
       <div className="mt-4 grid grid-cols-2 rounded-2xl bg-muted p-1">
         {(["desk", "room"] as BookingKind[]).map((kind) => (
