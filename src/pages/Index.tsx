@@ -1381,7 +1381,9 @@ const Index = () => {
         <p className="font-display text-xl font-extrabold">
           {bookingKind === "desk" ? "Seat" : "Room"} {bookingKind === "desk" ? selectedSeat : selectedRoom} · Floor {selectedFloor} · {selectedArea}
         </p>
-        <p className="mt-1 text-sm font-semibold text-muted-foreground">{currentShift.label} · {selectedHourlySlot}</p>
+        <p className="mt-1 text-sm font-semibold text-muted-foreground">
+          {format(bookingDate, "EEE, MMM d")} · {currentShift.label} ({currentShift.range}) · {selectedHourlySlot}
+        </p>
         <p className="mt-2 text-sm font-semibold text-primary">{bookingText}</p>
         <button
           type="button"
