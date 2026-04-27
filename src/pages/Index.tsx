@@ -290,9 +290,43 @@ const Index = () => {
   const [selectedRoom, setSelectedRoom] = useState<string>("M01");
   const [selectedShift, setSelectedShift] = useState<ShiftKey>("morning");
   const [selectedHourlySlot, setSelectedHourlySlot] = useState<string>("06:00 AM");
-  const [confirmedBookings, setConfirmedBookings] = useState<
-    { id: string; kind: BookingKind; floor: number; area: string; spot: string; time: string; shift: string }[]
-  >([]);
+  const [bookingDate, setBookingDate] = useState<Date>(() => new Date());
+  const [confirmedBookings, setConfirmedBookings] = useState<ConfirmedBooking[]>([]);
+
+  // Timezone — committed once, then locked forever (per device)
+  const [userTimezone, setUserTimezone] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    return window.localStorage.getItem("deskflow-user-timezone");
+  });
+  const [draftTimezone, setDraftTimezone] = useState<string>(
+    () =>
+      (typeof window !== "undefined" && window.localStorage.getItem("deskflow-user-timezone")) ||
+      Intl.DateTimeFormat().resolvedOptions().timeZone ||
+      "UTC",
+  );
+
+  // Tick clock every 30s so the auto-release sweep runs and the home greeting stays fresh
+  const [nowTs, setNowTs] = useState<number>(() => Date.now());
+  useEffect(() => {
+    const id = window.setInterval(() => setNowTs(Date.now()), 30_000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  // Auto-release any booking whose shift end has passed
+  useEffect(() => {
+    setConfirmedBookings((current) => {
+      let changed = false;
+      const next = current.map((b) => {
+        if (!b.released && b.endsAt <= nowTs) {
+          changed = true;
+          return { ...b, released: true };
+        }
+        return b;
+      });
+      return changed ? next : current;
+    });
+  }, [nowTs]);
+
 
   const selectedDesk = useMemo(() => desks.find((desk) => desk.id === selectedDeskId), [desks, selectedDeskId]);
   const availableCount = desks.filter((desk) => desk.status === "available").length;
