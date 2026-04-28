@@ -368,6 +368,57 @@ const Index = () => {
     window.localStorage.setItem(attendanceStorageKey(companyProfile.id), JSON.stringify(attendance));
   }, [attendance, companyProfile?.id]);
 
+  // ============== LEAVE STATE ==============
+  type LeaveType = "casual" | "sick" | "earned" | "unpaid";
+  type LeaveRequest = {
+    id: string;
+    userId: string;
+    userName: string;
+    type: LeaveType;
+    fromDate: string; // yyyy-MM-dd
+    toDate: string;
+    days: number;
+    reason: string;
+    status: "pending" | "approved" | "rejected";
+    createdAt: number;
+    reviewedBy?: string;
+    reviewedAt?: number;
+    reviewNote?: string;
+  };
+  const LEAVE_ANNUAL_QUOTA: Record<LeaveType, number> = {
+    casual: 12,
+    sick: 10,
+    earned: 15,
+    unpaid: 30,
+  };
+  const [leaves, setLeaves] = useState<LeaveRequest[]>([]);
+  const [leaveForm, setLeaveForm] = useState<{ type: LeaveType; from: string; to: string; reason: string }>({
+    type: "casual",
+    from: "",
+    to: "",
+    reason: "",
+  });
+  const leaveStorageKey = (companyId: string) => `deskflow-leaves-${companyId}`;
+
+  useEffect(() => {
+    if (!companyProfile) return;
+    const raw = window.localStorage.getItem(leaveStorageKey(companyProfile.id));
+    if (raw) {
+      try {
+        setLeaves(JSON.parse(raw));
+      } catch {
+        setLeaves([]);
+      }
+    } else {
+      setLeaves([]);
+    }
+  }, [companyProfile?.id]);
+
+  useEffect(() => {
+    if (!companyProfile) return;
+    window.localStorage.setItem(leaveStorageKey(companyProfile.id), JSON.stringify(leaves));
+  }, [leaves, companyProfile?.id]);
+
 
   // Auto-release any booking whose shift end has passed
   useEffect(() => {
