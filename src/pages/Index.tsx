@@ -195,8 +195,8 @@ const bottomTabs: { id: ActiveTab; icon: typeof CalendarCheck; label: string }[]
   { id: "home", icon: MapPin, label: "Home" },
   { id: "book", icon: CalendarCheck, label: "Book" },
   { id: "attendance", icon: Clock, label: "Attendance" },
+  { id: "leave", icon: Plane, label: "Leave" },
   { id: "admin", icon: BarChart3, label: "Admin" },
-  { id: "team", icon: Users, label: "Team" },
 ];
 
 // Compute the epoch ms when a shift ends on a given date (handles night-shift wrap)
