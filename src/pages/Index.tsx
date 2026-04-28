@@ -21,6 +21,7 @@ import {
   Mail,
   MapPin,
   Moon,
+  Plane,
   QrCode,
   Search,
   Send,
@@ -87,7 +88,7 @@ type EmployeeInvite = {
 };
 
 type AppMode = "signup" | "login";
-type ActiveTab = "home" | "book" | "attendance" | "map" | "admin" | "team";
+type ActiveTab = "home" | "book" | "attendance" | "leave" | "map" | "admin" | "team";
 type LoginStep = "form" | "otp";
 type LoginIdentifier = "email" | "phone";
 
@@ -195,8 +196,8 @@ const bottomTabs: { id: ActiveTab; icon: typeof CalendarCheck; label: string }[]
   { id: "home", icon: MapPin, label: "Home" },
   { id: "book", icon: CalendarCheck, label: "Book" },
   { id: "attendance", icon: Clock, label: "Attendance" },
+  { id: "leave", icon: Plane, label: "Leave" },
   { id: "admin", icon: BarChart3, label: "Admin" },
-  { id: "team", icon: Users, label: "Team" },
 ];
 
 // Compute the epoch ms when a shift ends on a given date (handles night-shift wrap)
@@ -366,6 +367,57 @@ const Index = () => {
     if (!companyProfile) return;
     window.localStorage.setItem(attendanceStorageKey(companyProfile.id), JSON.stringify(attendance));
   }, [attendance, companyProfile?.id]);
+
+  // ============== LEAVE STATE ==============
+  type LeaveType = "casual" | "sick" | "earned" | "unpaid";
+  type LeaveRequest = {
+    id: string;
+    userId: string;
+    userName: string;
+    type: LeaveType;
+    fromDate: string; // yyyy-MM-dd
+    toDate: string;
+    days: number;
+    reason: string;
+    status: "pending" | "approved" | "rejected";
+    createdAt: number;
+    reviewedBy?: string;
+    reviewedAt?: number;
+    reviewNote?: string;
+  };
+  const LEAVE_ANNUAL_QUOTA: Record<LeaveType, number> = {
+    casual: 12,
+    sick: 10,
+    earned: 15,
+    unpaid: 30,
+  };
+  const [leaves, setLeaves] = useState<LeaveRequest[]>([]);
+  const [leaveForm, setLeaveForm] = useState<{ type: LeaveType; from: string; to: string; reason: string }>({
+    type: "casual",
+    from: "",
+    to: "",
+    reason: "",
+  });
+  const leaveStorageKey = (companyId: string) => `deskflow-leaves-${companyId}`;
+
+  useEffect(() => {
+    if (!companyProfile) return;
+    const raw = window.localStorage.getItem(leaveStorageKey(companyProfile.id));
+    if (raw) {
+      try {
+        setLeaves(JSON.parse(raw));
+      } catch {
+        setLeaves([]);
+      }
+    } else {
+      setLeaves([]);
+    }
+  }, [companyProfile?.id]);
+
+  useEffect(() => {
+    if (!companyProfile) return;
+    window.localStorage.setItem(leaveStorageKey(companyProfile.id), JSON.stringify(leaves));
+  }, [leaves, companyProfile?.id]);
 
 
   // Auto-release any booking whose shift end has passed
@@ -2072,6 +2124,290 @@ const Index = () => {
     </div>
   );
 
+  // ============== LEAVE HELPERS & RENDER ==============
+  const diffDaysInclusive = (from: string, to: string) => {
+    if (!from || !to) return 0;
+    const f = new Date(from + "T00:00:00").getTime();
+    const t = new Date(to + "T00:00:00").getTime();
+    if (Number.isNaN(f) || Number.isNaN(t) || t < f) return 0;
+    return Math.floor((t - f) / 86400000) + 1;
+  };
+
+  const myLeaves = leaves
+    .filter((l) => l.userId === myUserId)
+    .sort((a, b) => b.createdAt - a.createdAt);
+
+  const yearOf = (d: string) => new Date(d + "T00:00:00").getFullYear();
+  const currentYear = new Date(nowTs).getFullYear();
+  const usedByType = (type: LeaveType) =>
+    myLeaves
+      .filter((l) => l.status === "approved" && l.type === type && yearOf(l.fromDate) === currentYear)
+      .reduce((sum, l) => sum + l.days, 0);
+
+  const submitLeave = () => {
+    if (!leaveForm.from || !leaveForm.to) {
+      toast.error("Pick from and to dates");
+      return;
+    }
+    const days = diffDaysInclusive(leaveForm.from, leaveForm.to);
+    if (days <= 0) {
+      toast.error("Invalid date range");
+      return;
+    }
+    if (!leaveForm.reason.trim()) {
+      toast.error("Please add a reason");
+      return;
+    }
+    const used = usedByType(leaveForm.type);
+    const quota = LEAVE_ANNUAL_QUOTA[leaveForm.type];
+    if (used + days > quota) {
+      toast.error(`Exceeds ${leaveForm.type} quota (${used}/${quota} used)`);
+      return;
+    }
+    const req: LeaveRequest = {
+      id: window.crypto.randomUUID(),
+      userId: myUserId,
+      userName: myName,
+      type: leaveForm.type,
+      fromDate: leaveForm.from,
+      toDate: leaveForm.to,
+      days,
+      reason: leaveForm.reason.trim(),
+      status: "pending",
+      createdAt: Date.now(),
+    };
+    setLeaves((prev) => [req, ...prev]);
+    setLeaveForm({ type: "casual", from: "", to: "", reason: "" });
+    toast.success("Leave request submitted");
+  };
+
+  const reviewLeave = (id: string, decision: "approved" | "rejected") => {
+    setLeaves((prev) =>
+      prev.map((l) =>
+        l.id === id
+          ? { ...l, status: decision, reviewedBy: myName, reviewedAt: Date.now() }
+          : l
+      )
+    );
+    toast.success(`Leave ${decision}`);
+  };
+
+  const cancelLeave = (id: string) => {
+    setLeaves((prev) => prev.filter((l) => l.id !== id));
+    toast.success("Leave request removed");
+  };
+
+  const pendingLeaves = leaves.filter((l) => l.status === "pending");
+  const upcomingApproved = leaves.filter(
+    (l) => l.status === "approved" && new Date(l.toDate + "T23:59:59").getTime() >= nowTs
+  );
+
+  const leaveTypeMeta: Record<LeaveType, { label: string; tone: string }> = {
+    casual: { label: "Casual", tone: "bg-primary/10 text-primary" },
+    sick: { label: "Sick", tone: "bg-destructive/10 text-destructive" },
+    earned: { label: "Earned", tone: "bg-emerald-500/10 text-emerald-600" },
+    unpaid: { label: "Unpaid", tone: "bg-muted text-muted-foreground" },
+  };
+
+  const renderLeavePanel = () => (
+    <div className="space-y-4">
+      <div className="rounded-[1.5rem] bg-gradient-to-br from-primary/15 via-surface-raised to-surface-raised p-5 shadow-card">
+        <p className="text-xs font-semibold uppercase tracking-wider text-primary">Leave</p>
+        <h2 className="font-display text-2xl font-extrabold">Time off</h2>
+        <p className="text-sm text-muted-foreground">Balances reset every calendar year</p>
+        <div className="mt-4 grid grid-cols-2 gap-3">
+          {(Object.keys(LEAVE_ANNUAL_QUOTA) as LeaveType[]).map((t) => {
+            const used = usedByType(t);
+            const quota = LEAVE_ANNUAL_QUOTA[t];
+            const remaining = Math.max(0, quota - used);
+            return (
+              <div key={t} className="rounded-2xl bg-background/60 p-3">
+                <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${leaveTypeMeta[t].tone}`}>
+                  {leaveTypeMeta[t].label}
+                </span>
+                <p className="mt-2 font-display text-xl font-extrabold">
+                  {remaining}
+                  <span className="ml-1 text-sm font-normal text-muted-foreground">/ {quota}</span>
+                </p>
+                <p className="text-xs text-muted-foreground">remaining · used {used}</p>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Apply */}
+      <div className="rounded-[1.5rem] bg-surface-raised p-4 shadow-card">
+        <h3 className="font-display text-lg font-extrabold">Apply for leave</h3>
+        <div className="mt-3 space-y-3">
+          <Select
+            value={leaveForm.type}
+            onValueChange={(v) => setLeaveForm((f) => ({ ...f, type: v as LeaveType }))}
+          >
+            <SelectTrigger className="rounded-2xl">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {(Object.keys(LEAVE_ANNUAL_QUOTA) as LeaveType[]).map((t) => (
+                <SelectItem key={t} value={t}>
+                  {leaveTypeMeta[t].label} leave
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <div className="grid grid-cols-2 gap-3">
+            <label className="flex flex-col gap-1 text-xs font-semibold">
+              From
+              <input
+                type="date"
+                value={leaveForm.from}
+                onChange={(e) => setLeaveForm((f) => ({ ...f, from: e.target.value }))}
+                className="focus-premium rounded-2xl border border-input bg-background px-3 py-2 text-sm"
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-xs font-semibold">
+              To
+              <input
+                type="date"
+                value={leaveForm.to}
+                onChange={(e) => setLeaveForm((f) => ({ ...f, to: e.target.value }))}
+                className="focus-premium rounded-2xl border border-input bg-background px-3 py-2 text-sm"
+              />
+            </label>
+          </div>
+          {leaveForm.from && leaveForm.to && (
+            <p className="text-xs font-semibold text-primary">
+              {diffDaysInclusive(leaveForm.from, leaveForm.to)} day(s) requested
+            </p>
+          )}
+          <textarea
+            value={leaveForm.reason}
+            onChange={(e) => setLeaveForm((f) => ({ ...f, reason: e.target.value }))}
+            placeholder="Reason for leave..."
+            className="focus-premium min-h-[72px] w-full rounded-2xl border border-input bg-background px-3 py-2 text-sm"
+          />
+          <button
+            onClick={submitLeave}
+            className="focus-premium w-full rounded-2xl bg-primary px-4 py-3 text-sm font-extrabold text-primary-foreground shadow-card hover:opacity-90"
+          >
+            Submit request
+          </button>
+        </div>
+      </div>
+
+      {/* My requests */}
+      <div className="rounded-[1.5rem] bg-surface-raised p-4 shadow-card">
+        <h3 className="font-display text-lg font-extrabold">My requests</h3>
+        {myLeaves.length === 0 ? (
+          <p className="mt-3 text-sm text-muted-foreground">No requests yet.</p>
+        ) : (
+          <ul className="mt-3 space-y-2">
+            {myLeaves.slice(0, 12).map((l) => (
+              <li key={l.id} className="rounded-2xl bg-background/60 p-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${leaveTypeMeta[l.type].tone}`}>
+                      {leaveTypeMeta[l.type].label}
+                    </span>
+                    <p className="mt-1 text-sm font-semibold">
+                      {l.fromDate} → {l.toDate} · {l.days}d
+                    </p>
+                    <p className="text-xs italic text-muted-foreground">"{l.reason}"</p>
+                  </div>
+                  <div className="text-right">
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${
+                        l.status === "approved"
+                          ? "bg-emerald-500/15 text-emerald-600"
+                          : l.status === "rejected"
+                            ? "bg-destructive/15 text-destructive"
+                            : "bg-muted text-muted-foreground"
+                      }`}
+                    >
+                      {l.status}
+                    </span>
+                    {l.status === "pending" && (
+                      <button
+                        onClick={() => cancelLeave(l.id)}
+                        className="mt-2 block text-[10px] font-bold text-destructive underline"
+                      >
+                        cancel
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      {/* Admin: review */}
+      {isAdmin && (
+        <>
+          <div className="rounded-[1.5rem] bg-surface-raised p-4 shadow-card">
+            <h3 className="font-display text-lg font-extrabold">Pending leave requests</h3>
+            {pendingLeaves.length === 0 ? (
+              <p className="mt-3 text-sm text-muted-foreground">No pending requests.</p>
+            ) : (
+              <ul className="mt-3 space-y-2">
+                {pendingLeaves.map((l) => (
+                  <li key={l.id} className="rounded-2xl bg-background/60 p-3">
+                    <p className="text-sm font-semibold">
+                      {l.userName} ·{" "}
+                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${leaveTypeMeta[l.type].tone}`}>
+                        {leaveTypeMeta[l.type].label}
+                      </span>
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {l.fromDate} → {l.toDate} · {l.days} day(s)
+                    </p>
+                    <p className="mt-1 text-xs italic text-muted-foreground">"{l.reason}"</p>
+                    <div className="mt-2 flex gap-2">
+                      <button
+                        onClick={() => reviewLeave(l.id, "approved")}
+                        className="focus-premium flex-1 rounded-xl bg-primary px-3 py-2 text-xs font-bold text-primary-foreground hover:opacity-90"
+                      >
+                        Approve
+                      </button>
+                      <button
+                        onClick={() => reviewLeave(l.id, "rejected")}
+                        className="focus-premium flex-1 rounded-xl bg-destructive px-3 py-2 text-xs font-bold text-destructive-foreground hover:opacity-90"
+                      >
+                        Reject
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <div className="rounded-[1.5rem] bg-surface-raised p-4 shadow-card">
+            <h3 className="font-display text-lg font-extrabold">Upcoming approved leaves</h3>
+            {upcomingApproved.length === 0 ? (
+              <p className="mt-3 text-sm text-muted-foreground">No upcoming leaves.</p>
+            ) : (
+              <ul className="mt-3 space-y-2">
+                {upcomingApproved.map((l) => (
+                  <li key={l.id} className="flex items-center justify-between rounded-2xl bg-background/60 px-3 py-2">
+                    <div>
+                      <p className="text-sm font-semibold">{l.userName}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {l.fromDate} → {l.toDate} · {l.days}d · {leaveTypeMeta[l.type].label}
+                      </p>
+                    </div>
+                    <Plane className="h-4 w-4 text-primary" />
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+
   const renderTeamPanel = () => (
     <div className="rounded-[1.5rem] bg-surface-raised p-4 shadow-card">
       <div className="flex items-center gap-3">
@@ -2431,6 +2767,7 @@ const Index = () => {
               {isAdmin && activeTab === "admin" && renderAdminPanel()}
               {activeTab === "team" && renderTeamPanel()}
               {activeTab === "attendance" && renderAttendancePanel()}
+              {activeTab === "leave" && renderLeavePanel()}
               {(activeTab === "book" || activeTab === "map") && renderBookingPanel()}
             </div>
 
