@@ -194,7 +194,7 @@ type BookingKind = "desk" | "room";
 const bottomTabs: { id: ActiveTab; icon: typeof CalendarCheck; label: string }[] = [
   { id: "home", icon: MapPin, label: "Home" },
   { id: "book", icon: CalendarCheck, label: "Book" },
-  { id: "map", icon: MapPin, label: "Map" },
+  { id: "attendance", icon: Clock, label: "Attendance" },
   { id: "admin", icon: BarChart3, label: "Admin" },
   { id: "team", icon: Users, label: "Team" },
 ];
