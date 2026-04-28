@@ -2430,6 +2430,7 @@ const Index = () => {
               {activeTab === "home" && renderHomeScreen()}
               {isAdmin && activeTab === "admin" && renderAdminPanel()}
               {activeTab === "team" && renderTeamPanel()}
+              {activeTab === "attendance" && renderAttendancePanel()}
               {(activeTab === "book" || activeTab === "map") && renderBookingPanel()}
             </div>
 
