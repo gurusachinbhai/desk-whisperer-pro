@@ -21,6 +21,7 @@ import {
   Mail,
   MapPin,
   Moon,
+  Plane,
   QrCode,
   Search,
   Send,
