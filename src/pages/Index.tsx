@@ -320,6 +320,54 @@ const Index = () => {
     return () => window.clearInterval(id);
   }, []);
 
+  // ============== ATTENDANCE STATE ==============
+  type AttendanceRecord = {
+    id: string;
+    userId: string;
+    userName: string;
+    date: string; // yyyy-MM-dd
+    signInAt: number | null;
+    signOutAt: number | null;
+    note?: string;
+    regularization?: {
+      requestedSignIn?: number;
+      requestedSignOut?: number;
+      reason: string;
+      status: "pending" | "approved" | "rejected";
+      reviewedBy?: string;
+      reviewedAt?: number;
+    };
+  };
+  const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
+  const [regForm, setRegForm] = useState<{ recordId: string; signIn: string; signOut: string; reason: string }>({
+    recordId: "",
+    signIn: "",
+    signOut: "",
+    reason: "",
+  });
+
+  const attendanceStorageKey = (companyId: string) => `deskflow-attendance-${companyId}`;
+
+  useEffect(() => {
+    if (!companyProfile) return;
+    const raw = window.localStorage.getItem(attendanceStorageKey(companyProfile.id));
+    if (raw) {
+      try {
+        setAttendance(JSON.parse(raw));
+      } catch {
+        setAttendance([]);
+      }
+    } else {
+      setAttendance([]);
+    }
+  }, [companyProfile?.id]);
+
+  useEffect(() => {
+    if (!companyProfile) return;
+    window.localStorage.setItem(attendanceStorageKey(companyProfile.id), JSON.stringify(attendance));
+  }, [attendance, companyProfile?.id]);
+
+
   // Auto-release any booking whose shift end has passed
   useEffect(() => {
     setConfirmedBookings((current) => {
