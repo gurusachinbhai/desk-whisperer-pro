@@ -1720,6 +1720,358 @@ const Index = () => {
     </div>
   );
 
+  // ============== ATTENDANCE HELPERS & RENDER ==============
+  const todayKey = format(new Date(nowTs), "yyyy-MM-dd");
+  const myUserId = currentUser?.email ?? "anon";
+  const myName = currentUser?.displayName ?? "You";
+  const myTodayRecord = attendance.find((r) => r.userId === myUserId && r.date === todayKey) ?? null;
+
+  const formatHm = (ms: number) => format(new Date(ms), "hh:mm a");
+  const computeWorkedMs = (r: AttendanceRecord) => {
+    if (!r.signInAt) return 0;
+    const end = r.signOutAt ?? nowTs;
+    return Math.max(0, end - r.signInAt);
+  };
+  const formatDuration = (ms: number) => {
+    const totalMin = Math.floor(ms / 60000);
+    const h = Math.floor(totalMin / 60);
+    const m = totalMin % 60;
+    return `${h}h ${m.toString().padStart(2, "0")}m`;
+  };
+
+  const handleSignIn = () => {
+    if (myTodayRecord?.signInAt) {
+      toast.error("You've already signed in today");
+      return;
+    }
+    const id = window.crypto.randomUUID();
+    const newRec: AttendanceRecord = {
+      id,
+      userId: myUserId,
+      userName: myName,
+      date: todayKey,
+      signInAt: Date.now(),
+      signOutAt: null,
+    };
+    setAttendance((prev) => [newRec, ...prev.filter((r) => !(r.userId === myUserId && r.date === todayKey))]);
+    toast.success(`Signed in at ${format(new Date(), "hh:mm a")}`);
+  };
+
+  const handleSignOut = () => {
+    if (!myTodayRecord || !myTodayRecord.signInAt) {
+      toast.error("Sign in first");
+      return;
+    }
+    if (myTodayRecord.signOutAt) {
+      toast.error("Already signed out today");
+      return;
+    }
+    setAttendance((prev) =>
+      prev.map((r) => (r.id === myTodayRecord.id ? { ...r, signOutAt: Date.now() } : r))
+    );
+    toast.success(`Signed out at ${format(new Date(), "hh:mm a")}`);
+  };
+
+  const submitRegularization = () => {
+    if (!regForm.recordId || !regForm.reason.trim()) {
+      toast.error("Pick a day and provide a reason");
+      return;
+    }
+    const parseHm = (hm: string, dateStr: string): number | undefined => {
+      if (!hm) return undefined;
+      const [h, m] = hm.split(":").map(Number);
+      if (Number.isNaN(h) || Number.isNaN(m)) return undefined;
+      const d = new Date(dateStr + "T00:00:00");
+      d.setHours(h, m, 0, 0);
+      return d.getTime();
+    };
+    setAttendance((prev) =>
+      prev.map((r) => {
+        if (r.id !== regForm.recordId) return r;
+        return {
+          ...r,
+          regularization: {
+            requestedSignIn: parseHm(regForm.signIn, r.date),
+            requestedSignOut: parseHm(regForm.signOut, r.date),
+            reason: regForm.reason.trim(),
+            status: "pending",
+          },
+        };
+      })
+    );
+    setRegForm({ recordId: "", signIn: "", signOut: "", reason: "" });
+    toast.success("Regularization submitted to admin");
+  };
+
+  const reviewRegularization = (recordId: string, decision: "approved" | "rejected") => {
+    setAttendance((prev) =>
+      prev.map((r) => {
+        if (r.id !== recordId || !r.regularization) return r;
+        const next = { ...r };
+        if (decision === "approved") {
+          if (r.regularization.requestedSignIn) next.signInAt = r.regularization.requestedSignIn;
+          if (r.regularization.requestedSignOut) next.signOutAt = r.regularization.requestedSignOut;
+        }
+        next.regularization = {
+          ...r.regularization,
+          status: decision,
+          reviewedBy: myName,
+          reviewedAt: Date.now(),
+        };
+        return next;
+      })
+    );
+    toast.success(`Request ${decision}`);
+  };
+
+  const whoIsInToday = attendance.filter((r) => r.date === todayKey && r.signInAt && !r.signOutAt);
+  const myHistory = attendance.filter((r) => r.userId === myUserId).sort((a, b) => (a.date < b.date ? 1 : -1));
+  const exceptions = attendance.filter((r) => {
+    if (r.date === todayKey) return false;
+    if (!r.signInAt || !r.signOutAt) return true; // missing punch
+    const worked = computeWorkedMs(r);
+    return worked < 4 * 60 * 60 * 1000; // under 4h flagged
+  });
+  const pendingRegs = attendance.filter((r) => r.regularization?.status === "pending");
+
+  const renderAttendancePanel = () => (
+    <div className="space-y-4">
+      <div className="rounded-[1.5rem] bg-gradient-to-br from-primary/15 via-surface-raised to-surface-raised p-5 shadow-card">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-primary">Attendance</p>
+            <h2 className="font-display text-2xl font-extrabold">
+              {format(new Date(nowTs), "EEEE, MMM d")}
+            </h2>
+            <p className="text-sm text-muted-foreground">{format(new Date(nowTs), "hh:mm:ss a")}</p>
+          </div>
+          <div className="rounded-2xl bg-background/60 p-3 text-right">
+            <p className="text-xs text-muted-foreground">Today's hours</p>
+            <p className="font-display text-xl font-extrabold text-primary">
+              {myTodayRecord ? formatDuration(computeWorkedMs(myTodayRecord)) : "0h 00m"}
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-4 grid grid-cols-2 gap-3">
+          <button
+            onClick={handleSignIn}
+            disabled={Boolean(myTodayRecord?.signInAt)}
+            className="focus-premium flex items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-extrabold text-primary-foreground shadow-card transition hover:opacity-90 disabled:opacity-40"
+          >
+            <LogIn className="h-4 w-4" />
+            {myTodayRecord?.signInAt ? `In · ${formatHm(myTodayRecord.signInAt)}` : "Sign In"}
+          </button>
+          <button
+            onClick={handleSignOut}
+            disabled={!myTodayRecord?.signInAt || Boolean(myTodayRecord?.signOutAt)}
+            className="focus-premium flex items-center justify-center gap-2 rounded-2xl bg-destructive px-4 py-3 text-sm font-extrabold text-destructive-foreground shadow-card transition hover:opacity-90 disabled:opacity-40"
+          >
+            <LogOut className="h-4 w-4" />
+            {myTodayRecord?.signOutAt ? `Out · ${formatHm(myTodayRecord.signOutAt)}` : "Sign Out"}
+          </button>
+        </div>
+      </div>
+
+      {/* Who's in today */}
+      <div className="rounded-[1.5rem] bg-surface-raised p-4 shadow-card">
+        <div className="flex items-center justify-between">
+          <h3 className="font-display text-lg font-extrabold">Who's in today</h3>
+          <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary">
+            {whoIsInToday.length} active
+          </span>
+        </div>
+        {whoIsInToday.length === 0 ? (
+          <p className="mt-3 text-sm text-muted-foreground">No one is currently signed in.</p>
+        ) : (
+          <ul className="mt-3 space-y-2">
+            {whoIsInToday.map((r) => (
+              <li
+                key={r.id}
+                className="flex items-center justify-between rounded-2xl bg-background/60 px-3 py-2"
+              >
+                <div className="flex items-center gap-2">
+                  <div className="grid h-8 w-8 place-items-center rounded-full bg-primary/15 text-xs font-bold text-primary">
+                    {r.userName.slice(0, 2).toUpperCase()}
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold">{r.userName}</p>
+                    <p className="text-xs text-muted-foreground">In since {formatHm(r.signInAt!)}</p>
+                  </div>
+                </div>
+                <span className="text-xs font-bold text-primary">{formatDuration(computeWorkedMs(r))}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      {/* My history */}
+      <div className="rounded-[1.5rem] bg-surface-raised p-4 shadow-card">
+        <h3 className="font-display text-lg font-extrabold">My attendance history</h3>
+        {myHistory.length === 0 ? (
+          <p className="mt-3 text-sm text-muted-foreground">No records yet.</p>
+        ) : (
+          <ul className="mt-3 space-y-2">
+            {myHistory.slice(0, 14).map((r) => {
+              const missing = !r.signInAt || !r.signOutAt;
+              const worked = computeWorkedMs(r);
+              const flag = r.date !== todayKey && (missing || worked < 4 * 60 * 60 * 1000);
+              return (
+                <li key={r.id} className="rounded-2xl bg-background/60 px-3 py-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-semibold">{r.date}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {r.signInAt ? `In ${formatHm(r.signInAt)}` : "— no sign in"}
+                        {" · "}
+                        {r.signOutAt ? `Out ${formatHm(r.signOutAt)}` : r.date === todayKey ? "still in" : "— no sign out"}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-bold text-primary">{formatDuration(worked)}</p>
+                      {flag && (
+                        <span className="inline-flex items-center gap-1 text-xs font-bold text-destructive">
+                          <AlertTriangle className="h-3 w-3" /> exception
+                        </span>
+                      )}
+                      {r.regularization && (
+                        <p className="text-xs font-bold capitalize text-muted-foreground">
+                          reg · {r.regularization.status}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+
+      {/* Regularization request */}
+      <div className="rounded-[1.5rem] bg-surface-raised p-4 shadow-card">
+        <h3 className="font-display text-lg font-extrabold">Request regularization</h3>
+        <p className="text-xs text-muted-foreground">For missed punches or wrong times — admin will review.</p>
+        <div className="mt-3 space-y-3">
+          <Select
+            value={regForm.recordId}
+            onValueChange={(v) => setRegForm((f) => ({ ...f, recordId: v }))}
+          >
+            <SelectTrigger className="rounded-2xl">
+              <SelectValue placeholder="Pick a day to regularize" />
+            </SelectTrigger>
+            <SelectContent>
+              {myHistory.length === 0 && <div className="p-2 text-xs text-muted-foreground">No history</div>}
+              {myHistory.map((r) => (
+                <SelectItem key={r.id} value={r.id}>
+                  {r.date} {!r.signInAt && "· no sign in"} {!r.signOutAt && "· no sign out"}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <div className="grid grid-cols-2 gap-3">
+            <label className="flex flex-col gap-1 text-xs font-semibold">
+              Sign-in time
+              <input
+                type="time"
+                value={regForm.signIn}
+                onChange={(e) => setRegForm((f) => ({ ...f, signIn: e.target.value }))}
+                className="focus-premium rounded-2xl border border-input bg-background px-3 py-2 text-sm"
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-xs font-semibold">
+              Sign-out time
+              <input
+                type="time"
+                value={regForm.signOut}
+                onChange={(e) => setRegForm((f) => ({ ...f, signOut: e.target.value }))}
+                className="focus-premium rounded-2xl border border-input bg-background px-3 py-2 text-sm"
+              />
+            </label>
+          </div>
+          <textarea
+            value={regForm.reason}
+            onChange={(e) => setRegForm((f) => ({ ...f, reason: e.target.value }))}
+            placeholder="Why this needs to be corrected..."
+            className="focus-premium min-h-[72px] w-full rounded-2xl border border-input bg-background px-3 py-2 text-sm"
+          />
+          <button
+            onClick={submitRegularization}
+            className="focus-premium w-full rounded-2xl bg-primary px-4 py-3 text-sm font-extrabold text-primary-foreground shadow-card hover:opacity-90"
+          >
+            Submit request
+          </button>
+        </div>
+      </div>
+
+      {/* Admin: review queue + exceptions */}
+      {isAdmin && (
+        <>
+          <div className="rounded-[1.5rem] bg-surface-raised p-4 shadow-card">
+            <h3 className="font-display text-lg font-extrabold">Pending regularizations</h3>
+            {pendingRegs.length === 0 ? (
+              <p className="mt-3 text-sm text-muted-foreground">No pending requests.</p>
+            ) : (
+              <ul className="mt-3 space-y-2">
+                {pendingRegs.map((r) => (
+                  <li key={r.id} className="rounded-2xl bg-background/60 p-3">
+                    <p className="text-sm font-semibold">{r.userName} · {r.date}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {r.regularization?.requestedSignIn ? `In → ${formatHm(r.regularization.requestedSignIn)}` : ""}
+                      {r.regularization?.requestedSignOut ? ` · Out → ${formatHm(r.regularization.requestedSignOut)}` : ""}
+                    </p>
+                    <p className="mt-1 text-xs italic text-muted-foreground">"{r.regularization?.reason}"</p>
+                    <div className="mt-2 flex gap-2">
+                      <button
+                        onClick={() => reviewRegularization(r.id, "approved")}
+                        className="focus-premium flex-1 rounded-xl bg-primary px-3 py-2 text-xs font-bold text-primary-foreground hover:opacity-90"
+                      >
+                        Approve
+                      </button>
+                      <button
+                        onClick={() => reviewRegularization(r.id, "rejected")}
+                        className="focus-premium flex-1 rounded-xl bg-destructive px-3 py-2 text-xs font-bold text-destructive-foreground hover:opacity-90"
+                      >
+                        Reject
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <div className="rounded-[1.5rem] bg-surface-raised p-4 shadow-card">
+            <h3 className="font-display text-lg font-extrabold">Exceptions (last entries)</h3>
+            {exceptions.length === 0 ? (
+              <p className="mt-3 text-sm text-muted-foreground">No exceptions detected.</p>
+            ) : (
+              <ul className="mt-3 space-y-2">
+                {exceptions.slice(0, 12).map((r) => (
+                  <li key={r.id} className="flex items-center justify-between rounded-2xl bg-background/60 px-3 py-2">
+                    <div>
+                      <p className="text-sm font-semibold">{r.userName}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {r.date} ·{" "}
+                        {!r.signInAt
+                          ? "missing sign in"
+                          : !r.signOutAt
+                            ? "missing sign out"
+                            : `worked only ${formatDuration(computeWorkedMs(r))}`}
+                      </p>
+                    </div>
+                    <AlertTriangle className="h-4 w-4 text-destructive" />
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+
   const renderTeamPanel = () => (
     <div className="rounded-[1.5rem] bg-surface-raised p-4 shadow-card">
       <div className="flex items-center gap-3">
