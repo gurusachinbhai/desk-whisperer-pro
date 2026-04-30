@@ -13,6 +13,8 @@ import {
   LogIn,
   Copy,
   DoorOpen,
+  Download,
+  FileText,
   Globe2,
   History,
   KeyRound,
@@ -48,6 +50,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
+import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
@@ -88,7 +91,7 @@ type EmployeeInvite = {
 };
 
 type AppMode = "signup" | "login";
-type ActiveTab = "home" | "book" | "attendance" | "leave" | "map" | "admin" | "team";
+type ActiveTab = "home" | "book" | "attendance" | "leave" | "payroll" | "map" | "admin" | "team";
 type LoginStep = "form" | "otp";
 type LoginIdentifier = "email" | "phone";
 
@@ -197,6 +200,7 @@ const bottomTabs: { id: ActiveTab; icon: typeof CalendarCheck; label: string }[]
   { id: "book", icon: CalendarCheck, label: "Book" },
   { id: "attendance", icon: Clock, label: "Attendance" },
   { id: "leave", icon: Plane, label: "Leave" },
+  { id: "payroll", icon: FileText, label: "Payroll" },
   { id: "admin", icon: BarChart3, label: "Admin" },
 ];
 
@@ -418,6 +422,66 @@ const Index = () => {
     if (!companyProfile) return;
     window.localStorage.setItem(leaveStorageKey(companyProfile.id), JSON.stringify(leaves));
   }, [leaves, companyProfile?.id]);
+
+  // ============== PAYROLL STATE ==============
+  type Payslip = {
+    id: string;
+    employeeId: string; // employee_profiles.id
+    employeeName: string;
+    employeeEmail: string | null;
+    period: string; // yyyy-MM
+    grossAmount: number;
+    netAmount: number;
+    currency: string;
+    notes?: string;
+    fileName?: string;
+    fileType?: string;
+    fileDataUrl?: string; // base64 data URL (mock storage)
+    uploadedAt: number;
+    uploadedBy: string;
+  };
+  const [payslips, setPayslips] = useState<Payslip[]>([]);
+  const [payslipForm, setPayslipForm] = useState<{
+    employeeId: string;
+    period: string;
+    grossAmount: string;
+    netAmount: string;
+    currency: string;
+    notes: string;
+    fileName: string;
+    fileType: string;
+    fileDataUrl: string;
+  }>({
+    employeeId: "",
+    period: format(new Date(), "yyyy-MM"),
+    grossAmount: "",
+    netAmount: "",
+    currency: "USD",
+    notes: "",
+    fileName: "",
+    fileType: "",
+    fileDataUrl: "",
+  });
+  const payrollStorageKey = (companyId: string) => `deskflow-payroll-${companyId}`;
+
+  useEffect(() => {
+    if (!companyProfile) return;
+    const raw = window.localStorage.getItem(payrollStorageKey(companyProfile.id));
+    if (raw) {
+      try {
+        setPayslips(JSON.parse(raw));
+      } catch {
+        setPayslips([]);
+      }
+    } else {
+      setPayslips([]);
+    }
+  }, [companyProfile?.id]);
+
+  useEffect(() => {
+    if (!companyProfile) return;
+    window.localStorage.setItem(payrollStorageKey(companyProfile.id), JSON.stringify(payslips));
+  }, [payslips, companyProfile?.id]);
 
 
   // Auto-release any booking whose shift end has passed
@@ -2408,6 +2472,316 @@ const Index = () => {
     </div>
   );
 
+  // ============== PAYROLL HANDLERS ==============
+  const handlePayslipFileChange = async (file: File | null) => {
+    if (!file) {
+      setPayslipForm((prev) => ({ ...prev, fileName: "", fileType: "", fileDataUrl: "" }));
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("Payslip file must be 2MB or smaller");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      setPayslipForm((prev) => ({
+        ...prev,
+        fileName: file.name,
+        fileType: file.type || "application/octet-stream",
+        fileDataUrl: String(reader.result || ""),
+      }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleUploadPayslip = (e: FormEvent) => {
+    e.preventDefault();
+    if (!isAdmin || !companyProfile || !currentUser) {
+      toast.error("Admin access required");
+      return;
+    }
+    const employee = employees.find((emp) => emp.id === payslipForm.employeeId);
+    if (!employee) {
+      toast.error("Select an employee");
+      return;
+    }
+    if (!/^\d{4}-\d{2}$/.test(payslipForm.period)) {
+      toast.error("Pay period must be in yyyy-MM format");
+      return;
+    }
+    const gross = Number(payslipForm.grossAmount);
+    const net = Number(payslipForm.netAmount);
+    if (!Number.isFinite(gross) || gross < 0 || !Number.isFinite(net) || net < 0) {
+      toast.error("Enter valid gross and net amounts");
+      return;
+    }
+
+    const duplicate = payslips.some(
+      (p) => p.employeeId === employee.id && p.period === payslipForm.period,
+    );
+    if (duplicate) {
+      toast.error(`A payslip for ${employee.display_name} (${payslipForm.period}) already exists`);
+      return;
+    }
+
+    const slip: Payslip = {
+      id: window.crypto.randomUUID(),
+      employeeId: employee.id,
+      employeeName: employee.display_name,
+      employeeEmail: employee.email,
+      period: payslipForm.period,
+      grossAmount: gross,
+      netAmount: net,
+      currency: payslipForm.currency.toUpperCase().slice(0, 4) || "USD",
+      notes: payslipForm.notes.trim() || undefined,
+      fileName: payslipForm.fileName || undefined,
+      fileType: payslipForm.fileType || undefined,
+      fileDataUrl: payslipForm.fileDataUrl || undefined,
+      uploadedAt: Date.now(),
+      uploadedBy: currentUser.displayName,
+    };
+    setPayslips((prev) => [slip, ...prev]);
+    setPayslipForm({
+      employeeId: "",
+      period: format(new Date(), "yyyy-MM"),
+      grossAmount: "",
+      netAmount: "",
+      currency: slip.currency,
+      notes: "",
+      fileName: "",
+      fileType: "",
+      fileDataUrl: "",
+    });
+    toast.success(`Payslip uploaded for ${employee.display_name}`);
+  };
+
+  const handleDeletePayslip = (id: string) => {
+    if (!isAdmin) return;
+    setPayslips((prev) => prev.filter((p) => p.id !== id));
+    toast.success("Payslip removed");
+  };
+
+  const handleDownloadPayslip = (slip: Payslip) => {
+    if (!slip.fileDataUrl) {
+      toast.info("No file attached for this payslip");
+      return;
+    }
+    const a = document.createElement("a");
+    a.href = slip.fileDataUrl;
+    a.download = slip.fileName || `payslip-${slip.period}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
+  const myEmployeeId = useMemo(() => {
+    const me = employees.find((emp) => emp.email && currentUser?.email && emp.email.toLowerCase() === currentUser.email.toLowerCase());
+    return me?.id ?? null;
+  }, [employees, currentUser?.email]);
+
+  const myPayslips = useMemo(
+    () => payslips.filter((p) => p.employeeId === myEmployeeId).sort((a, b) => b.period.localeCompare(a.period)),
+    [payslips, myEmployeeId],
+  );
+
+  const renderPayrollPanel = () => {
+    const sortedAll = [...payslips].sort((a, b) => b.uploadedAt - a.uploadedAt);
+    return (
+      <div className="space-y-5">
+        <div className="rounded-[1.5rem] bg-surface-raised p-5 shadow-card">
+          <div className="flex items-center gap-3">
+            <div className="grid h-10 w-10 place-items-center rounded-2xl bg-primary/10 text-primary">
+              <FileText className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Payroll</p>
+              <h2 className="font-display text-xl font-extrabold">My payslips</h2>
+            </div>
+          </div>
+          {myPayslips.length === 0 ? (
+            <p className="mt-4 rounded-2xl bg-surface-muted p-4 text-sm font-semibold text-muted-foreground">
+              No payslips have been issued to you yet. Your admin will upload them here each pay period.
+            </p>
+          ) : (
+            <ul className="mt-4 space-y-3">
+              {myPayslips.map((slip) => (
+                <li key={slip.id} className="rounded-2xl border border-border bg-surface-muted p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="font-display text-base font-extrabold">{slip.period}</p>
+                      <p className="text-xs font-semibold text-muted-foreground">
+                        Net {slip.currency} {slip.netAmount.toLocaleString()} · Gross {slip.currency} {slip.grossAmount.toLocaleString()}
+                      </p>
+                      {slip.notes && <p className="mt-1 text-xs font-semibold text-muted-foreground">{slip.notes}</p>}
+                    </div>
+                    {slip.fileDataUrl && (
+                      <button
+                        onClick={() => handleDownloadPayslip(slip)}
+                        className="focus-premium flex items-center gap-1 rounded-xl bg-primary px-3 py-2 text-xs font-extrabold text-primary-foreground"
+                      >
+                        <Download className="h-4 w-4" /> Download
+                      </button>
+                    )}
+                  </div>
+                  <p className="mt-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    Issued {format(new Date(slip.uploadedAt), "MMM d, yyyy")} by {slip.uploadedBy}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        {isAdmin && (
+          <div className="rounded-[1.5rem] bg-surface-raised p-5 shadow-card">
+            <div className="flex items-center gap-3">
+              <div className="grid h-10 w-10 place-items-center rounded-2xl bg-primary/10 text-primary">
+                <UserPlus className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Admin · Upload payslip</p>
+                <h2 className="font-display text-xl font-extrabold">Issue a payslip</h2>
+              </div>
+            </div>
+            <form onSubmit={handleUploadPayslip} className="mt-4 space-y-3">
+              <div>
+                <label className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Employee</label>
+                <Select
+                  value={payslipForm.employeeId}
+                  onValueChange={(v) => setPayslipForm((prev) => ({ ...prev, employeeId: v }))}
+                >
+                  <SelectTrigger className="mt-1 rounded-2xl">
+                    <SelectValue placeholder="Select employee" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {employees.map((emp) => (
+                      <SelectItem key={emp.id} value={emp.id}>
+                        {emp.display_name}{emp.email ? ` · ${emp.email}` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Period</label>
+                  <Input
+                    type="month"
+                    className="mt-1 rounded-2xl"
+                    value={payslipForm.period}
+                    onChange={(e) => setPayslipForm((prev) => ({ ...prev, period: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Currency</label>
+                  <Input
+                    className="mt-1 rounded-2xl"
+                    value={payslipForm.currency}
+                    onChange={(e) => setPayslipForm((prev) => ({ ...prev, currency: e.target.value }))}
+                    maxLength={4}
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Gross</label>
+                  <Input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    className="mt-1 rounded-2xl"
+                    value={payslipForm.grossAmount}
+                    onChange={(e) => setPayslipForm((prev) => ({ ...prev, grossAmount: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Net</label>
+                  <Input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    className="mt-1 rounded-2xl"
+                    value={payslipForm.netAmount}
+                    onChange={(e) => setPayslipForm((prev) => ({ ...prev, netAmount: e.target.value }))}
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Notes (optional)</label>
+                <Input
+                  className="mt-1 rounded-2xl"
+                  value={payslipForm.notes}
+                  onChange={(e) => setPayslipForm((prev) => ({ ...prev, notes: e.target.value }))}
+                  placeholder="Bonuses, deductions, etc."
+                />
+              </div>
+              <div>
+                <label className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Payslip file (PDF/Image, ≤ 2MB)</label>
+                <Input
+                  type="file"
+                  accept="application/pdf,image/*"
+                  className="mt-1 rounded-2xl"
+                  onChange={(e) => handlePayslipFileChange(e.target.files?.[0] ?? null)}
+                />
+                {payslipForm.fileName && (
+                  <p className="mt-1 text-xs font-semibold text-muted-foreground">Attached: {payslipForm.fileName}</p>
+                )}
+              </div>
+              <button
+                type="submit"
+                className="focus-premium flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 font-extrabold text-primary-foreground shadow-glow"
+              >
+                <UserPlus className="h-5 w-5" /> Upload payslip
+              </button>
+            </form>
+
+            <div className="mt-6">
+              <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">All issued payslips</p>
+              {sortedAll.length === 0 ? (
+                <p className="mt-2 rounded-2xl bg-surface-muted p-3 text-sm font-semibold text-muted-foreground">
+                  No payslips issued yet.
+                </p>
+              ) : (
+                <ul className="mt-2 space-y-2">
+                  {sortedAll.map((slip) => (
+                    <li key={slip.id} className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-surface-muted p-3">
+                      <div className="min-w-0">
+                        <p className="truncate font-display text-sm font-extrabold">
+                          {slip.employeeName} · {slip.period}
+                        </p>
+                        <p className="truncate text-xs font-semibold text-muted-foreground">
+                          Net {slip.currency} {slip.netAmount.toLocaleString()} · Gross {slip.currency} {slip.grossAmount.toLocaleString()}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {slip.fileDataUrl && (
+                          <button
+                            onClick={() => handleDownloadPayslip(slip)}
+                            className="focus-premium grid h-9 w-9 place-items-center rounded-xl bg-primary/10 text-primary"
+                            title="Download"
+                          >
+                            <Download className="h-4 w-4" />
+                          </button>
+                        )}
+                        <button
+                          onClick={() => handleDeletePayslip(slip.id)}
+                          className="focus-premium grid h-9 w-9 place-items-center rounded-xl bg-destructive/10 text-destructive"
+                          title="Remove"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const renderTeamPanel = () => (
     <div className="rounded-[1.5rem] bg-surface-raised p-4 shadow-card">
       <div className="flex items-center gap-3">
@@ -2768,11 +3142,12 @@ const Index = () => {
               {activeTab === "team" && renderTeamPanel()}
               {activeTab === "attendance" && renderAttendancePanel()}
               {activeTab === "leave" && renderLeavePanel()}
+              {activeTab === "payroll" && renderPayrollPanel()}
               {(activeTab === "book" || activeTab === "map") && renderBookingPanel()}
             </div>
 
-            <div className="sticky bottom-0 grid grid-cols-5 border-t border-border bg-surface-raised px-2 py-2">
-              {bottomTabs.map((tab) => (
+            <div className={`sticky bottom-0 grid ${isAdmin ? "grid-cols-6" : "grid-cols-5"} border-t border-border bg-surface-raised px-2 py-2`}>
+              {bottomTabs.filter((t) => t.id !== "admin" || isAdmin).map((tab) => (
                 <button
                   key={tab.label}
                   onClick={() => setActiveTab(tab.id)}
