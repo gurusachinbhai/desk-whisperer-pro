@@ -2311,17 +2311,18 @@ const Index = () => {
   const renderDirectoryPanel = () => {
     const todayStr = format(new Date(), "yyyy-MM-dd");
     const todaysAttendance = attendance.filter((r) => r.date === todayStr);
-    const todaysBookings = confirmedBookings.filter((b) => b.date === todayStr && !b.released);
 
-    const isOnline = (empEmail: string | null) => {
-      if (!empEmail) return false;
+    const isOnline = (empName: string) => {
+      const target = empName.trim().toLowerCase();
       return todaysAttendance.some(
-        (r) => r.signInAt && !r.signOutAt && r.userEmail?.toLowerCase() === empEmail.toLowerCase(),
+        (r) => r.signInAt && !r.signOutAt && r.userName?.trim().toLowerCase() === target,
       );
     };
-    const bookingFor = (empEmail: string | null) => {
-      if (!empEmail) return undefined;
-      return todaysBookings.find((b) => b.userEmail?.toLowerCase() === empEmail.toLowerCase());
+    const hasSignedInToday = (empName: string) => {
+      const target = empName.trim().toLowerCase();
+      return todaysAttendance.some(
+        (r) => r.signInAt && r.userName?.trim().toLowerCase() === target,
+      );
     };
 
     const q = directoryQuery.trim().toLowerCase();
