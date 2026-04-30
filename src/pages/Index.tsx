@@ -199,6 +199,7 @@ const bottomTabs: { id: ActiveTab; icon: typeof CalendarCheck; label: string }[]
   { id: "book", icon: CalendarCheck, label: "Book" },
   { id: "attendance", icon: Clock, label: "Attendance" },
   { id: "leave", icon: Plane, label: "Leave" },
+  { id: "payroll", icon: FileText, label: "Payroll" },
   { id: "admin", icon: BarChart3, label: "Admin" },
 ];
 
