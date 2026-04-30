@@ -102,7 +102,7 @@ type EmployeeInvite = {
 };
 
 type AppMode = "signup" | "login";
-type ActiveTab = "home" | "book" | "attendance" | "leave" | "payroll" | "billing" | "reports" | "map" | "rooms" | "admin" | "team";
+type ActiveTab = "home" | "book" | "attendance" | "leave" | "payroll" | "billing" | "reports" | "map" | "rooms" | "directory" | "admin" | "team";
 type LoginStep = "form" | "otp";
 type LoginIdentifier = "email" | "phone";
 
@@ -271,7 +271,7 @@ const Index = () => {
   const [companyProfile, setCompanyProfile] = useState<CompanyProfile | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [invites, setInvites] = useState<EmployeeInvite[]>([]);
-  const [employees, setEmployees] = useState<Array<{ id: string; display_name: string; email: string | null }>>([]);
+  const [employees, setEmployees] = useState<Array<{ id: string; display_name: string; email: string | null; phone: string | null }>>([]);
   const [floorDraft, setFloorDraft] = useState<string>("");
   const [areaDraft, setAreaDraft] = useState<string>("");
   const [latestInviteUrl, setLatestInviteUrl] = useState("");
@@ -992,10 +992,10 @@ const Index = () => {
     (async () => {
       const { data } = await supabase
         .from("employee_profiles")
-        .select("id, display_name, email")
+        .select("id, display_name, email, phone")
         .eq("company_id", companyProfile.id)
         .order("display_name", { ascending: true });
-      setEmployees((data ?? []) as Array<{ id: string; display_name: string; email: string | null }>);
+      setEmployees((data ?? []) as Array<{ id: string; display_name: string; email: string | null; phone: string | null }>);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [companyProfile?.id]);
@@ -2298,6 +2298,167 @@ const Index = () => {
                 ))}
               </ul>
             </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  // ============== DIRECTORY PANEL ==============
+  const [directoryQuery, setDirectoryQuery] = useState("");
+  const [directoryFilter, setDirectoryFilter] = useState<"all" | "online" | "today">("all");
+
+  const renderDirectoryPanel = () => {
+    const todayStr = format(new Date(), "yyyy-MM-dd");
+    const todaysAttendance = attendance.filter((r) => r.date === todayStr);
+
+    const isOnline = (empName: string) => {
+      const target = empName.trim().toLowerCase();
+      return todaysAttendance.some(
+        (r) => r.signInAt && !r.signOutAt && r.userName?.trim().toLowerCase() === target,
+      );
+    };
+    const hasSignedInToday = (empName: string) => {
+      const target = empName.trim().toLowerCase();
+      return todaysAttendance.some(
+        (r) => r.signInAt && r.userName?.trim().toLowerCase() === target,
+      );
+    };
+
+    const q = directoryQuery.trim().toLowerCase();
+    const filtered = employees.filter((emp) => {
+      const matchesQuery =
+        !q ||
+        emp.display_name.toLowerCase().includes(q) ||
+        (emp.email ?? "").toLowerCase().includes(q) ||
+        (emp.phone ?? "").toLowerCase().includes(q);
+      if (!matchesQuery) return false;
+      if (directoryFilter === "online") return isOnline(emp.display_name);
+      if (directoryFilter === "today") return hasSignedInToday(emp.display_name);
+      return true;
+    });
+
+    const onlineCount = employees.filter((e) => isOnline(e.display_name)).length;
+    const todayCount = employees.filter((e) => hasSignedInToday(e.display_name)).length;
+
+    const initialsOf = (name: string) =>
+      name.split(/\s+/).slice(0, 2).map((p) => p[0]?.toUpperCase() ?? "").join("") || "?";
+
+    return (
+      <div className="space-y-5">
+        <div className="rounded-[1.5rem] bg-surface-raised p-4 shadow-card">
+          <div className="mb-3 flex items-center gap-2">
+            <Users className="h-4 w-4 text-primary" />
+            <h3 className="font-display text-lg font-extrabold">Directory</h3>
+            <span className="ml-auto rounded-full bg-muted px-2.5 py-0.5 text-[10px] font-extrabold uppercase text-muted-foreground">
+              {employees.length} teammates
+            </span>
+          </div>
+
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <input
+              type="search"
+              value={directoryQuery}
+              onChange={(e) => setDirectoryQuery(e.target.value)}
+              placeholder="Search by name, email or phone"
+              className="focus-premium h-12 w-full rounded-2xl border border-border bg-background pl-10 pr-4 text-sm font-extrabold"
+            />
+          </div>
+
+          <div className="mt-3 grid grid-cols-3 gap-2">
+            {([
+              { id: "all", label: `All · ${employees.length}` },
+              { id: "online", label: `Online · ${onlineCount}` },
+              { id: "today", label: `Today · ${todayCount}` },
+            ] as const).map((f) => (
+              <button
+                key={f.id}
+                type="button"
+                onClick={() => setDirectoryFilter(f.id)}
+                className={cn(
+                  "focus-premium rounded-2xl py-2 text-xs font-extrabold transition-all",
+                  directoryFilter === f.id
+                    ? "bg-primary text-primary-foreground shadow-glow"
+                    : "bg-muted text-muted-foreground",
+                )}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="rounded-[1.5rem] bg-surface-raised p-4 shadow-card">
+          {filtered.length === 0 ? (
+            <p className="rounded-2xl bg-background p-4 text-center text-xs font-semibold text-muted-foreground">
+              {employees.length === 0
+                ? "No teammates yet. Send invites from the Admin console."
+                : "No teammates match your search."}
+            </p>
+          ) : (
+            <ul className="space-y-2">
+              {filtered.map((emp) => {
+                const online = isOnline(emp.display_name);
+                const seenToday = !online && hasSignedInToday(emp.display_name);
+                return (
+                  <li key={emp.id} className="flex items-center gap-3 rounded-2xl bg-background p-3">
+                    <div className="relative">
+                      <div className="grid h-11 w-11 place-items-center rounded-full bg-primary/15 text-primary">
+                        <span className="font-display text-sm font-extrabold">{initialsOf(emp.display_name)}</span>
+                      </div>
+                      <span
+                        className={cn(
+                          "absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full ring-2 ring-background",
+                          online ? "bg-success" : "bg-muted-foreground/40",
+                        )}
+                        aria-label={online ? "Online" : "Offline"}
+                      />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-extrabold">{emp.display_name}</p>
+                      <p className="truncate text-xs font-semibold text-muted-foreground">
+                        {emp.email ?? "No email"}
+                      </p>
+                      <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                        {online && (
+                          <span className="rounded-full bg-success/15 px-2 py-0.5 text-[10px] font-extrabold uppercase text-success">
+                            Online
+                          </span>
+                        )}
+                        {seenToday && (
+                          <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-extrabold uppercase text-primary">
+                            Signed in today
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-1">
+                      {emp.email && (
+                        <a
+                          href={`mailto:${emp.email}`}
+                          className="focus-premium grid h-9 w-9 place-items-center rounded-2xl bg-muted text-muted-foreground hover:text-primary"
+                          aria-label={`Email ${emp.display_name}`}
+                          title="Email"
+                        >
+                          <Mail className="h-4 w-4" />
+                        </a>
+                      )}
+                      {emp.phone && (
+                        <a
+                          href={`tel:${emp.phone}`}
+                          className="focus-premium grid h-9 w-9 place-items-center rounded-2xl bg-muted text-muted-foreground hover:text-primary"
+                          aria-label={`Call ${emp.display_name}`}
+                          title="Call"
+                        >
+                          <Smartphone className="h-4 w-4" />
+                        </a>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
           )}
         </div>
       </div>
@@ -4478,6 +4639,13 @@ const Index = () => {
               </button>
               <button
                 type="button"
+                onClick={() => setActiveTab("directory")}
+                className="focus-premium text-xs font-extrabold text-primary"
+              >
+                Directory
+              </button>
+              <button
+                type="button"
                 onClick={() => setActiveTab("book")}
                 className="focus-premium text-xs font-extrabold text-primary"
               >
@@ -4678,6 +4846,7 @@ const Index = () => {
                   {activeTab === "book" && renderBookingPanel()}
                   {activeTab === "map" && renderMapPanel()}
                   {activeTab === "rooms" && renderRoomsPanel()}
+                  {activeTab === "directory" && renderDirectoryPanel()}
                 </>
               )}
             </div>
