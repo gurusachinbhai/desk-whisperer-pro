@@ -3,6 +3,7 @@ import {
   BarChart3,
   Bell,
   Building2,
+  CreditCard,
   CalendarCheck,
   CalendarIcon,
   CheckCircle2,
@@ -91,7 +92,7 @@ type EmployeeInvite = {
 };
 
 type AppMode = "signup" | "login";
-type ActiveTab = "home" | "book" | "attendance" | "leave" | "payroll" | "map" | "admin" | "team";
+type ActiveTab = "home" | "book" | "attendance" | "leave" | "payroll" | "billing" | "map" | "admin" | "team";
 type LoginStep = "form" | "otp";
 type LoginIdentifier = "email" | "phone";
 
@@ -482,6 +483,78 @@ const Index = () => {
     if (!companyProfile) return;
     window.localStorage.setItem(payrollStorageKey(companyProfile.id), JSON.stringify(payslips));
   }, [payslips, companyProfile?.id]);
+
+  // ============== SUBSCRIPTION / BILLING STATE ==============
+  type BillingPlanId = "monthly" | "quarterly" | "halfyear" | "ninemonth" | "annual";
+  type BillingPlan = {
+    id: BillingPlanId;
+    label: string;
+    months: number;
+    pricePerSeatPerMonth: number; // USD
+  };
+  const BILLING_PLANS: BillingPlan[] = [
+    { id: "monthly", label: "Monthly", months: 1, pricePerSeatPerMonth: 3 },
+    { id: "quarterly", label: "Quarterly (3 mo)", months: 3, pricePerSeatPerMonth: 3 },
+    { id: "halfyear", label: "6 Months", months: 6, pricePerSeatPerMonth: 3 },
+    { id: "ninemonth", label: "9 Months", months: 9, pricePerSeatPerMonth: 3 },
+    { id: "annual", label: "1 Year", months: 12, pricePerSeatPerMonth: 3 },
+  ];
+
+  type Subscription = {
+    planId: BillingPlanId;
+    seats: number;
+    startedAt: number; // epoch ms
+    expiresAt: number; // epoch ms
+    autoRenew: boolean;
+    lastPaymentAmount: number;
+    currency: string;
+    activatedBy: string;
+    history: Array<{
+      planId: BillingPlanId;
+      seats: number;
+      amount: number;
+      paidAt: number;
+      periodStart: number;
+      periodEnd: number;
+    }>;
+  };
+  const [subscription, setSubscription] = useState<Subscription | null>(null);
+  const [billingForm, setBillingForm] = useState<{ planId: BillingPlanId; seats: string }>({
+    planId: "monthly",
+    seats: "10",
+  });
+  const subscriptionStorageKey = (companyId: string) => `deskflow-subscription-${companyId}`;
+
+  useEffect(() => {
+    if (!companyProfile) {
+      setSubscription(null);
+      return;
+    }
+    const raw = window.localStorage.getItem(subscriptionStorageKey(companyProfile.id));
+    if (raw) {
+      try {
+        setSubscription(JSON.parse(raw));
+      } catch {
+        setSubscription(null);
+      }
+    } else {
+      setSubscription(null);
+    }
+  }, [companyProfile?.id]);
+
+  useEffect(() => {
+    if (!companyProfile) return;
+    if (subscription) {
+      window.localStorage.setItem(subscriptionStorageKey(companyProfile.id), JSON.stringify(subscription));
+    }
+  }, [subscription, companyProfile?.id]);
+
+  const subscriptionExpired = useMemo(() => {
+    if (!subscription) return false;
+    return subscription.expiresAt <= nowTs;
+  }, [subscription, nowTs]);
+
+  const subscriptionActive = Boolean(subscription && !subscriptionExpired);
 
 
   // Auto-release any booking whose shift end has passed
@@ -1308,6 +1381,22 @@ const Index = () => {
             <p className="text-[10px] font-bold uppercase">staff</p>
           </div>
         </div>
+        <button
+          onClick={() => setActiveTab("billing")}
+          className="focus-premium mt-3 flex w-full items-center justify-between rounded-2xl border border-border bg-surface-muted px-4 py-3 text-sm font-extrabold"
+        >
+          <span className="flex items-center gap-2">
+            <CreditCard className="h-4 w-4 text-primary" />
+            Billing & subscription
+          </span>
+          <span className={subscriptionActive ? "text-primary" : subscriptionExpired ? "text-destructive" : "text-muted-foreground"}>
+            {subscriptionActive
+              ? `Active · renews ${subscription ? format(new Date(subscription.expiresAt), "MMM d") : ""}`
+              : subscriptionExpired
+                ? "Expired"
+                : "Not subscribed"}
+          </span>
+        </button>
       </div>
 
       {/* Floors management */}
@@ -2782,6 +2871,237 @@ const Index = () => {
     );
   };
 
+  // ============== BILLING HANDLERS ==============
+  const handleSubscribe = (e: FormEvent) => {
+    e.preventDefault();
+    if (!isAdmin) {
+      toast.error("Only admins can manage billing");
+      return;
+    }
+    if (!currentUser) return;
+    const plan = BILLING_PLANS.find((p) => p.id === billingForm.planId);
+    if (!plan) return;
+    const seats = Math.max(1, Math.floor(Number(billingForm.seats) || 0));
+    if (seats < 1) {
+      toast.error("Seats must be at least 1");
+      return;
+    }
+    const amount = seats * plan.pricePerSeatPerMonth * plan.months;
+    const now = Date.now();
+    const periodMs = plan.months * 30 * 24 * 60 * 60 * 1000;
+    // If currently active and renewing, extend from current expiry; otherwise start now
+    const startBase = subscriptionActive && subscription ? subscription.expiresAt : now;
+    const expiresAt = startBase + periodMs;
+    const history = subscription?.history ?? [];
+    const next: Subscription = {
+      planId: plan.id,
+      seats,
+      startedAt: subscription?.startedAt ?? now,
+      expiresAt,
+      autoRenew: subscription?.autoRenew ?? false,
+      lastPaymentAmount: amount,
+      currency: "USD",
+      activatedBy: currentUser.displayName,
+      history: [
+        ...history,
+        {
+          planId: plan.id,
+          seats,
+          amount,
+          paidAt: now,
+          periodStart: startBase,
+          periodEnd: expiresAt,
+        },
+      ],
+    };
+    setSubscription(next);
+    toast.success(
+      subscriptionActive
+        ? `Renewed: ${plan.label} · $${amount.toLocaleString()} (mock)`
+        : `Subscribed: ${plan.label} · $${amount.toLocaleString()} (mock)`,
+    );
+  };
+
+  const handleToggleAutoRenew = () => {
+    if (!subscription) return;
+    setSubscription({ ...subscription, autoRenew: !subscription.autoRenew });
+  };
+
+  const renderBillingPanel = () => {
+    const plan = subscription ? BILLING_PLANS.find((p) => p.id === subscription.planId) : null;
+    const previewSeats = Math.max(1, Math.floor(Number(billingForm.seats) || 0));
+    const previewPlan = BILLING_PLANS.find((p) => p.id === billingForm.planId)!;
+    const previewAmount = previewSeats * previewPlan.pricePerSeatPerMonth * previewPlan.months;
+    const daysLeft = subscription
+      ? Math.max(0, Math.ceil((subscription.expiresAt - nowTs) / (24 * 60 * 60 * 1000)))
+      : 0;
+
+    return (
+      <div className="space-y-5">
+        <div className="rounded-[1.5rem] bg-surface-raised p-5 shadow-card">
+          <div className="flex items-center gap-3">
+            <div className="grid h-10 w-10 place-items-center rounded-2xl bg-primary/10 text-primary">
+              <CreditCard className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Subscription</p>
+              <h2 className="font-display text-xl font-extrabold">
+                {subscription
+                  ? subscriptionExpired
+                    ? "Subscription expired"
+                    : `Active · ${plan?.label}`
+                  : "No active subscription"}
+              </h2>
+            </div>
+          </div>
+
+          {subscription ? (
+            <div className="mt-4 space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-2xl bg-surface-muted p-3">
+                  <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Seats</p>
+                  <p className="font-display text-lg font-extrabold">{subscription.seats}</p>
+                </div>
+                <div className="rounded-2xl bg-surface-muted p-3">
+                  <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Last payment</p>
+                  <p className="font-display text-lg font-extrabold">
+                    {subscription.currency} {subscription.lastPaymentAmount.toLocaleString()}
+                  </p>
+                </div>
+                <div className="rounded-2xl bg-surface-muted p-3">
+                  <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Started</p>
+                  <p className="font-display text-sm font-extrabold">
+                    {format(new Date(subscription.startedAt), "MMM d, yyyy")}
+                  </p>
+                </div>
+                <div className="rounded-2xl bg-surface-muted p-3">
+                  <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Renewal date</p>
+                  <p className="font-display text-sm font-extrabold">
+                    {format(new Date(subscription.expiresAt), "MMM d, yyyy")}
+                  </p>
+                </div>
+              </div>
+              <div
+                className={`rounded-2xl p-3 text-sm font-semibold ${
+                  subscriptionExpired
+                    ? "bg-destructive/10 text-destructive"
+                    : daysLeft <= 7
+                      ? "bg-amber-500/10 text-amber-700 dark:text-amber-400"
+                      : "bg-primary/10 text-primary"
+                }`}
+              >
+                {subscriptionExpired
+                  ? "Your subscription has expired. Renew to restore access for your team."
+                  : `${daysLeft} day${daysLeft === 1 ? "" : "s"} left in current billing period.`}
+              </div>
+              {isAdmin && (
+                <button
+                  onClick={handleToggleAutoRenew}
+                  className="focus-premium flex w-full items-center justify-between rounded-2xl border border-border bg-surface-muted px-4 py-3 text-sm font-extrabold"
+                >
+                  <span>Auto-renew</span>
+                  <span className={subscription.autoRenew ? "text-primary" : "text-muted-foreground"}>
+                    {subscription.autoRenew ? "ON" : "OFF"}
+                  </span>
+                </button>
+              )}
+            </div>
+          ) : (
+            <p className="mt-4 rounded-2xl bg-surface-muted p-4 text-sm font-semibold text-muted-foreground">
+              Your company is on a free trial preview. An admin must subscribe to keep using Open Desk Flow.
+            </p>
+          )}
+        </div>
+
+        {isAdmin && (
+          <div className="rounded-[1.5rem] bg-surface-raised p-5 shadow-card">
+            <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+              {subscriptionActive ? "Renew or change plan" : "Choose a plan"}
+            </p>
+            <h3 className="mt-1 font-display text-lg font-extrabold">$3 per employee per month</h3>
+
+            <form onSubmit={handleSubscribe} className="mt-4 space-y-3">
+              <div>
+                <label className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Number of seats</label>
+                <Input
+                  type="number"
+                  min={1}
+                  className="mt-1 rounded-2xl"
+                  value={billingForm.seats}
+                  onChange={(e) => setBillingForm((prev) => ({ ...prev, seats: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Billing cycle</label>
+                <div className="mt-2 grid grid-cols-1 gap-2">
+                  {BILLING_PLANS.map((p) => {
+                    const total = previewSeats * p.pricePerSeatPerMonth * p.months;
+                    const selected = billingForm.planId === p.id;
+                    return (
+                      <button
+                        type="button"
+                        key={p.id}
+                        onClick={() => setBillingForm((prev) => ({ ...prev, planId: p.id }))}
+                        className={`focus-premium flex items-center justify-between rounded-2xl border px-4 py-3 text-left text-sm font-extrabold transition ${
+                          selected
+                            ? "border-primary bg-primary/10 text-primary"
+                            : "border-border bg-surface-muted text-foreground"
+                        }`}
+                      >
+                        <span>{p.label}</span>
+                        <span>${total.toLocaleString()} <span className="text-xs font-semibold opacity-70">/ {p.months} mo</span></span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              <div className="rounded-2xl bg-primary/5 p-3 text-sm font-semibold">
+                Total today: <span className="font-display font-extrabold text-primary">${previewAmount.toLocaleString()} USD</span>
+              </div>
+              <button
+                type="submit"
+                className="focus-premium flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 font-extrabold text-primary-foreground shadow-glow"
+              >
+                <CreditCard className="h-5 w-5" />
+                {subscriptionActive ? "Renew subscription (mock)" : "Subscribe (mock)"}
+              </button>
+              <p className="text-[11px] font-semibold text-muted-foreground">
+                This is a mock checkout — no real payment is processed.
+              </p>
+            </form>
+          </div>
+        )}
+
+        {subscription && subscription.history.length > 0 && (
+          <div className="rounded-[1.5rem] bg-surface-raised p-5 shadow-card">
+            <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Payment history</p>
+            <ul className="mt-2 space-y-2">
+              {[...subscription.history].reverse().map((h, idx) => {
+                const hp = BILLING_PLANS.find((p) => p.id === h.planId);
+                return (
+                  <li key={idx} className="rounded-2xl border border-border bg-surface-muted p-3">
+                    <div className="flex items-center justify-between">
+                      <p className="font-display text-sm font-extrabold">
+                        {hp?.label} · {h.seats} seats
+                      </p>
+                      <p className="font-display text-sm font-extrabold text-primary">
+                        ${h.amount.toLocaleString()}
+                      </p>
+                    </div>
+                    <p className="mt-1 text-[11px] font-semibold text-muted-foreground">
+                      {format(new Date(h.periodStart), "MMM d, yyyy")} → {format(new Date(h.periodEnd), "MMM d, yyyy")}
+                      {" · paid "}{format(new Date(h.paidAt), "MMM d, yyyy")}
+                    </p>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const renderTeamPanel = () => (
     <div className="rounded-[1.5rem] bg-surface-raised p-4 shadow-card">
       <div className="flex items-center gap-3">
@@ -3137,13 +3457,43 @@ const Index = () => {
             </div>
 
             <div className="space-y-5 px-5 py-5">
-              {activeTab === "home" && renderHomeScreen()}
-              {isAdmin && activeTab === "admin" && renderAdminPanel()}
-              {activeTab === "team" && renderTeamPanel()}
-              {activeTab === "attendance" && renderAttendancePanel()}
-              {activeTab === "leave" && renderLeavePanel()}
-              {activeTab === "payroll" && renderPayrollPanel()}
-              {(activeTab === "book" || activeTab === "map") && renderBookingPanel()}
+              {subscriptionExpired && activeTab !== "billing" ? (
+                <div className="rounded-[1.5rem] border-2 border-destructive bg-destructive/5 p-5 shadow-card">
+                  <div className="flex items-center gap-3">
+                    <div className="grid h-10 w-10 place-items-center rounded-2xl bg-destructive/15 text-destructive">
+                      <Lock className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-wide text-destructive">Access blocked</p>
+                      <h2 className="font-display text-xl font-extrabold">Subscription expired</h2>
+                    </div>
+                  </div>
+                  <p className="mt-3 text-sm font-semibold leading-6 text-muted-foreground">
+                    {isAdmin
+                      ? "Your company's subscription has lapsed. Renew now to restore access for your whole team."
+                      : "Your company's subscription has lapsed. Please ask your admin to renew to restore access."}
+                  </p>
+                  {isAdmin && (
+                    <button
+                      onClick={() => setActiveTab("billing")}
+                      className="focus-premium mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 font-extrabold text-primary-foreground shadow-glow"
+                    >
+                      <CreditCard className="h-5 w-5" /> Go to billing
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <>
+                  {activeTab === "home" && renderHomeScreen()}
+                  {isAdmin && activeTab === "admin" && renderAdminPanel()}
+                  {activeTab === "team" && renderTeamPanel()}
+                  {activeTab === "attendance" && renderAttendancePanel()}
+                  {activeTab === "leave" && renderLeavePanel()}
+                  {activeTab === "payroll" && renderPayrollPanel()}
+                  {activeTab === "billing" && renderBillingPanel()}
+                  {(activeTab === "book" || activeTab === "map") && renderBookingPanel()}
+                </>
+              )}
             </div>
 
             <div className={`sticky bottom-0 grid ${isAdmin ? "grid-cols-6" : "grid-cols-5"} border-t border-border bg-surface-raised px-2 py-2`}>
