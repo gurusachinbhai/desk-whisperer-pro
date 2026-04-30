@@ -4604,8 +4604,12 @@ const Index = () => {
 
             <div className="bg-primary px-5 pb-6 text-primary-foreground">
               <div className="flex items-center gap-3">
-                <div className="grid h-12 w-12 place-items-center rounded-2xl bg-primary-foreground/15">
-                  <UserIcon className="h-6 w-6" />
+                <div className="grid h-12 w-12 place-items-center overflow-hidden rounded-2xl bg-primary-foreground/15">
+                  {userAvatar ? (
+                    <img src={userAvatar} alt="Your profile" className="h-full w-full object-cover" />
+                  ) : (
+                    <UserIcon className="h-6 w-6" />
+                  )}
                 </div>
                 <div className="min-w-0">
                   <p className="text-sm font-semibold opacity-80">{companyProfile?.name}</p>
