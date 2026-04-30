@@ -4368,9 +4368,9 @@ const Index = () => {
           <div className="mb-3 flex items-center gap-2">
             <Globe2 className="h-4 w-4 text-primary" />
             <h3 className="font-display text-base font-extrabold">Your timezone</h3>
-            {userTimezone && (
+            {userTimezone && !editingTimezone && (
               <span className="ml-auto flex items-center gap-1 rounded-full bg-success/15 px-2 py-0.5 text-[10px] font-extrabold uppercase text-success">
-                <Lock className="h-3 w-3" /> Locked
+                <Lock className="h-3 w-3" /> Saved
               </span>
             )}
           </div>
