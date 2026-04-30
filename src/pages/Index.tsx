@@ -3656,6 +3656,68 @@ const Index = () => {
           </div>
         </section>
       </div>
+
+      <Dialog open={showNotifications} onOpenChange={setShowNotifications}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Bell className="h-5 w-5 text-primary" /> Notifications
+            </DialogTitle>
+            <DialogDescription>
+              Company-wide announcements from your admin team.
+            </DialogDescription>
+          </DialogHeader>
+          {sortedAnnouncements.length === 0 ? (
+            <p className="rounded-2xl bg-surface-muted p-4 text-sm font-semibold text-muted-foreground">
+              No announcements yet. When your admin posts company news, it appears here.
+            </p>
+          ) : (
+            <ul className="max-h-[60vh] space-y-3 overflow-y-auto pr-1">
+              {sortedAnnouncements.map((a) => {
+                const tone =
+                  a.priority === "urgent"
+                    ? "border-destructive/40 bg-destructive/5"
+                    : a.priority === "important"
+                      ? "border-amber-500/40 bg-amber-500/5"
+                      : "border-border bg-surface-muted";
+                const badgeTone =
+                  a.priority === "urgent"
+                    ? "bg-destructive text-destructive-foreground"
+                    : a.priority === "important"
+                      ? "bg-amber-500 text-white"
+                      : "bg-primary/10 text-primary";
+                return (
+                  <li key={a.id} className={`rounded-2xl border p-3 ${tone}`}>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="font-display text-sm font-extrabold">{a.title}</p>
+                        <p className="mt-1 whitespace-pre-wrap text-xs font-semibold text-muted-foreground">
+                          {a.body}
+                        </p>
+                      </div>
+                      <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-extrabold uppercase ${badgeTone}`}>
+                        {a.priority}
+                      </span>
+                    </div>
+                    <div className="mt-2 flex items-center justify-between text-[11px] font-semibold text-muted-foreground">
+                      <span>By {a.authorName} · {format(new Date(a.createdAt), "MMM d, yyyy h:mm a")}</span>
+                      {isAdmin && (
+                        <button
+                          onClick={() => handleDeleteAnnouncement(a.id)}
+                          className="focus-premium grid h-7 w-7 place-items-center rounded-lg bg-destructive/10 text-destructive"
+                          title="Remove"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </DialogContent>
+      </Dialog>
     </main>
   );
 };
