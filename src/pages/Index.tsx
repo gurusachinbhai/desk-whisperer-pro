@@ -12,9 +12,11 @@ import {
   Clock3,
   AlertTriangle,
   LogIn,
+  Camera,
   Copy,
   DoorOpen,
   Download,
+  Pencil,
   FileText,
   Globe2,
   History,
@@ -366,6 +368,101 @@ const Index = () => {
     signOut: "",
     reason: "",
   });
+
+  // ============== USER PROFILE (avatar + name override) ==============
+  const profileStorageKey = (email: string) => `deskflow-profile-${email.toLowerCase()}`;
+  const [userAvatar, setUserAvatar] = useState<string | null>(null);
+  const [profileNameDraft, setProfileNameDraft] = useState<string>("");
+  const [editingProfile, setEditingProfile] = useState<boolean>(false);
+  const [editingTimezone, setEditingTimezone] = useState<boolean>(false);
+
+  // Load profile overrides on user change
+  useEffect(() => {
+    if (!currentUser?.email) {
+      setUserAvatar(null);
+      return;
+    }
+    try {
+      const raw = window.localStorage.getItem(profileStorageKey(currentUser.email));
+      if (raw) {
+        const parsed = JSON.parse(raw) as { avatar?: string; displayName?: string };
+        if (parsed.avatar) setUserAvatar(parsed.avatar);
+        if (parsed.displayName && parsed.displayName !== currentUser.displayName) {
+          setCurrentUser({ ...currentUser, displayName: parsed.displayName });
+        }
+      } else {
+        setUserAvatar(null);
+      }
+    } catch {
+      setUserAvatar(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser?.email]);
+
+  const persistProfile = (next: { avatar?: string | null; displayName?: string }) => {
+    if (!currentUser?.email) return;
+    const key = profileStorageKey(currentUser.email);
+    let prev: { avatar?: string; displayName?: string } = {};
+    try {
+      const raw = window.localStorage.getItem(key);
+      if (raw) prev = JSON.parse(raw);
+    } catch { /* noop */ }
+    const merged = {
+      ...prev,
+      ...(next.avatar !== undefined ? { avatar: next.avatar ?? undefined } : {}),
+      ...(next.displayName ? { displayName: next.displayName } : {}),
+    };
+    window.localStorage.setItem(key, JSON.stringify(merged));
+  };
+
+  const handleAvatarFile = (file: File) => {
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please choose an image file");
+      return;
+    }
+    if (file.size > 1.5 * 1024 * 1024) {
+      toast.error("Image too large — keep it under 1.5 MB");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = String(reader.result || "");
+      setUserAvatar(dataUrl);
+      persistProfile({ avatar: dataUrl });
+      toast.success("Profile photo updated");
+    };
+    reader.onerror = () => toast.error("Couldn't read that image");
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveAvatar = () => {
+    setUserAvatar(null);
+    persistProfile({ avatar: null });
+    toast.success("Profile photo removed");
+  };
+
+  const handleSaveDisplayName = () => {
+    const trimmed = profileNameDraft.trim();
+    if (trimmed.length < 2) {
+      toast.error("Display name must be at least 2 characters");
+      return;
+    }
+    if (currentUser) {
+      setCurrentUser({ ...currentUser, displayName: trimmed });
+      persistProfile({ displayName: trimmed });
+    }
+    setEditingProfile(false);
+    toast.success("Display name updated");
+  };
+
+  const handleChangeTimezone = (next: string) => {
+    if (!next) return;
+    setUserTimezone(next);
+    setDraftTimezone(next);
+    window.localStorage.setItem("deskflow-user-timezone", next);
+    setEditingTimezone(false);
+    toast.success(`Timezone set to ${next}`);
+  };
 
   const attendanceStorageKey = (companyId: string) => `deskflow-attendance-${companyId}`;
 
@@ -4134,17 +4231,52 @@ const Index = () => {
         <div className="rounded-[1.5rem] bg-surface-raised p-4 shadow-card">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="grid h-14 w-14 place-items-center rounded-full bg-primary text-primary-foreground shadow-glow">
-                <span className="font-display text-xl font-extrabold">{initials || "E"}</span>
-              </div>
+              <label
+                htmlFor="profile-avatar-input"
+                className="group relative grid h-14 w-14 cursor-pointer place-items-center overflow-hidden rounded-full bg-primary text-primary-foreground shadow-glow ring-2 ring-primary/30"
+                aria-label="Change profile photo"
+              >
+                {userAvatar ? (
+                  <img src={userAvatar} alt="Your profile" className="h-full w-full object-cover" />
+                ) : (
+                  <span className="font-display text-xl font-extrabold">{initials || "E"}</span>
+                )}
+                <span className="absolute inset-x-0 bottom-0 grid place-items-center bg-foreground/55 py-0.5 text-primary-foreground opacity-0 transition-opacity group-hover:opacity-100">
+                  <Camera className="h-3.5 w-3.5" />
+                </span>
+                <input
+                  id="profile-avatar-input"
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) handleAvatarFile(f);
+                    e.currentTarget.value = "";
+                  }}
+                />
+              </label>
               <div className="min-w-0">
                 <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Welcome back</p>
-                <h2 className="truncate font-display text-xl font-extrabold">
-                  {currentUser?.displayName}
-                  {companyProfile && (
-                    <span className="ml-1 text-sm font-bold text-muted-foreground">· {companyProfile.name}</span>
-                  )}
-                </h2>
+                <div className="flex items-center gap-1.5">
+                  <h2 className="truncate font-display text-xl font-extrabold">
+                    {currentUser?.displayName}
+                    {companyProfile && (
+                      <span className="ml-1 text-sm font-bold text-muted-foreground">· {companyProfile.name}</span>
+                    )}
+                  </h2>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setProfileNameDraft(currentUser?.displayName ?? "");
+                      setEditingProfile(true);
+                    }}
+                    className="focus-premium grid h-6 w-6 shrink-0 place-items-center rounded-full bg-muted text-muted-foreground hover:text-primary"
+                    aria-label="Edit display name"
+                  >
+                    <Pencil className="h-3 w-3" />
+                  </button>
+                </div>
                 <p className="truncate text-xs font-semibold text-muted-foreground">{currentUser?.email}</p>
                 <div className="mt-1 flex flex-wrap items-center gap-1.5">
                   <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-primary">
@@ -4154,6 +4286,15 @@ const Index = () => {
                     <span className="rounded-full bg-success px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-success-foreground shadow-glow ring-2 ring-success/40">
                       Admin
                     </span>
+                  )}
+                  {userAvatar && (
+                    <button
+                      type="button"
+                      onClick={handleRemoveAvatar}
+                      className="focus-premium rounded-full bg-muted px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-muted-foreground hover:text-destructive"
+                    >
+                      Remove photo
+                    </button>
                   )}
                 </div>
               </div>
@@ -4227,24 +4368,34 @@ const Index = () => {
           <div className="mb-3 flex items-center gap-2">
             <Globe2 className="h-4 w-4 text-primary" />
             <h3 className="font-display text-base font-extrabold">Your timezone</h3>
-            {userTimezone && (
+            {userTimezone && !editingTimezone && (
               <span className="ml-auto flex items-center gap-1 rounded-full bg-success/15 px-2 py-0.5 text-[10px] font-extrabold uppercase text-success">
-                <Lock className="h-3 w-3" /> Locked
+                <Lock className="h-3 w-3" /> Saved
               </span>
             )}
           </div>
-          {userTimezone ? (
+          {userTimezone && !editingTimezone ? (
             <div className="rounded-2xl bg-background p-3">
               <p className="text-xs font-semibold text-muted-foreground">Committed timezone</p>
               <p className="font-display text-base font-extrabold">{userTimezone}</p>
               <p className="mt-1 text-[10px] font-semibold text-muted-foreground">
-                This selection is permanent. Contact the Open Desk Flow team to change it.
+                Your bookings, attendance and shift cutoffs use this timezone.
               </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setDraftTimezone(userTimezone);
+                  setEditingTimezone(true);
+                }}
+                className="focus-premium mt-3 flex w-full items-center justify-center gap-2 rounded-2xl border border-border bg-background px-4 py-2.5 text-xs font-extrabold text-primary"
+              >
+                <Pencil className="h-3.5 w-3.5" /> Change timezone
+              </button>
             </div>
           ) : (
             <div className="space-y-2">
               <p className="text-xs font-semibold text-muted-foreground">
-                Pick your timezone — once committed, it cannot be changed from here.
+                {userTimezone ? "Pick a new timezone — this affects your future bookings and attendance." : "Pick your timezone."}
               </p>
               <Select value={draftTimezone} onValueChange={(v) => setDraftTimezone(v)}>
                 <SelectTrigger className="h-12 rounded-2xl border-border bg-background text-sm font-extrabold">
@@ -4258,13 +4409,24 @@ const Index = () => {
                   ))}
                 </SelectContent>
               </Select>
-              <button
-                type="button"
-                onClick={handleCommitTimezone}
-                className="focus-premium flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-extrabold text-primary-foreground shadow-glow"
-              >
-                <Lock className="h-4 w-4" /> Commit timezone forever
-              </button>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => (userTimezone ? handleChangeTimezone(draftTimezone) : handleCommitTimezone())}
+                  className="focus-premium flex flex-1 items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-extrabold text-primary-foreground shadow-glow"
+                >
+                  <Lock className="h-4 w-4" /> {userTimezone ? "Save timezone" : "Commit timezone"}
+                </button>
+                {userTimezone && (
+                  <button
+                    type="button"
+                    onClick={() => setEditingTimezone(false)}
+                    className="focus-premium rounded-2xl border border-border bg-background px-4 py-3 text-sm font-extrabold text-muted-foreground"
+                  >
+                    Cancel
+                  </button>
+                )}
+              </div>
             </div>
           )}
         </div>
@@ -4463,8 +4625,12 @@ const Index = () => {
 
             <div className="bg-primary px-5 pb-6 text-primary-foreground">
               <div className="flex items-center gap-3">
-                <div className="grid h-12 w-12 place-items-center rounded-2xl bg-primary-foreground/15">
-                  <UserIcon className="h-6 w-6" />
+                <div className="grid h-12 w-12 place-items-center overflow-hidden rounded-2xl bg-primary-foreground/15">
+                  {userAvatar ? (
+                    <img src={userAvatar} alt="Your profile" className="h-full w-full object-cover" />
+                  ) : (
+                    <UserIcon className="h-6 w-6" />
+                  )}
                 </div>
                 <div className="min-w-0">
                   <p className="text-sm font-semibold opacity-80">{companyProfile?.name}</p>
@@ -4590,6 +4756,49 @@ const Index = () => {
               })}
             </ul>
           )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={editingProfile} onOpenChange={setEditingProfile}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Pencil className="h-5 w-5 text-primary" /> Edit display name
+            </DialogTitle>
+            <DialogDescription>
+              This is the name your teammates see on bookings, attendance and announcements.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <label className="block text-xs font-bold uppercase tracking-wide text-muted-foreground">
+              Display name
+            </label>
+            <input
+              type="text"
+              value={profileNameDraft}
+              onChange={(e) => setProfileNameDraft(e.target.value)}
+              maxLength={48}
+              className="focus-premium h-12 w-full rounded-2xl border border-border bg-background px-4 text-sm font-extrabold"
+              placeholder="e.g. Alex Chen"
+              autoFocus
+            />
+            <div className="flex gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setEditingProfile(false)}
+                className="focus-premium flex-1 rounded-2xl border border-border bg-background px-4 py-3 text-sm font-extrabold text-muted-foreground"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveDisplayName}
+                className="focus-premium flex-1 rounded-2xl bg-primary px-4 py-3 text-sm font-extrabold text-primary-foreground shadow-glow"
+              >
+                Save
+              </button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </main>
