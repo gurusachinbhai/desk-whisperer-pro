@@ -484,6 +484,78 @@ const Index = () => {
     window.localStorage.setItem(payrollStorageKey(companyProfile.id), JSON.stringify(payslips));
   }, [payslips, companyProfile?.id]);
 
+  // ============== SUBSCRIPTION / BILLING STATE ==============
+  type BillingPlanId = "monthly" | "quarterly" | "halfyear" | "ninemonth" | "annual";
+  type BillingPlan = {
+    id: BillingPlanId;
+    label: string;
+    months: number;
+    pricePerSeatPerMonth: number; // USD
+  };
+  const BILLING_PLANS: BillingPlan[] = [
+    { id: "monthly", label: "Monthly", months: 1, pricePerSeatPerMonth: 3 },
+    { id: "quarterly", label: "Quarterly (3 mo)", months: 3, pricePerSeatPerMonth: 3 },
+    { id: "halfyear", label: "6 Months", months: 6, pricePerSeatPerMonth: 3 },
+    { id: "ninemonth", label: "9 Months", months: 9, pricePerSeatPerMonth: 3 },
+    { id: "annual", label: "1 Year", months: 12, pricePerSeatPerMonth: 3 },
+  ];
+
+  type Subscription = {
+    planId: BillingPlanId;
+    seats: number;
+    startedAt: number; // epoch ms
+    expiresAt: number; // epoch ms
+    autoRenew: boolean;
+    lastPaymentAmount: number;
+    currency: string;
+    activatedBy: string;
+    history: Array<{
+      planId: BillingPlanId;
+      seats: number;
+      amount: number;
+      paidAt: number;
+      periodStart: number;
+      periodEnd: number;
+    }>;
+  };
+  const [subscription, setSubscription] = useState<Subscription | null>(null);
+  const [billingForm, setBillingForm] = useState<{ planId: BillingPlanId; seats: string }>({
+    planId: "monthly",
+    seats: "10",
+  });
+  const subscriptionStorageKey = (companyId: string) => `deskflow-subscription-${companyId}`;
+
+  useEffect(() => {
+    if (!companyProfile) {
+      setSubscription(null);
+      return;
+    }
+    const raw = window.localStorage.getItem(subscriptionStorageKey(companyProfile.id));
+    if (raw) {
+      try {
+        setSubscription(JSON.parse(raw));
+      } catch {
+        setSubscription(null);
+      }
+    } else {
+      setSubscription(null);
+    }
+  }, [companyProfile?.id]);
+
+  useEffect(() => {
+    if (!companyProfile) return;
+    if (subscription) {
+      window.localStorage.setItem(subscriptionStorageKey(companyProfile.id), JSON.stringify(subscription));
+    }
+  }, [subscription, companyProfile?.id]);
+
+  const subscriptionExpired = useMemo(() => {
+    if (!subscription) return false;
+    return subscription.expiresAt <= nowTs;
+  }, [subscription, nowTs]);
+
+  const subscriptionActive = Boolean(subscription && !subscriptionExpired);
+
 
   // Auto-release any booking whose shift end has passed
   useEffect(() => {
