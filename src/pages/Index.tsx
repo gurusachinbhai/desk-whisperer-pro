@@ -2370,7 +2370,7 @@ const Index = () => {
             {([
               { id: "all", label: `All · ${employees.length}` },
               { id: "online", label: `Online · ${onlineCount}` },
-              { id: "booked", label: `Booked · ${bookedCount}` },
+              { id: "today", label: `Today · ${todayCount}` },
             ] as const).map((f) => (
               <button
                 key={f.id}
