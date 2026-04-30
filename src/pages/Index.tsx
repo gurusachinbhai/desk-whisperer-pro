@@ -367,6 +367,7 @@ const Index = () => {
     signIn: "",
     signOut: "",
     reason: "",
+  });
 
   // ============== USER PROFILE (avatar + name override) ==============
   const profileStorageKey = (email: string) => `deskflow-profile-${email.toLowerCase()}`;
