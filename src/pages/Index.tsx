@@ -2399,8 +2399,8 @@ const Index = () => {
           ) : (
             <ul className="space-y-2">
               {filtered.map((emp) => {
-                const online = isOnline(emp.email);
-                const booking = bookingFor(emp.email);
+                const online = isOnline(emp.display_name);
+                const seenToday = !online && hasSignedInToday(emp.display_name);
                 return (
                   <li key={emp.id} className="flex items-center gap-3 rounded-2xl bg-background p-3">
                     <div className="relative">
