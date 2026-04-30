@@ -556,6 +556,129 @@ const Index = () => {
 
   const subscriptionActive = Boolean(subscription && !subscriptionExpired);
 
+  // ============== ANNOUNCEMENTS / NOTIFICATIONS STATE ==============
+  type AnnouncementPriority = "info" | "important" | "urgent";
+  type Announcement = {
+    id: string;
+    title: string;
+    body: string;
+    priority: AnnouncementPriority;
+    authorName: string;
+    authorId: string;
+    createdAt: number;
+  };
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [announcementForm, setAnnouncementForm] = useState<{ title: string; body: string; priority: AnnouncementPriority }>({
+    title: "",
+    body: "",
+    priority: "info",
+  });
+  const [readAnnouncementIds, setReadAnnouncementIds] = useState<string[]>([]);
+  const [showNotifications, setShowNotifications] = useState(false);
+
+  const announcementsStorageKey = (companyId: string) => `deskflow-announcements-${companyId}`;
+  const readAnnouncementsStorageKey = (companyId: string, userKey: string) =>
+    `deskflow-announcements-read-${companyId}-${userKey}`;
+
+  const userReadKey = currentUser?.email?.toLowerCase() ?? "anon";
+
+  useEffect(() => {
+    if (!companyProfile) {
+      setAnnouncements([]);
+      return;
+    }
+    const raw = window.localStorage.getItem(announcementsStorageKey(companyProfile.id));
+    if (raw) {
+      try {
+        setAnnouncements(JSON.parse(raw));
+      } catch {
+        setAnnouncements([]);
+      }
+    } else {
+      setAnnouncements([]);
+    }
+  }, [companyProfile?.id]);
+
+  useEffect(() => {
+    if (!companyProfile) return;
+    window.localStorage.setItem(announcementsStorageKey(companyProfile.id), JSON.stringify(announcements));
+  }, [announcements, companyProfile?.id]);
+
+  useEffect(() => {
+    if (!companyProfile || !currentUser) {
+      setReadAnnouncementIds([]);
+      return;
+    }
+    const raw = window.localStorage.getItem(readAnnouncementsStorageKey(companyProfile.id, userReadKey));
+    if (raw) {
+      try {
+        setReadAnnouncementIds(JSON.parse(raw));
+      } catch {
+        setReadAnnouncementIds([]);
+      }
+    } else {
+      setReadAnnouncementIds([]);
+    }
+  }, [companyProfile?.id, userReadKey]);
+
+  useEffect(() => {
+    if (!companyProfile || !currentUser) return;
+    window.localStorage.setItem(
+      readAnnouncementsStorageKey(companyProfile.id, userReadKey),
+      JSON.stringify(readAnnouncementIds),
+    );
+  }, [readAnnouncementIds, companyProfile?.id, userReadKey]);
+
+  const sortedAnnouncements = useMemo(
+    () => [...announcements].sort((a, b) => b.createdAt - a.createdAt),
+    [announcements],
+  );
+  const unreadAnnouncementCount = useMemo(
+    () => sortedAnnouncements.filter((a) => !readAnnouncementIds.includes(a.id)).length,
+    [sortedAnnouncements, readAnnouncementIds],
+  );
+
+  const markAllAnnouncementsRead = () => {
+    setReadAnnouncementIds(announcements.map((a) => a.id));
+  };
+
+  const handlePostAnnouncement = (e: FormEvent) => {
+    e.preventDefault();
+    if (!isAdmin || !currentUser) {
+      toast.error("Only admins can post announcements");
+      return;
+    }
+    const title = announcementForm.title.trim();
+    const body = announcementForm.body.trim();
+    if (title.length < 3) {
+      toast.error("Title must be at least 3 characters");
+      return;
+    }
+    if (body.length < 3) {
+      toast.error("Message body is required");
+      return;
+    }
+    const next: Announcement = {
+      id: window.crypto.randomUUID(),
+      title,
+      body,
+      priority: announcementForm.priority,
+      authorName: currentUser.displayName,
+      authorId: currentUser.email,
+      createdAt: Date.now(),
+    };
+    setAnnouncements((prev) => [next, ...prev]);
+    // Author auto-reads their own post
+    setReadAnnouncementIds((prev) => (prev.includes(next.id) ? prev : [...prev, next.id]));
+    setAnnouncementForm({ title: "", body: "", priority: "info" });
+    toast.success("Announcement posted to your team");
+  };
+
+  const handleDeleteAnnouncement = (id: string) => {
+    if (!isAdmin) return;
+    setAnnouncements((prev) => prev.filter((a) => a.id !== id));
+  };
+
 
   // Auto-release any booking whose shift end has passed
   useEffect(() => {
