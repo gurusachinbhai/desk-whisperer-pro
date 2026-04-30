@@ -2207,6 +2207,188 @@ const Index = () => {
     );
   };
 
+  // ============== ROOMS PANEL ==============
+  const renderRoomsPanel = () => {
+    const dayMeetings = roomMeetings
+      .filter((m) => m.date === meetingForm.date)
+      .sort((a, b) => a.startMinutes - b.startMinutes);
+    const selectedRoomMeta = meetingRoomCatalog.find((r) => r.id === meetingForm.roomId)!;
+
+    return (
+      <div className="space-y-5">
+        <div className="rounded-[1.5rem] bg-surface-raised p-5 shadow-card">
+          <div className="flex items-center gap-3">
+            <div className="grid h-10 w-10 place-items-center rounded-2xl bg-primary/10 text-primary">
+              <DoorOpen className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Meeting rooms</p>
+              <h2 className="font-display text-xl font-extrabold">Book a room</h2>
+            </div>
+          </div>
+
+          <form onSubmit={handleBookRoom} className="mt-4 space-y-3">
+            <Input
+              className="rounded-2xl"
+              placeholder="Meeting title (e.g. Sprint review)"
+              value={meetingForm.title}
+              onChange={(e) => setMeetingForm((p) => ({ ...p, title: e.target.value }))}
+              maxLength={120}
+            />
+
+            <div>
+              <label className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Room</label>
+              <div className="mt-2 grid grid-cols-1 gap-2">
+                {meetingRoomCatalog.map((r) => {
+                  const selected = meetingForm.roomId === r.id;
+                  const totalAttendees = meetingForm.attendeeIds.length + 1;
+                  const overCap = selected && totalAttendees > r.capacity;
+                  return (
+                    <button
+                      type="button"
+                      key={r.id}
+                      onClick={() => setMeetingForm((p) => ({ ...p, roomId: r.id }))}
+                      className={`focus-premium flex items-center justify-between rounded-2xl border px-4 py-3 text-left text-sm font-extrabold transition ${
+                        selected ? "border-primary bg-primary/10 text-primary" : "border-border bg-surface-muted text-foreground"
+                      }`}
+                    >
+                      <span className="flex items-center gap-2">
+                        <DoorOpen className="h-4 w-4" />
+                        {r.name} <span className="text-xs font-bold opacity-70">· {r.id}</span>
+                      </span>
+                      <span className={`text-xs ${overCap ? "text-destructive" : "opacity-80"}`}>
+                        Floor {r.floor} · seats {r.capacity}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <label className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Date</label>
+                <Input
+                  type="date"
+                  className="mt-1 rounded-2xl"
+                  value={meetingForm.date}
+                  onChange={(e) => setMeetingForm((p) => ({ ...p, date: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Start</label>
+                <Input
+                  type="time"
+                  className="mt-1 rounded-2xl"
+                  value={meetingForm.startTime}
+                  onChange={(e) => setMeetingForm((p) => ({ ...p, startTime: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">End</label>
+                <Input
+                  type="time"
+                  className="mt-1 rounded-2xl"
+                  value={meetingForm.endTime}
+                  onChange={(e) => setMeetingForm((p) => ({ ...p, endTime: e.target.value }))}
+                />
+              </div>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between">
+                <label className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+                  Attendees ({meetingForm.attendeeIds.length} + you)
+                </label>
+                <span className="text-[11px] font-bold text-muted-foreground">
+                  Capacity {selectedRoomMeta.capacity}
+                </span>
+              </div>
+              {employees.length === 0 ? (
+                <p className="mt-2 rounded-2xl bg-surface-muted p-3 text-xs font-semibold text-muted-foreground">
+                  Your roster is empty. Add employees from the Admin console.
+                </p>
+              ) : (
+                <div className="mt-2 max-h-44 space-y-1 overflow-y-auto rounded-2xl border border-border bg-surface-muted p-2">
+                  {employees.map((emp) => {
+                    const checked = meetingForm.attendeeIds.includes(emp.id);
+                    const isMe = emp.email && currentUser?.email && emp.email.toLowerCase() === currentUser.email.toLowerCase();
+                    if (isMe) return null;
+                    return (
+                      <button
+                        type="button"
+                        key={emp.id}
+                        onClick={() => handleToggleAttendee(emp.id)}
+                        className={`focus-premium flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-xs font-extrabold transition ${
+                          checked ? "bg-primary/15 text-primary" : "bg-background text-foreground hover:bg-background/60"
+                        }`}
+                      >
+                        <span className="truncate">{emp.display_name}</span>
+                        <span className={checked ? "text-primary" : "text-muted-foreground"}>
+                          {checked ? "✓ Invited" : "Add"}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            <button
+              type="submit"
+              className="focus-premium flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 font-extrabold text-primary-foreground shadow-glow"
+            >
+              <CalendarCheck className="h-5 w-5" /> Book room
+            </button>
+          </form>
+        </div>
+
+        <div className="rounded-[1.5rem] bg-surface-raised p-5 shadow-card">
+          <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+            Schedule for {meetingForm.date}
+          </p>
+          <h3 className="mt-1 font-display text-lg font-extrabold">{dayMeetings.length} meeting{dayMeetings.length === 1 ? "" : "s"}</h3>
+          {dayMeetings.length === 0 ? (
+            <p className="mt-3 rounded-2xl bg-surface-muted p-3 text-sm font-semibold text-muted-foreground">
+              Nothing booked for this day yet.
+            </p>
+          ) : (
+            <ul className="mt-3 space-y-2">
+              {dayMeetings.map((m) => {
+                const canCancel = isAdmin || m.organizerId === currentUser?.email;
+                return (
+                  <li key={m.id} className="rounded-2xl border border-border bg-surface-muted p-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="truncate font-display text-sm font-extrabold">{m.title}</p>
+                        <p className="text-[11px] font-bold text-muted-foreground">
+                          {m.roomName} · {minutesToLabel(m.startMinutes)} – {minutesToLabel(m.endMinutes)}
+                        </p>
+                        <p className="mt-1 text-[11px] font-semibold text-muted-foreground">
+                          By {m.organizerName}
+                          {m.attendeeNames.length > 0 && ` · with ${m.attendeeNames.slice(0, 3).join(", ")}${m.attendeeNames.length > 3 ? ` +${m.attendeeNames.length - 3}` : ""}`}
+                        </p>
+                      </div>
+                      {canCancel && (
+                        <button
+                          onClick={() => handleCancelMeeting(m.id)}
+                          className="focus-premium grid h-8 w-8 place-items-center rounded-xl bg-destructive/10 text-destructive"
+                          title="Cancel"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   const renderBookingPanel = () => (
     <div id="booking" className="rounded-[1.5rem] bg-surface-raised p-4 shadow-card">
       <div className="flex items-center justify-between">
