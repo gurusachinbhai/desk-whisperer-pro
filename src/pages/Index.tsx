@@ -4231,17 +4231,52 @@ const Index = () => {
         <div className="rounded-[1.5rem] bg-surface-raised p-4 shadow-card">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="grid h-14 w-14 place-items-center rounded-full bg-primary text-primary-foreground shadow-glow">
-                <span className="font-display text-xl font-extrabold">{initials || "E"}</span>
-              </div>
+              <label
+                htmlFor="profile-avatar-input"
+                className="group relative grid h-14 w-14 cursor-pointer place-items-center overflow-hidden rounded-full bg-primary text-primary-foreground shadow-glow ring-2 ring-primary/30"
+                aria-label="Change profile photo"
+              >
+                {userAvatar ? (
+                  <img src={userAvatar} alt="Your profile" className="h-full w-full object-cover" />
+                ) : (
+                  <span className="font-display text-xl font-extrabold">{initials || "E"}</span>
+                )}
+                <span className="absolute inset-x-0 bottom-0 grid place-items-center bg-foreground/55 py-0.5 text-primary-foreground opacity-0 transition-opacity group-hover:opacity-100">
+                  <Camera className="h-3.5 w-3.5" />
+                </span>
+                <input
+                  id="profile-avatar-input"
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) handleAvatarFile(f);
+                    e.currentTarget.value = "";
+                  }}
+                />
+              </label>
               <div className="min-w-0">
                 <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Welcome back</p>
-                <h2 className="truncate font-display text-xl font-extrabold">
-                  {currentUser?.displayName}
-                  {companyProfile && (
-                    <span className="ml-1 text-sm font-bold text-muted-foreground">· {companyProfile.name}</span>
-                  )}
-                </h2>
+                <div className="flex items-center gap-1.5">
+                  <h2 className="truncate font-display text-xl font-extrabold">
+                    {currentUser?.displayName}
+                    {companyProfile && (
+                      <span className="ml-1 text-sm font-bold text-muted-foreground">· {companyProfile.name}</span>
+                    )}
+                  </h2>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setProfileNameDraft(currentUser?.displayName ?? "");
+                      setEditingProfile(true);
+                    }}
+                    className="focus-premium grid h-6 w-6 shrink-0 place-items-center rounded-full bg-muted text-muted-foreground hover:text-primary"
+                    aria-label="Edit display name"
+                  >
+                    <Pencil className="h-3 w-3" />
+                  </button>
+                </div>
                 <p className="truncate text-xs font-semibold text-muted-foreground">{currentUser?.email}</p>
                 <div className="mt-1 flex flex-wrap items-center gap-1.5">
                   <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-primary">
@@ -4251,6 +4286,15 @@ const Index = () => {
                     <span className="rounded-full bg-success px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-success-foreground shadow-glow ring-2 ring-success/40">
                       Admin
                     </span>
+                  )}
+                  {userAvatar && (
+                    <button
+                      type="button"
+                      onClick={handleRemoveAvatar}
+                      className="focus-premium rounded-full bg-muted px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-muted-foreground hover:text-destructive"
+                    >
+                      Remove photo
+                    </button>
                   )}
                 </div>
               </div>
