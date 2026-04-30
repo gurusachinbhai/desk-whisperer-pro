@@ -694,8 +694,165 @@ const Index = () => {
     setAnnouncements((prev) => prev.filter((a) => a.id !== id));
   };
 
+  // ============== ROOM MEETINGS STATE ==============
+  type RoomMeeting = {
+    id: string;
+    roomId: string;
+    roomName: string;
+    date: string; // yyyy-MM-dd
+    startMinutes: number; // minutes from 00:00
+    endMinutes: number;
+    title: string;
+    organizerId: string;
+    organizerName: string;
+    attendeeIds: string[]; // employee_profiles.id
+    attendeeNames: string[];
+    createdAt: number;
+  };
+  const [roomMeetings, setRoomMeetings] = useState<RoomMeeting[]>([]);
+  const [meetingForm, setMeetingForm] = useState<{
+    roomId: string;
+    date: string;
+    startTime: string; // HH:mm
+    endTime: string;
+    title: string;
+    attendeeIds: string[];
+  }>({
+    roomId: meetingRoomCatalog[0].id,
+    date: format(new Date(), "yyyy-MM-dd"),
+    startTime: "09:00",
+    endTime: "10:00",
+    title: "",
+    attendeeIds: [],
+  });
+  const roomMeetingsStorageKey = (companyId: string) => `deskflow-room-meetings-${companyId}`;
 
-  // Auto-release any booking whose shift end has passed
+  useEffect(() => {
+    if (!companyProfile) {
+      setRoomMeetings([]);
+      return;
+    }
+    const raw = window.localStorage.getItem(roomMeetingsStorageKey(companyProfile.id));
+    if (raw) {
+      try {
+        setRoomMeetings(JSON.parse(raw));
+      } catch {
+        setRoomMeetings([]);
+      }
+    } else {
+      setRoomMeetings([]);
+    }
+  }, [companyProfile?.id]);
+
+  useEffect(() => {
+    if (!companyProfile) return;
+    window.localStorage.setItem(roomMeetingsStorageKey(companyProfile.id), JSON.stringify(roomMeetings));
+  }, [roomMeetings, companyProfile?.id]);
+
+  const parseTimeToMinutes = (hhmm: string): number | null => {
+    const m = /^(\d{2}):(\d{2})$/.exec(hhmm);
+    if (!m) return null;
+    const h = Number(m[1]);
+    const mm = Number(m[2]);
+    if (h < 0 || h > 23 || mm < 0 || mm > 59) return null;
+    return h * 60 + mm;
+  };
+  const minutesToLabel = (n: number) => {
+    const h = Math.floor(n / 60);
+    const mm = n % 60;
+    const period = h >= 12 ? "PM" : "AM";
+    const h12 = ((h + 11) % 12) + 1;
+    return `${h12}:${String(mm).padStart(2, "0")} ${period}`;
+  };
+
+  const handleToggleAttendee = (employeeId: string) => {
+    setMeetingForm((prev) => ({
+      ...prev,
+      attendeeIds: prev.attendeeIds.includes(employeeId)
+        ? prev.attendeeIds.filter((id) => id !== employeeId)
+        : [...prev.attendeeIds, employeeId],
+    }));
+  };
+
+  const handleBookRoom = (e: FormEvent) => {
+    e.preventDefault();
+    if (!currentUser || !companyProfile) {
+      toast.error("Sign in to book a room");
+      return;
+    }
+    const room = meetingRoomCatalog.find((r) => r.id === meetingForm.roomId);
+    if (!room) {
+      toast.error("Pick a room");
+      return;
+    }
+    const startMin = parseTimeToMinutes(meetingForm.startTime);
+    const endMin = parseTimeToMinutes(meetingForm.endTime);
+    if (startMin === null || endMin === null) {
+      toast.error("Enter valid times");
+      return;
+    }
+    if (endMin <= startMin) {
+      toast.error("End time must be after start time");
+      return;
+    }
+    if (!meetingForm.title.trim()) {
+      toast.error("Add a meeting title");
+      return;
+    }
+    const totalAttendees = meetingForm.attendeeIds.length + 1;
+    if (totalAttendees > room.capacity) {
+      toast.error(`${room.name} fits ${room.capacity}; you have ${totalAttendees}`);
+      return;
+    }
+    const conflict = roomMeetings.find(
+      (m) =>
+        m.roomId === room.id &&
+        m.date === meetingForm.date &&
+        startMin < m.endMinutes &&
+        endMin > m.startMinutes,
+    );
+    if (conflict) {
+      toast.error(`Conflicts with "${conflict.title}"`, {
+        description: `${minutesToLabel(conflict.startMinutes)} – ${minutesToLabel(conflict.endMinutes)}`,
+      });
+      return;
+    }
+    const attendeeNames = meetingForm.attendeeIds
+      .map((id) => employees.find((e) => e.id === id)?.display_name)
+      .filter((n): n is string => Boolean(n));
+    const meeting: RoomMeeting = {
+      id: window.crypto.randomUUID(),
+      roomId: room.id,
+      roomName: room.name,
+      date: meetingForm.date,
+      startMinutes: startMin,
+      endMinutes: endMin,
+      title: meetingForm.title.trim(),
+      organizerId: currentUser.email,
+      organizerName: currentUser.displayName,
+      attendeeIds: meetingForm.attendeeIds,
+      attendeeNames,
+      createdAt: Date.now(),
+    };
+    setRoomMeetings((prev) => [meeting, ...prev]);
+    setMeetingForm((prev) => ({ ...prev, title: "", attendeeIds: [] }));
+    toast.success(`${room.name} booked`, {
+      description: `${meeting.date} · ${minutesToLabel(startMin)} – ${minutesToLabel(endMin)}`,
+    });
+  };
+
+  const handleCancelMeeting = (id: string) => {
+    const meeting = roomMeetings.find((m) => m.id === id);
+    if (!meeting) return;
+    if (!isAdmin && meeting.organizerId !== currentUser?.email) {
+      toast.error("Only the organizer or an admin can cancel");
+      return;
+    }
+    setRoomMeetings((prev) => prev.filter((m) => m.id !== id));
+    toast.success("Meeting cancelled");
+  };
+
+
   useEffect(() => {
     setConfirmedBookings((current) => {
       let changed = false;
