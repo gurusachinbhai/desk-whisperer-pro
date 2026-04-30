@@ -1381,6 +1381,22 @@ const Index = () => {
             <p className="text-[10px] font-bold uppercase">staff</p>
           </div>
         </div>
+        <button
+          onClick={() => setActiveTab("billing")}
+          className="focus-premium mt-3 flex w-full items-center justify-between rounded-2xl border border-border bg-surface-muted px-4 py-3 text-sm font-extrabold"
+        >
+          <span className="flex items-center gap-2">
+            <CreditCard className="h-4 w-4 text-primary" />
+            Billing & subscription
+          </span>
+          <span className={subscriptionActive ? "text-primary" : subscriptionExpired ? "text-destructive" : "text-muted-foreground"}>
+            {subscriptionActive
+              ? `Active · renews ${subscription ? format(new Date(subscription.expiresAt), "MMM d") : ""}`
+              : subscriptionExpired
+                ? "Expired"
+                : "Not subscribed"}
+          </span>
+        </button>
       </div>
 
       {/* Floors management */}
