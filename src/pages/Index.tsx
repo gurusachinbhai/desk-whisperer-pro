@@ -3953,13 +3953,22 @@ const Index = () => {
               <CalendarCheck className="h-4 w-4 text-primary" />
               <h3 className="font-display text-base font-extrabold">Booking history</h3>
             </div>
-            <button
-              type="button"
-              onClick={() => setActiveTab("book")}
-              className="focus-premium text-xs font-extrabold text-primary"
-            >
-              New booking
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setActiveTab("map")}
+                className="focus-premium text-xs font-extrabold text-primary"
+              >
+                Floor map
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("book")}
+                className="focus-premium text-xs font-extrabold text-primary"
+              >
+                New booking
+              </button>
+            </div>
           </div>
           {confirmedBookings.length === 0 ? (
             <p className="rounded-2xl bg-background p-4 text-center text-xs font-semibold text-muted-foreground">
