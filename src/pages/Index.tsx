@@ -367,7 +367,101 @@ const Index = () => {
     signIn: "",
     signOut: "",
     reason: "",
-  });
+
+  // ============== USER PROFILE (avatar + name override) ==============
+  const profileStorageKey = (email: string) => `deskflow-profile-${email.toLowerCase()}`;
+  const [userAvatar, setUserAvatar] = useState<string | null>(null);
+  const [profileNameDraft, setProfileNameDraft] = useState<string>("");
+  const [editingProfile, setEditingProfile] = useState<boolean>(false);
+  const [editingTimezone, setEditingTimezone] = useState<boolean>(false);
+
+  // Load profile overrides on user change
+  useEffect(() => {
+    if (!currentUser?.email) {
+      setUserAvatar(null);
+      return;
+    }
+    try {
+      const raw = window.localStorage.getItem(profileStorageKey(currentUser.email));
+      if (raw) {
+        const parsed = JSON.parse(raw) as { avatar?: string; displayName?: string };
+        if (parsed.avatar) setUserAvatar(parsed.avatar);
+        if (parsed.displayName && parsed.displayName !== currentUser.displayName) {
+          setCurrentUser({ ...currentUser, displayName: parsed.displayName });
+        }
+      } else {
+        setUserAvatar(null);
+      }
+    } catch {
+      setUserAvatar(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser?.email]);
+
+  const persistProfile = (next: { avatar?: string | null; displayName?: string }) => {
+    if (!currentUser?.email) return;
+    const key = profileStorageKey(currentUser.email);
+    let prev: { avatar?: string; displayName?: string } = {};
+    try {
+      const raw = window.localStorage.getItem(key);
+      if (raw) prev = JSON.parse(raw);
+    } catch { /* noop */ }
+    const merged = {
+      ...prev,
+      ...(next.avatar !== undefined ? { avatar: next.avatar ?? undefined } : {}),
+      ...(next.displayName ? { displayName: next.displayName } : {}),
+    };
+    window.localStorage.setItem(key, JSON.stringify(merged));
+  };
+
+  const handleAvatarFile = (file: File) => {
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please choose an image file");
+      return;
+    }
+    if (file.size > 1.5 * 1024 * 1024) {
+      toast.error("Image too large — keep it under 1.5 MB");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = String(reader.result || "");
+      setUserAvatar(dataUrl);
+      persistProfile({ avatar: dataUrl });
+      toast.success("Profile photo updated");
+    };
+    reader.onerror = () => toast.error("Couldn't read that image");
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveAvatar = () => {
+    setUserAvatar(null);
+    persistProfile({ avatar: null });
+    toast.success("Profile photo removed");
+  };
+
+  const handleSaveDisplayName = () => {
+    const trimmed = profileNameDraft.trim();
+    if (trimmed.length < 2) {
+      toast.error("Display name must be at least 2 characters");
+      return;
+    }
+    if (currentUser) {
+      setCurrentUser({ ...currentUser, displayName: trimmed });
+      persistProfile({ displayName: trimmed });
+    }
+    setEditingProfile(false);
+    toast.success("Display name updated");
+  };
+
+  const handleChangeTimezone = (next: string) => {
+    if (!next) return;
+    setUserTimezone(next);
+    setDraftTimezone(next);
+    window.localStorage.setItem("deskflow-user-timezone", next);
+    setEditingTimezone(false);
+    toast.success(`Timezone set to ${next}`);
+  };
 
   const attendanceStorageKey = (companyId: string) => `deskflow-attendance-${companyId}`;
 
