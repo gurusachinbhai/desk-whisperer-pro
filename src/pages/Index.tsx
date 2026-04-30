@@ -271,7 +271,7 @@ const Index = () => {
   const [companyProfile, setCompanyProfile] = useState<CompanyProfile | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [invites, setInvites] = useState<EmployeeInvite[]>([]);
-  const [employees, setEmployees] = useState<Array<{ id: string; display_name: string; email: string | null }>>([]);
+  const [employees, setEmployees] = useState<Array<{ id: string; display_name: string; email: string | null; phone: string | null }>>([]);
   const [floorDraft, setFloorDraft] = useState<string>("");
   const [areaDraft, setAreaDraft] = useState<string>("");
   const [latestInviteUrl, setLatestInviteUrl] = useState("");
