@@ -4309,6 +4309,13 @@ const Index = () => {
               </button>
               <button
                 type="button"
+                onClick={() => setActiveTab("rooms")}
+                className="focus-premium text-xs font-extrabold text-primary"
+              >
+                Rooms
+              </button>
+              <button
+                type="button"
                 onClick={() => setActiveTab("book")}
                 className="focus-premium text-xs font-extrabold text-primary"
               >
