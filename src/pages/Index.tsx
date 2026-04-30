@@ -3142,10 +3142,11 @@ const Index = () => {
               {activeTab === "team" && renderTeamPanel()}
               {activeTab === "attendance" && renderAttendancePanel()}
               {activeTab === "leave" && renderLeavePanel()}
+              {activeTab === "payroll" && renderPayrollPanel()}
               {(activeTab === "book" || activeTab === "map") && renderBookingPanel()}
             </div>
 
-            <div className="sticky bottom-0 grid grid-cols-5 border-t border-border bg-surface-raised px-2 py-2">
+            <div className="sticky bottom-0 grid grid-cols-6 border-t border-border bg-surface-raised px-2 py-2">
               {bottomTabs.map((tab) => (
                 <button
                   key={tab.label}
