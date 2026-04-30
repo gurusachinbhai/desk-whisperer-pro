@@ -3564,7 +3564,22 @@ const Index = () => {
             <div className="flex items-center justify-between bg-primary px-5 pb-4 pt-5 text-primary-foreground">
               <ArrowLeft className="h-5 w-5" />
               <div className="h-6 w-28 rounded-full bg-primary-foreground/20" />
-              <Bell className="h-5 w-5" />
+              <button
+                type="button"
+                onClick={() => {
+                  setShowNotifications(true);
+                  markAllAnnouncementsRead();
+                }}
+                className="focus-premium relative grid h-9 w-9 place-items-center rounded-full hover:bg-primary-foreground/10"
+                aria-label="Notifications"
+              >
+                <Bell className="h-5 w-5" />
+                {unreadAnnouncementCount > 0 && (
+                  <span className="absolute -right-0.5 -top-0.5 grid h-5 min-w-[1.25rem] place-items-center rounded-full bg-destructive px-1 text-[10px] font-extrabold text-destructive-foreground">
+                    {unreadAnnouncementCount > 9 ? "9+" : unreadAnnouncementCount}
+                  </span>
+                )}
+              </button>
             </div>
 
             <div className="bg-primary px-5 pb-6 text-primary-foreground">
