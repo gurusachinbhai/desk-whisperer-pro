@@ -100,7 +100,7 @@ type EmployeeInvite = {
 };
 
 type AppMode = "signup" | "login";
-type ActiveTab = "home" | "book" | "attendance" | "leave" | "payroll" | "billing" | "map" | "admin" | "team";
+type ActiveTab = "home" | "book" | "attendance" | "leave" | "payroll" | "billing" | "reports" | "map" | "admin" | "team";
 type LoginStep = "form" | "otp";
 type LoginIdentifier = "email" | "phone";
 
@@ -1527,6 +1527,16 @@ const Index = () => {
                 ? "Expired"
                 : "Not subscribed"}
           </span>
+        </button>
+        <button
+          onClick={() => setActiveTab("reports")}
+          className="focus-premium mt-2 flex w-full items-center justify-between rounded-2xl border border-border bg-surface-muted px-4 py-3 text-sm font-extrabold"
+        >
+          <span className="flex items-center gap-2">
+            <BarChart3 className="h-4 w-4 text-primary" />
+            Reports & analytics
+          </span>
+          <span className="text-muted-foreground">View</span>
         </button>
       </div>
 
@@ -3308,6 +3318,246 @@ const Index = () => {
     );
   };
 
+  // ============== REPORTS / ANALYTICS ==============
+  const renderReportsPanel = () => {
+    if (!isAdmin) {
+      return (
+        <div className="rounded-[1.5rem] bg-surface-raised p-5 shadow-card">
+          <p className="text-sm font-semibold text-muted-foreground">
+            Reports are available to admins only.
+          </p>
+        </div>
+      );
+    }
+
+    const todayStr = format(new Date(), "yyyy-MM-dd");
+    const last7 = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date();
+      d.setDate(d.getDate() - (6 - i));
+      return format(d, "yyyy-MM-dd");
+    });
+
+    // Booking utilization
+    const totalBookings = confirmedBookings.length;
+    const activeBookings = confirmedBookings.filter((b) => !b.released).length;
+    const todayBookings = confirmedBookings.filter((b) => b.date === todayStr).length;
+
+    // Per-shift breakdown (all-time)
+    const shiftCounts: Record<string, number> = {};
+    confirmedBookings.forEach((b) => {
+      shiftCounts[b.shift] = (shiftCounts[b.shift] ?? 0) + 1;
+    });
+    const shiftEntries = Object.entries(shiftCounts).sort((a, b) => b[1] - a[1]);
+    const maxShift = Math.max(1, ...shiftEntries.map(([, n]) => n));
+
+    // Per-floor breakdown
+    const floorCounts: Record<string, number> = {};
+    confirmedBookings.forEach((b) => {
+      const k = `Floor ${b.floor}`;
+      floorCounts[k] = (floorCounts[k] ?? 0) + 1;
+    });
+    const floorEntries = Object.entries(floorCounts).sort((a, b) => b[1] - a[1]);
+    const maxFloor = Math.max(1, ...floorEntries.map(([, n]) => n));
+
+    // Attendance trend (last 7 days)
+    const attendanceByDay = last7.map((day) => {
+      const recs = attendance.filter((r) => r.date === day);
+      const present = recs.filter((r) => r.signInAt).length;
+      const completed = recs.filter((r) => r.signInAt && r.signOutAt).length;
+      return { day, present, completed };
+    });
+    const maxPresent = Math.max(1, ...attendanceByDay.map((d) => d.present));
+
+    const totalEmployees = employees.length;
+    const presentToday = attendance.filter((r) => r.date === todayStr && r.signInAt).length;
+    const attendanceRate = totalEmployees > 0
+      ? Math.round((presentToday / totalEmployees) * 100)
+      : 0;
+
+    // Average work hours (records that have both punches in last 7 days)
+    const completedRecent = attendance.filter(
+      (r) => last7.includes(r.date) && r.signInAt && r.signOutAt,
+    );
+    const avgHours = completedRecent.length > 0
+      ? completedRecent.reduce((acc, r) => acc + ((r.signOutAt! - r.signInAt!) / 3_600_000), 0) /
+        completedRecent.length
+      : 0;
+
+    // Leave overview
+    const pendingLeaves = leaves.filter((l) => l.status === "pending").length;
+    const approvedLeaves = leaves.filter((l) => l.status === "approved").length;
+    const rejectedLeaves = leaves.filter((l) => l.status === "rejected").length;
+
+    const yearStart = new Date(new Date().getFullYear(), 0, 1).getTime();
+    const leaveDaysByType: Record<string, number> = { casual: 0, sick: 0, earned: 0, unpaid: 0 };
+    leaves
+      .filter((l) => l.status === "approved" && new Date(l.fromDate).getTime() >= yearStart)
+      .forEach((l) => {
+        leaveDaysByType[l.type] = (leaveDaysByType[l.type] ?? 0) + l.days;
+      });
+
+    // Payroll
+    const totalPayslips = payslips.length;
+    const monthCutoff = format(new Date(), "yyyy-MM");
+    const paidThisMonth = payslips
+      .filter((p) => p.period === monthCutoff)
+      .reduce((acc, p) => acc + p.netAmount, 0);
+
+    const StatCard = ({ label, value, sub }: { label: string; value: React.ReactNode; sub?: string }) => (
+      <div className="rounded-2xl bg-surface-muted p-3">
+        <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">{label}</p>
+        <p className="font-display text-lg font-extrabold">{value}</p>
+        {sub && <p className="text-[11px] font-semibold text-muted-foreground">{sub}</p>}
+      </div>
+    );
+
+    return (
+      <div className="space-y-5">
+        <div className="rounded-[1.5rem] bg-surface-raised p-5 shadow-card">
+          <div className="flex items-center gap-3">
+            <div className="grid h-10 w-10 place-items-center rounded-2xl bg-primary/10 text-primary">
+              <BarChart3 className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Reports</p>
+              <h2 className="font-display text-xl font-extrabold">{companyProfile?.name} overview</h2>
+            </div>
+          </div>
+          <div className="mt-4 grid grid-cols-2 gap-3">
+            <StatCard label="Employees" value={totalEmployees} />
+            <StatCard label="Present today" value={`${presentToday} / ${totalEmployees}`} sub={`${attendanceRate}% attendance`} />
+            <StatCard label="Bookings today" value={todayBookings} sub={`${activeBookings} active now`} />
+            <StatCard label="Avg work (7d)" value={`${avgHours.toFixed(1)} h`} sub={`${completedRecent.length} completed`} />
+          </div>
+        </div>
+
+        {/* Attendance trend */}
+        <div className="rounded-[1.5rem] bg-surface-raised p-5 shadow-card">
+          <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Attendance · last 7 days</p>
+          <h3 className="mt-1 font-display text-lg font-extrabold">Daily sign-ins</h3>
+          <div className="mt-4 flex h-32 items-end gap-2">
+            {attendanceByDay.map((d) => {
+              const h = (d.present / maxPresent) * 100;
+              const isToday = d.day === todayStr;
+              return (
+                <div key={d.day} className="flex flex-1 flex-col items-center gap-1">
+                  <div className="flex w-full flex-1 items-end">
+                    <div
+                      className={`w-full rounded-t-lg ${isToday ? "bg-primary" : "bg-primary/40"}`}
+                      style={{ height: `${Math.max(6, h)}%` }}
+                      title={`${d.present} present`}
+                    />
+                  </div>
+                  <p className="text-[10px] font-extrabold text-muted-foreground">
+                    {format(new Date(d.day), "EEE")}
+                  </p>
+                  <p className="text-[10px] font-bold text-foreground">{d.present}</p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Booking utilization */}
+        <div className="rounded-[1.5rem] bg-surface-raised p-5 shadow-card">
+          <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Booking utilization</p>
+          <h3 className="mt-1 font-display text-lg font-extrabold">{totalBookings} total bookings</h3>
+
+          <p className="mt-4 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">By shift</p>
+          {shiftEntries.length === 0 ? (
+            <p className="mt-2 rounded-2xl bg-surface-muted p-3 text-sm font-semibold text-muted-foreground">
+              No bookings recorded yet.
+            </p>
+          ) : (
+            <ul className="mt-2 space-y-2">
+              {shiftEntries.map(([shift, n]) => (
+                <li key={shift}>
+                  <div className="flex items-center justify-between text-xs font-extrabold">
+                    <span>{shift}</span>
+                    <span className="text-muted-foreground">{n}</span>
+                  </div>
+                  <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-surface-muted">
+                    <div
+                      className="h-full rounded-full bg-primary"
+                      style={{ width: `${(n / maxShift) * 100}%` }}
+                    />
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {floorEntries.length > 0 && (
+            <>
+              <p className="mt-4 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">By floor</p>
+              <ul className="mt-2 space-y-2">
+                {floorEntries.map(([floor, n]) => (
+                  <li key={floor}>
+                    <div className="flex items-center justify-between text-xs font-extrabold">
+                      <span>{floor}</span>
+                      <span className="text-muted-foreground">{n}</span>
+                    </div>
+                    <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-surface-muted">
+                      <div
+                        className="h-full rounded-full bg-primary/70"
+                        style={{ width: `${(n / maxFloor) * 100}%` }}
+                      />
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </div>
+
+        {/* Leave overview */}
+        <div className="rounded-[1.5rem] bg-surface-raised p-5 shadow-card">
+          <div className="flex items-center gap-3">
+            <div className="grid h-10 w-10 place-items-center rounded-2xl bg-primary/10 text-primary">
+              <Plane className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Leave overview</p>
+              <h3 className="font-display text-lg font-extrabold">This year</h3>
+            </div>
+          </div>
+          <div className="mt-4 grid grid-cols-3 gap-3">
+            <StatCard label="Pending" value={pendingLeaves} />
+            <StatCard label="Approved" value={approvedLeaves} />
+            <StatCard label="Rejected" value={rejectedLeaves} />
+          </div>
+          <ul className="mt-4 space-y-2">
+            {(["casual", "sick", "earned", "unpaid"] as const).map((t) => (
+              <li key={t} className="flex items-center justify-between rounded-2xl border border-border bg-surface-muted px-3 py-2 text-xs font-extrabold">
+                <span className="capitalize">{t} leave</span>
+                <span className="text-muted-foreground">
+                  {leaveDaysByType[t] ?? 0} day{(leaveDaysByType[t] ?? 0) === 1 ? "" : "s"} approved
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {/* Payroll snapshot */}
+        <div className="rounded-[1.5rem] bg-surface-raised p-5 shadow-card">
+          <div className="flex items-center gap-3">
+            <div className="grid h-10 w-10 place-items-center rounded-2xl bg-primary/10 text-primary">
+              <FileText className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Payroll snapshot</p>
+              <h3 className="font-display text-lg font-extrabold">{format(new Date(), "MMMM yyyy")}</h3>
+            </div>
+          </div>
+          <div className="mt-4 grid grid-cols-2 gap-3">
+            <StatCard label="Payslips issued" value={totalPayslips} />
+            <StatCard label="Net paid this month" value={`$${paidThisMonth.toLocaleString()}`} />
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const renderTeamPanel = () => (
     <div className="rounded-[1.5rem] bg-surface-raised p-4 shadow-card">
       <div className="flex items-center gap-3">
@@ -3712,6 +3962,7 @@ const Index = () => {
                   {activeTab === "leave" && renderLeavePanel()}
                   {activeTab === "payroll" && renderPayrollPanel()}
                   {activeTab === "billing" && renderBillingPanel()}
+                  {isAdmin && activeTab === "reports" && renderReportsPanel()}
                   {(activeTab === "book" || activeTab === "map") && renderBookingPanel()}
                 </>
               )}
