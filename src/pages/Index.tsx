@@ -422,6 +422,66 @@ const Index = () => {
     window.localStorage.setItem(leaveStorageKey(companyProfile.id), JSON.stringify(leaves));
   }, [leaves, companyProfile?.id]);
 
+  // ============== PAYROLL STATE ==============
+  type Payslip = {
+    id: string;
+    employeeId: string; // employee_profiles.id
+    employeeName: string;
+    employeeEmail: string | null;
+    period: string; // yyyy-MM
+    grossAmount: number;
+    netAmount: number;
+    currency: string;
+    notes?: string;
+    fileName?: string;
+    fileType?: string;
+    fileDataUrl?: string; // base64 data URL (mock storage)
+    uploadedAt: number;
+    uploadedBy: string;
+  };
+  const [payslips, setPayslips] = useState<Payslip[]>([]);
+  const [payslipForm, setPayslipForm] = useState<{
+    employeeId: string;
+    period: string;
+    grossAmount: string;
+    netAmount: string;
+    currency: string;
+    notes: string;
+    fileName: string;
+    fileType: string;
+    fileDataUrl: string;
+  }>({
+    employeeId: "",
+    period: format(new Date(), "yyyy-MM"),
+    grossAmount: "",
+    netAmount: "",
+    currency: "USD",
+    notes: "",
+    fileName: "",
+    fileType: "",
+    fileDataUrl: "",
+  });
+  const payrollStorageKey = (companyId: string) => `deskflow-payroll-${companyId}`;
+
+  useEffect(() => {
+    if (!companyProfile) return;
+    const raw = window.localStorage.getItem(payrollStorageKey(companyProfile.id));
+    if (raw) {
+      try {
+        setPayslips(JSON.parse(raw));
+      } catch {
+        setPayslips([]);
+      }
+    } else {
+      setPayslips([]);
+    }
+  }, [companyProfile?.id]);
+
+  useEffect(() => {
+    if (!companyProfile) return;
+    window.localStorage.setItem(payrollStorageKey(companyProfile.id), JSON.stringify(payslips));
+  }, [payslips, companyProfile?.id]);
+
 
   // Auto-release any booking whose shift end has passed
   useEffect(() => {
