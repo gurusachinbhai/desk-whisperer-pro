@@ -3,6 +3,7 @@ import {
   BarChart3,
   Bell,
   Building2,
+  CreditCard,
   CalendarCheck,
   CalendarIcon,
   CheckCircle2,
