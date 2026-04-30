@@ -3147,7 +3147,7 @@ const Index = () => {
             </div>
 
             <div className="sticky bottom-0 grid grid-cols-6 border-t border-border bg-surface-raised px-2 py-2">
-              {bottomTabs.map((tab) => (
+              {bottomTabs.filter((t) => t.id !== "admin" || isAdmin).map((tab) => (
                 <button
                   key={tab.label}
                   onClick={() => setActiveTab(tab.id)}
