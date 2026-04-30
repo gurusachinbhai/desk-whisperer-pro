@@ -4504,6 +4504,7 @@ const Index = () => {
                   {isAdmin && activeTab === "reports" && renderReportsPanel()}
                   {activeTab === "book" && renderBookingPanel()}
                   {activeTab === "map" && renderMapPanel()}
+                  {activeTab === "rooms" && renderRoomsPanel()}
                 </>
               )}
             </div>
