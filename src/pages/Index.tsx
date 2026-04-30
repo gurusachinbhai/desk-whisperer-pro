@@ -4758,6 +4758,49 @@ const Index = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      <Dialog open={editingProfile} onOpenChange={setEditingProfile}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Pencil className="h-5 w-5 text-primary" /> Edit display name
+            </DialogTitle>
+            <DialogDescription>
+              This is the name your teammates see on bookings, attendance and announcements.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <label className="block text-xs font-bold uppercase tracking-wide text-muted-foreground">
+              Display name
+            </label>
+            <input
+              type="text"
+              value={profileNameDraft}
+              onChange={(e) => setProfileNameDraft(e.target.value)}
+              maxLength={48}
+              className="focus-premium h-12 w-full rounded-2xl border border-border bg-background px-4 text-sm font-extrabold"
+              placeholder="e.g. Alex Chen"
+              autoFocus
+            />
+            <div className="flex gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setEditingProfile(false)}
+                className="focus-premium flex-1 rounded-2xl border border-border bg-background px-4 py-3 text-sm font-extrabold text-muted-foreground"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveDisplayName}
+                className="focus-premium flex-1 rounded-2xl bg-primary px-4 py-3 text-sm font-extrabold text-primary-foreground shadow-glow"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </main>
   );
 };
