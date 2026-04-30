@@ -2306,7 +2306,7 @@ const Index = () => {
 
   // ============== DIRECTORY PANEL ==============
   const [directoryQuery, setDirectoryQuery] = useState("");
-  const [directoryFilter, setDirectoryFilter] = useState<"all" | "online" | "booked">("all");
+  const [directoryFilter, setDirectoryFilter] = useState<"all" | "online" | "today">("all");
 
   const renderDirectoryPanel = () => {
     const todayStr = format(new Date(), "yyyy-MM-dd");
