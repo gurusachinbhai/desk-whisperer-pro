@@ -13,6 +13,8 @@ import {
   LogIn,
   Copy,
   DoorOpen,
+  Download,
+  FileText,
   Globe2,
   History,
   KeyRound,
