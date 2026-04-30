@@ -4839,6 +4839,7 @@ const Index = () => {
                   {activeTab === "book" && renderBookingPanel()}
                   {activeTab === "map" && renderMapPanel()}
                   {activeTab === "rooms" && renderRoomsPanel()}
+                  {activeTab === "directory" && renderDirectoryPanel()}
                 </>
               )}
             </div>
