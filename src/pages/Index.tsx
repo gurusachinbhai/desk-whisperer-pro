@@ -1528,6 +1528,16 @@ const Index = () => {
                 : "Not subscribed"}
           </span>
         </button>
+        <button
+          onClick={() => setActiveTab("reports")}
+          className="focus-premium mt-2 flex w-full items-center justify-between rounded-2xl border border-border bg-surface-muted px-4 py-3 text-sm font-extrabold"
+        >
+          <span className="flex items-center gap-2">
+            <BarChart3 className="h-4 w-4 text-primary" />
+            Reports & analytics
+          </span>
+          <span className="text-muted-foreground">View</span>
+        </button>
       </div>
 
       {/* Announcements composer */}
