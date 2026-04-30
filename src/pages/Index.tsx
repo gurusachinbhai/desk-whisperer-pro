@@ -4374,18 +4374,28 @@ const Index = () => {
               </span>
             )}
           </div>
-          {userTimezone ? (
+          {userTimezone && !editingTimezone ? (
             <div className="rounded-2xl bg-background p-3">
               <p className="text-xs font-semibold text-muted-foreground">Committed timezone</p>
               <p className="font-display text-base font-extrabold">{userTimezone}</p>
               <p className="mt-1 text-[10px] font-semibold text-muted-foreground">
-                This selection is permanent. Contact the Open Desk Flow team to change it.
+                Your bookings, attendance and shift cutoffs use this timezone.
               </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setDraftTimezone(userTimezone);
+                  setEditingTimezone(true);
+                }}
+                className="focus-premium mt-3 flex w-full items-center justify-center gap-2 rounded-2xl border border-border bg-background px-4 py-2.5 text-xs font-extrabold text-primary"
+              >
+                <Pencil className="h-3.5 w-3.5" /> Change timezone
+              </button>
             </div>
           ) : (
             <div className="space-y-2">
               <p className="text-xs font-semibold text-muted-foreground">
-                Pick your timezone — once committed, it cannot be changed from here.
+                {userTimezone ? "Pick a new timezone — this affects your future bookings and attendance." : "Pick your timezone."}
               </p>
               <Select value={draftTimezone} onValueChange={(v) => setDraftTimezone(v)}>
                 <SelectTrigger className="h-12 rounded-2xl border-border bg-background text-sm font-extrabold">
@@ -4399,13 +4409,24 @@ const Index = () => {
                   ))}
                 </SelectContent>
               </Select>
-              <button
-                type="button"
-                onClick={handleCommitTimezone}
-                className="focus-premium flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-extrabold text-primary-foreground shadow-glow"
-              >
-                <Lock className="h-4 w-4" /> Commit timezone forever
-              </button>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => (userTimezone ? handleChangeTimezone(draftTimezone) : handleCommitTimezone())}
+                  className="focus-premium flex flex-1 items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-extrabold text-primary-foreground shadow-glow"
+                >
+                  <Lock className="h-4 w-4" /> {userTimezone ? "Save timezone" : "Commit timezone"}
+                </button>
+                {userTimezone && (
+                  <button
+                    type="button"
+                    onClick={() => setEditingTimezone(false)}
+                    className="focus-premium rounded-2xl border border-border bg-background px-4 py-3 text-sm font-extrabold text-muted-foreground"
+                  >
+                    Cancel
+                  </button>
+                )}
+              </div>
             </div>
           )}
         </div>
