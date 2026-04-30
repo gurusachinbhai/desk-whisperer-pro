@@ -2426,9 +2426,9 @@ const Index = () => {
                             Online
                           </span>
                         )}
-                        {booking && (
+                        {seenToday && (
                           <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-extrabold uppercase text-primary">
-                            {booking.kind === "desk" ? "Desk" : "Room"} {booking.spot} · F{booking.floor}
+                            Signed in today
                           </span>
                         )}
                       </div>
