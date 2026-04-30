@@ -141,6 +141,13 @@ const DEFAULT_AREAS = ["AREA-01", "AREA-02", "AREA-03", "AREA-04", "AREA-05", "A
 const seatRows = ["A", "B", "C", "D", "E"] as const;
 const seatColumns = [1, 2, 3, 4] as const;
 const meetingRooms = ["M01", "M02", "M03", "M04", "M05"] as const;
+const meetingRoomCatalog: { id: string; name: string; capacity: number; floor: number }[] = [
+  { id: "M01", name: "Aurora", capacity: 4, floor: 1 },
+  { id: "M02", name: "Borealis", capacity: 6, floor: 1 },
+  { id: "M03", name: "Cascade", capacity: 8, floor: 2 },
+  { id: "M04", name: "Delta", capacity: 12, floor: 2 },
+  { id: "M05", name: "Echo", capacity: 16, floor: 3 },
+];
 
 type ShiftKey = "morning" | "day" | "afternoon" | "night";
 
