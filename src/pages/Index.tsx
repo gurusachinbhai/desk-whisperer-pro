@@ -100,7 +100,7 @@ type EmployeeInvite = {
 };
 
 type AppMode = "signup" | "login";
-type ActiveTab = "home" | "book" | "attendance" | "leave" | "payroll" | "billing" | "reports" | "map" | "admin" | "team";
+type ActiveTab = "home" | "book" | "attendance" | "leave" | "payroll" | "billing" | "reports" | "map" | "rooms" | "admin" | "team";
 type LoginStep = "form" | "otp";
 type LoginIdentifier = "email" | "phone";
 
@@ -141,6 +141,13 @@ const DEFAULT_AREAS = ["AREA-01", "AREA-02", "AREA-03", "AREA-04", "AREA-05", "A
 const seatRows = ["A", "B", "C", "D", "E"] as const;
 const seatColumns = [1, 2, 3, 4] as const;
 const meetingRooms = ["M01", "M02", "M03", "M04", "M05"] as const;
+const meetingRoomCatalog: { id: string; name: string; capacity: number; floor: number }[] = [
+  { id: "M01", name: "Aurora", capacity: 4, floor: 1 },
+  { id: "M02", name: "Borealis", capacity: 6, floor: 1 },
+  { id: "M03", name: "Cascade", capacity: 8, floor: 2 },
+  { id: "M04", name: "Delta", capacity: 12, floor: 2 },
+  { id: "M05", name: "Echo", capacity: 16, floor: 3 },
+];
 
 type ShiftKey = "morning" | "day" | "afternoon" | "night";
 
@@ -687,8 +694,165 @@ const Index = () => {
     setAnnouncements((prev) => prev.filter((a) => a.id !== id));
   };
 
+  // ============== ROOM MEETINGS STATE ==============
+  type RoomMeeting = {
+    id: string;
+    roomId: string;
+    roomName: string;
+    date: string; // yyyy-MM-dd
+    startMinutes: number; // minutes from 00:00
+    endMinutes: number;
+    title: string;
+    organizerId: string;
+    organizerName: string;
+    attendeeIds: string[]; // employee_profiles.id
+    attendeeNames: string[];
+    createdAt: number;
+  };
+  const [roomMeetings, setRoomMeetings] = useState<RoomMeeting[]>([]);
+  const [meetingForm, setMeetingForm] = useState<{
+    roomId: string;
+    date: string;
+    startTime: string; // HH:mm
+    endTime: string;
+    title: string;
+    attendeeIds: string[];
+  }>({
+    roomId: meetingRoomCatalog[0].id,
+    date: format(new Date(), "yyyy-MM-dd"),
+    startTime: "09:00",
+    endTime: "10:00",
+    title: "",
+    attendeeIds: [],
+  });
+  const roomMeetingsStorageKey = (companyId: string) => `deskflow-room-meetings-${companyId}`;
 
-  // Auto-release any booking whose shift end has passed
+  useEffect(() => {
+    if (!companyProfile) {
+      setRoomMeetings([]);
+      return;
+    }
+    const raw = window.localStorage.getItem(roomMeetingsStorageKey(companyProfile.id));
+    if (raw) {
+      try {
+        setRoomMeetings(JSON.parse(raw));
+      } catch {
+        setRoomMeetings([]);
+      }
+    } else {
+      setRoomMeetings([]);
+    }
+  }, [companyProfile?.id]);
+
+  useEffect(() => {
+    if (!companyProfile) return;
+    window.localStorage.setItem(roomMeetingsStorageKey(companyProfile.id), JSON.stringify(roomMeetings));
+  }, [roomMeetings, companyProfile?.id]);
+
+  const parseTimeToMinutes = (hhmm: string): number | null => {
+    const m = /^(\d{2}):(\d{2})$/.exec(hhmm);
+    if (!m) return null;
+    const h = Number(m[1]);
+    const mm = Number(m[2]);
+    if (h < 0 || h > 23 || mm < 0 || mm > 59) return null;
+    return h * 60 + mm;
+  };
+  const minutesToLabel = (n: number) => {
+    const h = Math.floor(n / 60);
+    const mm = n % 60;
+    const period = h >= 12 ? "PM" : "AM";
+    const h12 = ((h + 11) % 12) + 1;
+    return `${h12}:${String(mm).padStart(2, "0")} ${period}`;
+  };
+
+  const handleToggleAttendee = (employeeId: string) => {
+    setMeetingForm((prev) => ({
+      ...prev,
+      attendeeIds: prev.attendeeIds.includes(employeeId)
+        ? prev.attendeeIds.filter((id) => id !== employeeId)
+        : [...prev.attendeeIds, employeeId],
+    }));
+  };
+
+  const handleBookRoom = (e: FormEvent) => {
+    e.preventDefault();
+    if (!currentUser || !companyProfile) {
+      toast.error("Sign in to book a room");
+      return;
+    }
+    const room = meetingRoomCatalog.find((r) => r.id === meetingForm.roomId);
+    if (!room) {
+      toast.error("Pick a room");
+      return;
+    }
+    const startMin = parseTimeToMinutes(meetingForm.startTime);
+    const endMin = parseTimeToMinutes(meetingForm.endTime);
+    if (startMin === null || endMin === null) {
+      toast.error("Enter valid times");
+      return;
+    }
+    if (endMin <= startMin) {
+      toast.error("End time must be after start time");
+      return;
+    }
+    if (!meetingForm.title.trim()) {
+      toast.error("Add a meeting title");
+      return;
+    }
+    const totalAttendees = meetingForm.attendeeIds.length + 1;
+    if (totalAttendees > room.capacity) {
+      toast.error(`${room.name} fits ${room.capacity}; you have ${totalAttendees}`);
+      return;
+    }
+    const conflict = roomMeetings.find(
+      (m) =>
+        m.roomId === room.id &&
+        m.date === meetingForm.date &&
+        startMin < m.endMinutes &&
+        endMin > m.startMinutes,
+    );
+    if (conflict) {
+      toast.error(`Conflicts with "${conflict.title}"`, {
+        description: `${minutesToLabel(conflict.startMinutes)} – ${minutesToLabel(conflict.endMinutes)}`,
+      });
+      return;
+    }
+    const attendeeNames = meetingForm.attendeeIds
+      .map((id) => employees.find((e) => e.id === id)?.display_name)
+      .filter((n): n is string => Boolean(n));
+    const meeting: RoomMeeting = {
+      id: window.crypto.randomUUID(),
+      roomId: room.id,
+      roomName: room.name,
+      date: meetingForm.date,
+      startMinutes: startMin,
+      endMinutes: endMin,
+      title: meetingForm.title.trim(),
+      organizerId: currentUser.email,
+      organizerName: currentUser.displayName,
+      attendeeIds: meetingForm.attendeeIds,
+      attendeeNames,
+      createdAt: Date.now(),
+    };
+    setRoomMeetings((prev) => [meeting, ...prev]);
+    setMeetingForm((prev) => ({ ...prev, title: "", attendeeIds: [] }));
+    toast.success(`${room.name} booked`, {
+      description: `${meeting.date} · ${minutesToLabel(startMin)} – ${minutesToLabel(endMin)}`,
+    });
+  };
+
+  const handleCancelMeeting = (id: string) => {
+    const meeting = roomMeetings.find((m) => m.id === id);
+    if (!meeting) return;
+    if (!isAdmin && meeting.organizerId !== currentUser?.email) {
+      toast.error("Only the organizer or an admin can cancel");
+      return;
+    }
+    setRoomMeetings((prev) => prev.filter((m) => m.id !== id));
+    toast.success("Meeting cancelled");
+  };
+
+
   useEffect(() => {
     setConfirmedBookings((current) => {
       let changed = false;
@@ -2037,6 +2201,188 @@ const Index = () => {
                 ))}
               </ul>
             </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  // ============== ROOMS PANEL ==============
+  const renderRoomsPanel = () => {
+    const dayMeetings = roomMeetings
+      .filter((m) => m.date === meetingForm.date)
+      .sort((a, b) => a.startMinutes - b.startMinutes);
+    const selectedRoomMeta = meetingRoomCatalog.find((r) => r.id === meetingForm.roomId)!;
+
+    return (
+      <div className="space-y-5">
+        <div className="rounded-[1.5rem] bg-surface-raised p-5 shadow-card">
+          <div className="flex items-center gap-3">
+            <div className="grid h-10 w-10 place-items-center rounded-2xl bg-primary/10 text-primary">
+              <DoorOpen className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Meeting rooms</p>
+              <h2 className="font-display text-xl font-extrabold">Book a room</h2>
+            </div>
+          </div>
+
+          <form onSubmit={handleBookRoom} className="mt-4 space-y-3">
+            <Input
+              className="rounded-2xl"
+              placeholder="Meeting title (e.g. Sprint review)"
+              value={meetingForm.title}
+              onChange={(e) => setMeetingForm((p) => ({ ...p, title: e.target.value }))}
+              maxLength={120}
+            />
+
+            <div>
+              <label className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Room</label>
+              <div className="mt-2 grid grid-cols-1 gap-2">
+                {meetingRoomCatalog.map((r) => {
+                  const selected = meetingForm.roomId === r.id;
+                  const totalAttendees = meetingForm.attendeeIds.length + 1;
+                  const overCap = selected && totalAttendees > r.capacity;
+                  return (
+                    <button
+                      type="button"
+                      key={r.id}
+                      onClick={() => setMeetingForm((p) => ({ ...p, roomId: r.id }))}
+                      className={`focus-premium flex items-center justify-between rounded-2xl border px-4 py-3 text-left text-sm font-extrabold transition ${
+                        selected ? "border-primary bg-primary/10 text-primary" : "border-border bg-surface-muted text-foreground"
+                      }`}
+                    >
+                      <span className="flex items-center gap-2">
+                        <DoorOpen className="h-4 w-4" />
+                        {r.name} <span className="text-xs font-bold opacity-70">· {r.id}</span>
+                      </span>
+                      <span className={`text-xs ${overCap ? "text-destructive" : "opacity-80"}`}>
+                        Floor {r.floor} · seats {r.capacity}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <label className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Date</label>
+                <Input
+                  type="date"
+                  className="mt-1 rounded-2xl"
+                  value={meetingForm.date}
+                  onChange={(e) => setMeetingForm((p) => ({ ...p, date: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Start</label>
+                <Input
+                  type="time"
+                  className="mt-1 rounded-2xl"
+                  value={meetingForm.startTime}
+                  onChange={(e) => setMeetingForm((p) => ({ ...p, startTime: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">End</label>
+                <Input
+                  type="time"
+                  className="mt-1 rounded-2xl"
+                  value={meetingForm.endTime}
+                  onChange={(e) => setMeetingForm((p) => ({ ...p, endTime: e.target.value }))}
+                />
+              </div>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between">
+                <label className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+                  Attendees ({meetingForm.attendeeIds.length} + you)
+                </label>
+                <span className="text-[11px] font-bold text-muted-foreground">
+                  Capacity {selectedRoomMeta.capacity}
+                </span>
+              </div>
+              {employees.length === 0 ? (
+                <p className="mt-2 rounded-2xl bg-surface-muted p-3 text-xs font-semibold text-muted-foreground">
+                  Your roster is empty. Add employees from the Admin console.
+                </p>
+              ) : (
+                <div className="mt-2 max-h-44 space-y-1 overflow-y-auto rounded-2xl border border-border bg-surface-muted p-2">
+                  {employees.map((emp) => {
+                    const checked = meetingForm.attendeeIds.includes(emp.id);
+                    const isMe = emp.email && currentUser?.email && emp.email.toLowerCase() === currentUser.email.toLowerCase();
+                    if (isMe) return null;
+                    return (
+                      <button
+                        type="button"
+                        key={emp.id}
+                        onClick={() => handleToggleAttendee(emp.id)}
+                        className={`focus-premium flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-xs font-extrabold transition ${
+                          checked ? "bg-primary/15 text-primary" : "bg-background text-foreground hover:bg-background/60"
+                        }`}
+                      >
+                        <span className="truncate">{emp.display_name}</span>
+                        <span className={checked ? "text-primary" : "text-muted-foreground"}>
+                          {checked ? "✓ Invited" : "Add"}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            <button
+              type="submit"
+              className="focus-premium flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 font-extrabold text-primary-foreground shadow-glow"
+            >
+              <CalendarCheck className="h-5 w-5" /> Book room
+            </button>
+          </form>
+        </div>
+
+        <div className="rounded-[1.5rem] bg-surface-raised p-5 shadow-card">
+          <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+            Schedule for {meetingForm.date}
+          </p>
+          <h3 className="mt-1 font-display text-lg font-extrabold">{dayMeetings.length} meeting{dayMeetings.length === 1 ? "" : "s"}</h3>
+          {dayMeetings.length === 0 ? (
+            <p className="mt-3 rounded-2xl bg-surface-muted p-3 text-sm font-semibold text-muted-foreground">
+              Nothing booked for this day yet.
+            </p>
+          ) : (
+            <ul className="mt-3 space-y-2">
+              {dayMeetings.map((m) => {
+                const canCancel = isAdmin || m.organizerId === currentUser?.email;
+                return (
+                  <li key={m.id} className="rounded-2xl border border-border bg-surface-muted p-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="truncate font-display text-sm font-extrabold">{m.title}</p>
+                        <p className="text-[11px] font-bold text-muted-foreground">
+                          {m.roomName} · {minutesToLabel(m.startMinutes)} – {minutesToLabel(m.endMinutes)}
+                        </p>
+                        <p className="mt-1 text-[11px] font-semibold text-muted-foreground">
+                          By {m.organizerName}
+                          {m.attendeeNames.length > 0 && ` · with ${m.attendeeNames.slice(0, 3).join(", ")}${m.attendeeNames.length > 3 ? ` +${m.attendeeNames.length - 3}` : ""}`}
+                        </p>
+                      </div>
+                      {canCancel && (
+                        <button
+                          onClick={() => handleCancelMeeting(m.id)}
+                          className="focus-premium grid h-8 w-8 place-items-center rounded-xl bg-destructive/10 text-destructive"
+                          title="Cancel"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
           )}
         </div>
       </div>
@@ -3963,6 +4309,13 @@ const Index = () => {
               </button>
               <button
                 type="button"
+                onClick={() => setActiveTab("rooms")}
+                className="focus-premium text-xs font-extrabold text-primary"
+              >
+                Rooms
+              </button>
+              <button
+                type="button"
                 onClick={() => setActiveTab("book")}
                 className="focus-premium text-xs font-extrabold text-primary"
               >
@@ -4158,6 +4511,7 @@ const Index = () => {
                   {isAdmin && activeTab === "reports" && renderReportsPanel()}
                   {activeTab === "book" && renderBookingPanel()}
                   {activeTab === "map" && renderMapPanel()}
+                  {activeTab === "rooms" && renderRoomsPanel()}
                 </>
               )}
             </div>
