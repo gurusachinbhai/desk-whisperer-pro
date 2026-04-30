@@ -3441,13 +3441,43 @@ const Index = () => {
             </div>
 
             <div className="space-y-5 px-5 py-5">
-              {activeTab === "home" && renderHomeScreen()}
-              {isAdmin && activeTab === "admin" && renderAdminPanel()}
-              {activeTab === "team" && renderTeamPanel()}
-              {activeTab === "attendance" && renderAttendancePanel()}
-              {activeTab === "leave" && renderLeavePanel()}
-              {activeTab === "payroll" && renderPayrollPanel()}
-              {(activeTab === "book" || activeTab === "map") && renderBookingPanel()}
+              {subscriptionExpired && activeTab !== "billing" ? (
+                <div className="rounded-[1.5rem] border-2 border-destructive bg-destructive/5 p-5 shadow-card">
+                  <div className="flex items-center gap-3">
+                    <div className="grid h-10 w-10 place-items-center rounded-2xl bg-destructive/15 text-destructive">
+                      <Lock className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-wide text-destructive">Access blocked</p>
+                      <h2 className="font-display text-xl font-extrabold">Subscription expired</h2>
+                    </div>
+                  </div>
+                  <p className="mt-3 text-sm font-semibold leading-6 text-muted-foreground">
+                    {isAdmin
+                      ? "Your company's subscription has lapsed. Renew now to restore access for your whole team."
+                      : "Your company's subscription has lapsed. Please ask your admin to renew to restore access."}
+                  </p>
+                  {isAdmin && (
+                    <button
+                      onClick={() => setActiveTab("billing")}
+                      className="focus-premium mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 font-extrabold text-primary-foreground shadow-glow"
+                    >
+                      <CreditCard className="h-5 w-5" /> Go to billing
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <>
+                  {activeTab === "home" && renderHomeScreen()}
+                  {isAdmin && activeTab === "admin" && renderAdminPanel()}
+                  {activeTab === "team" && renderTeamPanel()}
+                  {activeTab === "attendance" && renderAttendancePanel()}
+                  {activeTab === "leave" && renderLeavePanel()}
+                  {activeTab === "payroll" && renderPayrollPanel()}
+                  {activeTab === "billing" && renderBillingPanel()}
+                  {(activeTab === "book" || activeTab === "map") && renderBookingPanel()}
+                </>
+              )}
             </div>
 
             <div className={`sticky bottom-0 grid ${isAdmin ? "grid-cols-6" : "grid-cols-5"} border-t border-border bg-surface-raised px-2 py-2`}>
