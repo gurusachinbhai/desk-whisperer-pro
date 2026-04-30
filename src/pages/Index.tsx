@@ -1859,6 +1859,191 @@ const Index = () => {
     toast.success("Timezone locked", { description: `Set to ${draftTimezone}. This is permanent.` });
   };
 
+  // ============== VISUAL FLOOR MAP ==============
+  const renderMapPanel = () => {
+    const dateKey = format(bookingDate, "yyyy-MM-dd");
+    const cellsForArea = confirmedBookings.filter(
+      (b) =>
+        b.kind === "desk" &&
+        !b.released &&
+        b.floor === selectedFloor &&
+        b.area === selectedArea &&
+        b.shiftKey === selectedShift &&
+        b.date === dateKey,
+    );
+    const occupiedMap = new Map(cellsForArea.map((b) => [b.spot, b]));
+
+    const totalSeats = seatRows.length * seatColumns.length;
+    const occupiedCount = cellsForArea.length;
+    const availableCount = totalSeats - occupiedCount;
+
+    const handleMapSeatClick = (seatId: string) => {
+      const existing = occupiedMap.get(seatId);
+      if (existing) {
+        toast.info(`${seatId} is booked for ${existing.shift}`, {
+          description: `Floor ${existing.floor} · ${existing.area} · ${existing.shiftRange}`,
+        });
+        return;
+      }
+      setBookingKind("desk");
+      setSelectedSeat(seatId);
+      setSelectedSpot?.(seatId);
+      setSelectedDeskId(seatId);
+      setTimeout(() => handleConfirmBooking(), 0);
+    };
+
+    return (
+      <div className="space-y-5">
+        <div className="rounded-[1.5rem] bg-surface-raised p-5 shadow-card">
+          <div className="flex items-center gap-3">
+            <div className="grid h-10 w-10 place-items-center rounded-2xl bg-primary/10 text-primary">
+              <MapPin className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Floor map</p>
+              <h2 className="font-display text-xl font-extrabold">Pick a seat visually</h2>
+            </div>
+          </div>
+
+          <div className="mt-4 grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Floor</label>
+              <Select value={String(selectedFloor)} onValueChange={(v) => setSelectedFloor(Number(v))}>
+                <SelectTrigger className="mt-1 rounded-2xl"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {companyFloors.map((f) => (
+                    <SelectItem key={f} value={String(f)}>Floor {f}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Area</label>
+              <Select value={selectedArea} onValueChange={setSelectedArea}>
+                <SelectTrigger className="mt-1 rounded-2xl"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {companyAreas.map((a) => (
+                    <SelectItem key={a} value={a}>{a}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Shift</label>
+              <Select value={selectedShift} onValueChange={(v) => setSelectedShift(v as ShiftKey)}>
+                <SelectTrigger className="mt-1 rounded-2xl"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {shiftDefinitions.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>{s.label} · {s.range}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Date</label>
+              <Input
+                type="date"
+                className="mt-1 rounded-2xl"
+                value={format(bookingDate, "yyyy-MM-dd")}
+                onChange={(e) => {
+                  const d = new Date(e.target.value);
+                  if (!isNaN(d.getTime())) setBookingDate(d);
+                }}
+              />
+            </div>
+          </div>
+
+          <div className="mt-5 grid grid-cols-3 gap-2 text-center text-[11px] font-extrabold">
+            <div className="rounded-xl bg-success/15 p-2 text-success">
+              <p className="font-display text-base">{availableCount}</p>
+              <p className="uppercase">Free</p>
+            </div>
+            <div className="rounded-xl bg-destructive/10 p-2 text-destructive">
+              <p className="font-display text-base">{occupiedCount}</p>
+              <p className="uppercase">Booked</p>
+            </div>
+            <div className="rounded-xl bg-primary/10 p-2 text-primary">
+              <p className="font-display text-base">{totalSeats}</p>
+              <p className="uppercase">Total</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-[1.5rem] bg-surface-raised p-5 shadow-card">
+          <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+            {selectedArea} · Floor {selectedFloor}
+          </p>
+          <h3 className="mt-1 font-display text-lg font-extrabold">Tap a seat to book</h3>
+
+          <div className="mt-4 rounded-2xl bg-surface-muted p-4">
+            <div className="grid gap-2" style={{ gridTemplateColumns: `auto repeat(${seatColumns.length}, minmax(0, 1fr))` }}>
+              <div />
+              {seatColumns.map((c) => (
+                <div key={`h-${c}`} className="text-center text-[10px] font-extrabold uppercase text-muted-foreground">
+                  {c}
+                </div>
+              ))}
+              {seatRows.map((row) => (
+                <div key={`row-${row}`} className="contents">
+                  <div className="flex items-center justify-center text-[10px] font-extrabold uppercase text-muted-foreground">
+                    {row}
+                  </div>
+                  {seatColumns.map((col) => {
+                    const seatId = `${row}${col}`;
+                    const occ = occupiedMap.get(seatId);
+                    const isMine =
+                      occ &&
+                      currentUser &&
+                      // own bookings have same id pattern; we just dim by spot
+                      false;
+                    const tone = occ
+                      ? "bg-destructive/10 text-destructive border-destructive/30"
+                      : "bg-success/10 text-success border-success/30 hover:bg-success/20";
+                    return (
+                      <button
+                        key={seatId}
+                        onClick={() => handleMapSeatClick(seatId)}
+                        className={`focus-premium aspect-square rounded-xl border-2 text-xs font-extrabold transition ${tone} ${isMine ? "ring-2 ring-primary" : ""}`}
+                        title={occ ? `${seatId} · booked` : `${seatId} · available`}
+                      >
+                        {seatId}
+                      </button>
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-4 flex items-center justify-center gap-4 text-[11px] font-extrabold">
+              <span className="flex items-center gap-1.5">
+                <span className="h-3 w-3 rounded bg-success/30 ring-1 ring-success/50" /> Free
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="h-3 w-3 rounded bg-destructive/30 ring-1 ring-destructive/50" /> Booked
+              </span>
+            </div>
+          </div>
+
+          {cellsForArea.length > 0 && (
+            <div className="mt-4">
+              <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+                Booked this shift
+              </p>
+              <ul className="mt-2 space-y-1">
+                {cellsForArea.map((b) => (
+                  <li key={b.id} className="flex items-center justify-between rounded-xl border border-border bg-surface-muted px-3 py-2 text-xs font-extrabold">
+                    <span>{b.spot}</span>
+                    <span className="text-muted-foreground">{b.shiftRange}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   const renderBookingPanel = () => (
     <div id="booking" className="rounded-[1.5rem] bg-surface-raised p-4 shadow-card">
       <div className="flex items-center justify-between">
