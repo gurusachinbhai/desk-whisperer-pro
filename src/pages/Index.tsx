@@ -2333,13 +2333,13 @@ const Index = () => {
         (emp.email ?? "").toLowerCase().includes(q) ||
         (emp.phone ?? "").toLowerCase().includes(q);
       if (!matchesQuery) return false;
-      if (directoryFilter === "online") return isOnline(emp.email);
-      if (directoryFilter === "booked") return Boolean(bookingFor(emp.email));
+      if (directoryFilter === "online") return isOnline(emp.display_name);
+      if (directoryFilter === "today") return hasSignedInToday(emp.display_name);
       return true;
     });
 
-    const onlineCount = employees.filter((e) => isOnline(e.email)).length;
-    const bookedCount = employees.filter((e) => Boolean(bookingFor(e.email))).length;
+    const onlineCount = employees.filter((e) => isOnline(e.display_name)).length;
+    const todayCount = employees.filter((e) => hasSignedInToday(e.display_name)).length;
 
     const initialsOf = (name: string) =>
       name.split(/\s+/).slice(0, 2).map((p) => p[0]?.toUpperCase() ?? "").join("") || "?";
