@@ -1887,7 +1887,6 @@ const Index = () => {
       }
       setBookingKind("desk");
       setSelectedSeat(seatId);
-      setSelectedSpot?.(seatId);
       setSelectedDeskId(seatId);
       setTimeout(() => handleConfirmBooking(), 0);
     };
