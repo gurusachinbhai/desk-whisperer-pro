@@ -52,6 +52,14 @@ import {
 } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
@@ -555,6 +563,129 @@ const Index = () => {
   }, [subscription, nowTs]);
 
   const subscriptionActive = Boolean(subscription && !subscriptionExpired);
+
+  // ============== ANNOUNCEMENTS / NOTIFICATIONS STATE ==============
+  type AnnouncementPriority = "info" | "important" | "urgent";
+  type Announcement = {
+    id: string;
+    title: string;
+    body: string;
+    priority: AnnouncementPriority;
+    authorName: string;
+    authorId: string;
+    createdAt: number;
+  };
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [announcementForm, setAnnouncementForm] = useState<{ title: string; body: string; priority: AnnouncementPriority }>({
+    title: "",
+    body: "",
+    priority: "info",
+  });
+  const [readAnnouncementIds, setReadAnnouncementIds] = useState<string[]>([]);
+  const [showNotifications, setShowNotifications] = useState(false);
+
+  const announcementsStorageKey = (companyId: string) => `deskflow-announcements-${companyId}`;
+  const readAnnouncementsStorageKey = (companyId: string, userKey: string) =>
+    `deskflow-announcements-read-${companyId}-${userKey}`;
+
+  const userReadKey = currentUser?.email?.toLowerCase() ?? "anon";
+
+  useEffect(() => {
+    if (!companyProfile) {
+      setAnnouncements([]);
+      return;
+    }
+    const raw = window.localStorage.getItem(announcementsStorageKey(companyProfile.id));
+    if (raw) {
+      try {
+        setAnnouncements(JSON.parse(raw));
+      } catch {
+        setAnnouncements([]);
+      }
+    } else {
+      setAnnouncements([]);
+    }
+  }, [companyProfile?.id]);
+
+  useEffect(() => {
+    if (!companyProfile) return;
+    window.localStorage.setItem(announcementsStorageKey(companyProfile.id), JSON.stringify(announcements));
+  }, [announcements, companyProfile?.id]);
+
+  useEffect(() => {
+    if (!companyProfile || !currentUser) {
+      setReadAnnouncementIds([]);
+      return;
+    }
+    const raw = window.localStorage.getItem(readAnnouncementsStorageKey(companyProfile.id, userReadKey));
+    if (raw) {
+      try {
+        setReadAnnouncementIds(JSON.parse(raw));
+      } catch {
+        setReadAnnouncementIds([]);
+      }
+    } else {
+      setReadAnnouncementIds([]);
+    }
+  }, [companyProfile?.id, userReadKey]);
+
+  useEffect(() => {
+    if (!companyProfile || !currentUser) return;
+    window.localStorage.setItem(
+      readAnnouncementsStorageKey(companyProfile.id, userReadKey),
+      JSON.stringify(readAnnouncementIds),
+    );
+  }, [readAnnouncementIds, companyProfile?.id, userReadKey]);
+
+  const sortedAnnouncements = useMemo(
+    () => [...announcements].sort((a, b) => b.createdAt - a.createdAt),
+    [announcements],
+  );
+  const unreadAnnouncementCount = useMemo(
+    () => sortedAnnouncements.filter((a) => !readAnnouncementIds.includes(a.id)).length,
+    [sortedAnnouncements, readAnnouncementIds],
+  );
+
+  const markAllAnnouncementsRead = () => {
+    setReadAnnouncementIds(announcements.map((a) => a.id));
+  };
+
+  const handlePostAnnouncement = (e: FormEvent) => {
+    e.preventDefault();
+    if (!isAdmin || !currentUser) {
+      toast.error("Only admins can post announcements");
+      return;
+    }
+    const title = announcementForm.title.trim();
+    const body = announcementForm.body.trim();
+    if (title.length < 3) {
+      toast.error("Title must be at least 3 characters");
+      return;
+    }
+    if (body.length < 3) {
+      toast.error("Message body is required");
+      return;
+    }
+    const next: Announcement = {
+      id: window.crypto.randomUUID(),
+      title,
+      body,
+      priority: announcementForm.priority,
+      authorName: currentUser.displayName,
+      authorId: currentUser.email,
+      createdAt: Date.now(),
+    };
+    setAnnouncements((prev) => [next, ...prev]);
+    // Author auto-reads their own post
+    setReadAnnouncementIds((prev) => (prev.includes(next.id) ? prev : [...prev, next.id]));
+    setAnnouncementForm({ title: "", body: "", priority: "info" });
+    toast.success("Announcement posted to your team");
+  };
+
+  const handleDeleteAnnouncement = (id: string) => {
+    if (!isAdmin) return;
+    setAnnouncements((prev) => prev.filter((a) => a.id !== id));
+  };
 
 
   // Auto-release any booking whose shift end has passed
@@ -1397,6 +1528,81 @@ const Index = () => {
                 : "Not subscribed"}
           </span>
         </button>
+      </div>
+
+      {/* Announcements composer */}
+      <div className="rounded-[1.5rem] bg-surface-raised p-4 shadow-card">
+        <div className="flex items-center gap-3">
+          <div className="grid h-10 w-10 place-items-center rounded-2xl bg-primary/10 text-primary">
+            <Bell className="h-5 w-5" />
+          </div>
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Announcements</p>
+            <h3 className="font-display text-lg font-extrabold">Notify your team</h3>
+          </div>
+        </div>
+        <form onSubmit={handlePostAnnouncement} className="mt-3 space-y-3">
+          <Input
+            className="rounded-2xl"
+            placeholder="Title (e.g. Office closed Friday)"
+            value={announcementForm.title}
+            onChange={(e) => setAnnouncementForm((p) => ({ ...p, title: e.target.value }))}
+            maxLength={120}
+          />
+          <Textarea
+            className="min-h-[90px] rounded-2xl"
+            placeholder="Message body…"
+            value={announcementForm.body}
+            onChange={(e) => setAnnouncementForm((p) => ({ ...p, body: e.target.value }))}
+            maxLength={1000}
+          />
+          <div>
+            <label className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Priority</label>
+            <Select
+              value={announcementForm.priority}
+              onValueChange={(v) => setAnnouncementForm((p) => ({ ...p, priority: v as AnnouncementPriority }))}
+            >
+              <SelectTrigger className="mt-1 rounded-2xl">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="info">Info</SelectItem>
+                <SelectItem value="important">Important</SelectItem>
+                <SelectItem value="urgent">Urgent</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <button
+            type="submit"
+            className="focus-premium flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 font-extrabold text-primary-foreground shadow-glow"
+          >
+            <Send className="h-5 w-5" /> Post announcement
+          </button>
+        </form>
+        {sortedAnnouncements.length > 0 && (
+          <div className="mt-4">
+            <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Recent</p>
+            <ul className="mt-2 space-y-2">
+              {sortedAnnouncements.slice(0, 5).map((a) => (
+                <li key={a.id} className="flex items-center justify-between gap-2 rounded-2xl border border-border bg-surface-muted p-3">
+                  <div className="min-w-0">
+                    <p className="truncate font-display text-sm font-extrabold">{a.title}</p>
+                    <p className="truncate text-[11px] font-semibold text-muted-foreground">
+                      {a.priority.toUpperCase()} · {format(new Date(a.createdAt), "MMM d, h:mm a")}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => handleDeleteAnnouncement(a.id)}
+                    className="focus-premium grid h-9 w-9 place-items-center rounded-xl bg-destructive/10 text-destructive"
+                    title="Remove"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
 
       {/* Floors management */}
@@ -3441,7 +3647,22 @@ const Index = () => {
             <div className="flex items-center justify-between bg-primary px-5 pb-4 pt-5 text-primary-foreground">
               <ArrowLeft className="h-5 w-5" />
               <div className="h-6 w-28 rounded-full bg-primary-foreground/20" />
-              <Bell className="h-5 w-5" />
+              <button
+                type="button"
+                onClick={() => {
+                  setShowNotifications(true);
+                  markAllAnnouncementsRead();
+                }}
+                className="focus-premium relative grid h-9 w-9 place-items-center rounded-full hover:bg-primary-foreground/10"
+                aria-label="Notifications"
+              >
+                <Bell className="h-5 w-5" />
+                {unreadAnnouncementCount > 0 && (
+                  <span className="absolute -right-0.5 -top-0.5 grid h-5 min-w-[1.25rem] place-items-center rounded-full bg-destructive px-1 text-[10px] font-extrabold text-destructive-foreground">
+                    {unreadAnnouncementCount > 9 ? "9+" : unreadAnnouncementCount}
+                  </span>
+                )}
+              </button>
             </div>
 
             <div className="bg-primary px-5 pb-6 text-primary-foreground">
@@ -3510,6 +3731,68 @@ const Index = () => {
           </div>
         </section>
       </div>
+
+      <Dialog open={showNotifications} onOpenChange={setShowNotifications}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Bell className="h-5 w-5 text-primary" /> Notifications
+            </DialogTitle>
+            <DialogDescription>
+              Company-wide announcements from your admin team.
+            </DialogDescription>
+          </DialogHeader>
+          {sortedAnnouncements.length === 0 ? (
+            <p className="rounded-2xl bg-surface-muted p-4 text-sm font-semibold text-muted-foreground">
+              No announcements yet. When your admin posts company news, it appears here.
+            </p>
+          ) : (
+            <ul className="max-h-[60vh] space-y-3 overflow-y-auto pr-1">
+              {sortedAnnouncements.map((a) => {
+                const tone =
+                  a.priority === "urgent"
+                    ? "border-destructive/40 bg-destructive/5"
+                    : a.priority === "important"
+                      ? "border-amber-500/40 bg-amber-500/5"
+                      : "border-border bg-surface-muted";
+                const badgeTone =
+                  a.priority === "urgent"
+                    ? "bg-destructive text-destructive-foreground"
+                    : a.priority === "important"
+                      ? "bg-amber-500 text-white"
+                      : "bg-primary/10 text-primary";
+                return (
+                  <li key={a.id} className={`rounded-2xl border p-3 ${tone}`}>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="font-display text-sm font-extrabold">{a.title}</p>
+                        <p className="mt-1 whitespace-pre-wrap text-xs font-semibold text-muted-foreground">
+                          {a.body}
+                        </p>
+                      </div>
+                      <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-extrabold uppercase ${badgeTone}`}>
+                        {a.priority}
+                      </span>
+                    </div>
+                    <div className="mt-2 flex items-center justify-between text-[11px] font-semibold text-muted-foreground">
+                      <span>By {a.authorName} · {format(new Date(a.createdAt), "MMM d, yyyy h:mm a")}</span>
+                      {isAdmin && (
+                        <button
+                          onClick={() => handleDeleteAnnouncement(a.id)}
+                          className="focus-premium grid h-7 w-7 place-items-center rounded-lg bg-destructive/10 text-destructive"
+                          title="Remove"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </DialogContent>
+      </Dialog>
     </main>
   );
 };
