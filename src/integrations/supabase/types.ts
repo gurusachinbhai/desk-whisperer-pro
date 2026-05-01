@@ -16,30 +16,66 @@ export type Database = {
     Tables: {
       company_profiles: {
         Row: {
+          address_line1: string | null
+          address_line2: string | null
+          approved_at: string | null
+          approved_by: string | null
+          city: string | null
+          contact_email: string | null
+          contact_name: string | null
+          contact_phone: string | null
+          country: string | null
           created_at: string
           created_by: string | null
           domain: string | null
           id: string
           name: string
           organization_code: string
+          postal_code: string | null
+          state: string | null
+          status: string
           updated_at: string
         }
         Insert: {
+          address_line1?: string | null
+          address_line2?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          city?: string | null
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          country?: string | null
           created_at?: string
           created_by?: string | null
           domain?: string | null
           id?: string
           name: string
           organization_code: string
+          postal_code?: string | null
+          state?: string | null
+          status?: string
           updated_at?: string
         }
         Update: {
+          address_line1?: string | null
+          address_line2?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          city?: string | null
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          country?: string | null
           created_at?: string
           created_by?: string | null
           domain?: string | null
           id?: string
           name?: string
           organization_code?: string
+          postal_code?: string | null
+          state?: string | null
+          status?: string
           updated_at?: string
         }
         Relationships: []
@@ -249,32 +285,41 @@ export type Database = {
       }
       employee_profiles: {
         Row: {
+          approved_at: string | null
+          approved_by: string | null
           company_id: string
           created_at: string
           display_name: string
           email: string | null
           id: string
           phone: string | null
+          status: string
           updated_at: string
           user_id: string | null
         }
         Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
           company_id: string
           created_at?: string
           display_name: string
           email?: string | null
           id?: string
           phone?: string | null
+          status?: string
           updated_at?: string
           user_id?: string | null
         }
         Update: {
+          approved_at?: string | null
+          approved_by?: string | null
           company_id?: string
           created_at?: string
           display_name?: string
           email?: string | null
           id?: string
           phone?: string | null
+          status?: string
           updated_at?: string
           user_id?: string | null
         }
@@ -328,12 +373,67 @@ export type Database = {
       accept_employee_invite: {
         Args: { _display_name?: string; _email?: string; _invite_token: string }
         Returns: {
+          approved_at: string | null
+          approved_by: string | null
           company_id: string
           created_at: string
           display_name: string
           email: string | null
           id: string
           phone: string | null
+          status: string
+          updated_at: string
+          user_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "employee_profiles"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      approve_company: {
+        Args: { _company_id: string }
+        Returns: {
+          address_line1: string | null
+          address_line2: string | null
+          approved_at: string | null
+          approved_by: string | null
+          city: string | null
+          contact_email: string | null
+          contact_name: string | null
+          contact_phone: string | null
+          country: string | null
+          created_at: string
+          created_by: string | null
+          domain: string | null
+          id: string
+          name: string
+          organization_code: string
+          postal_code: string | null
+          state: string | null
+          status: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "company_profiles"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      approve_employee: {
+        Args: { _employee_id: string }
+        Returns: {
+          approved_at: string | null
+          approved_by: string | null
+          company_id: string
+          created_at: string
+          display_name: string
+          email: string | null
+          id: string
+          phone: string | null
+          status: string
           updated_at: string
           user_id: string | null
         }
@@ -347,12 +447,15 @@ export type Database = {
       attach_user_to_employee_record: {
         Args: { _employee_email: string; _organization_code: string }
         Returns: {
+          approved_at: string | null
+          approved_by: string | null
           company_id: string
           created_at: string
           display_name: string
           email: string | null
           id: string
           phone: string | null
+          status: string
           updated_at: string
           user_id: string | null
         }
@@ -413,6 +516,8 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      get_platform_stats: { Args: never; Returns: Json }
+      grant_super_admin: { Args: { _email: string }; Returns: boolean }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -421,6 +526,7 @@ export type Database = {
         Returns: boolean
       }
       is_company_member: { Args: { _company_id: string }; Returns: boolean }
+      is_super_admin: { Args: never; Returns: boolean }
       join_company_profile: {
         Args: {
           _display_name: string
@@ -428,12 +534,24 @@ export type Database = {
           _organization_code: string
         }
         Returns: {
+          address_line1: string | null
+          address_line2: string | null
+          approved_at: string | null
+          approved_by: string | null
+          city: string | null
+          contact_email: string | null
+          contact_name: string | null
+          contact_phone: string | null
+          country: string | null
           created_at: string
           created_by: string | null
           domain: string | null
           id: string
           name: string
           organization_code: string
+          postal_code: string | null
+          state: string | null
+          status: string
           updated_at: string
         }
         SetofOptions: {
@@ -469,12 +587,24 @@ export type Database = {
           _organization_code: string
         }
         Returns: {
+          address_line1: string | null
+          address_line2: string | null
+          approved_at: string | null
+          approved_by: string | null
+          city: string | null
+          contact_email: string | null
+          contact_name: string | null
+          contact_phone: string | null
+          country: string | null
           created_at: string
           created_by: string | null
           domain: string | null
           id: string
           name: string
           organization_code: string
+          postal_code: string | null
+          state: string | null
+          status: string
           updated_at: string
         }
         SetofOptions: {
@@ -484,6 +614,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      revoke_super_admin: { Args: { _user_id: string }; Returns: boolean }
       signup_employee_record: {
         Args: {
           _company_name: string
@@ -493,12 +624,67 @@ export type Database = {
           _phone?: string
         }
         Returns: {
+          approved_at: string | null
+          approved_by: string | null
           company_id: string
           created_at: string
           display_name: string
           email: string | null
           id: string
           phone: string | null
+          status: string
+          updated_at: string
+          user_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "employee_profiles"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      suspend_company: {
+        Args: { _company_id: string }
+        Returns: {
+          address_line1: string | null
+          address_line2: string | null
+          approved_at: string | null
+          approved_by: string | null
+          city: string | null
+          contact_email: string | null
+          contact_name: string | null
+          contact_phone: string | null
+          country: string | null
+          created_at: string
+          created_by: string | null
+          domain: string | null
+          id: string
+          name: string
+          organization_code: string
+          postal_code: string | null
+          state: string | null
+          status: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "company_profiles"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      suspend_employee: {
+        Args: { _employee_id: string }
+        Returns: {
+          approved_at: string | null
+          approved_by: string | null
+          company_id: string
+          created_at: string
+          display_name: string
+          email: string | null
+          id: string
+          phone: string | null
+          status: string
           updated_at: string
           user_id: string | null
         }
@@ -511,7 +697,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "moderator" | "user"
+      app_role: "admin" | "moderator" | "user" | "super_admin"
       deskflow_booking_status:
         | "confirmed"
         | "checked_in"
@@ -645,7 +831,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "moderator", "user"],
+      app_role: ["admin", "moderator", "user", "super_admin"],
       deskflow_booking_status: [
         "confirmed",
         "checked_in",
