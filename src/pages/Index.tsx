@@ -45,6 +45,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { lovable } from "@/integrations/lovable";
 import { supabase } from "@/integrations/supabase/client";
+import hrgreatlyLogo from "@/assets/hrgreatly-logo.png";
 import {
   Select,
   SelectContent,
@@ -4743,15 +4744,15 @@ const Index = () => {
         <div className="mx-auto flex min-h-[calc(100vh-3rem)] w-full max-w-[460px] items-center justify-center">
           <section className="w-full rounded-[2.25rem] border-[10px] border-foreground bg-foreground p-2 shadow-soft">
             <div className="overflow-hidden rounded-[1.65rem] bg-background">
-              <div className="bg-primary px-5 pb-6 pt-6 text-primary-foreground">
-                <div className="flex items-center gap-3">
-                  <div className="grid h-12 w-12 place-items-center rounded-2xl bg-primary-foreground/15">
-                    <Building2 className="h-6 w-6" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold opacity-80">Open Desk Flow</p>
-                    <h1 className="font-display text-2xl font-extrabold">Sign in to your workspace</h1>
-                  </div>
+              <div className="bg-background px-5 pb-4 pt-6">
+                <div className="flex flex-col items-center gap-2 text-center">
+                  <img
+                    src={hrgreatlyLogo}
+                    alt="HR Greatly — HR & Workspace Flow"
+                    className="h-20 w-auto object-contain"
+                  />
+                  <h1 className="font-display text-lg font-extrabold text-foreground">Sign in to your workspace</h1>
+                  <p className="text-xs font-semibold text-muted-foreground">hrgreatly.com</p>
                 </div>
               </div>
               <div className="space-y-5 px-5 py-5">
