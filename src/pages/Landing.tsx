@@ -380,18 +380,37 @@ const Landing = () => {
         </div>
       </section>
 
-      {/* Trusted by */}
+      {/* Trusted by — animated marquee */}
       <section className="bg-muted/20">
         <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-          <p className="text-center text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+          <p className="text-center text-xs font-bold uppercase tracking-widest text-foreground">
             Trusted by forward-thinking teams worldwide
           </p>
-          <div className="mt-6 grid grid-cols-2 items-center gap-8 sm:grid-cols-3 lg:grid-cols-6">
-            {["Northwind", "Acme Corp", "Globex", "Initech", "Umbrella", "Soylent"].map((name) => (
-              <div key={name} className="text-center text-base font-semibold tracking-tight text-muted-foreground/70">
-                {name}
-              </div>
-            ))}
+
+          <div
+            className="group relative mt-6 overflow-hidden"
+            style={{
+              maskImage:
+                "linear-gradient(to right, transparent, black 8%, black 92%, transparent)",
+              WebkitMaskImage:
+                "linear-gradient(to right, transparent, black 8%, black 92%, transparent)",
+            }}
+          >
+            <div className="flex w-max animate-marquee gap-10 group-hover:[animation-play-state:paused]">
+              {[...trustedCompanies, ...trustedCompanies].map((c, i) => (
+                <div
+                  key={`${c.name}-${i}`}
+                  className="flex shrink-0 items-center gap-2.5 rounded-full border border-border/60 bg-card px-5 py-2.5 shadow-sm"
+                >
+                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-primary/15 to-secondary/15 text-primary">
+                    <c.icon className="h-4 w-4" />
+                  </span>
+                  <span className="whitespace-nowrap text-sm font-bold tracking-tight text-foreground">
+                    {c.name}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </section>
