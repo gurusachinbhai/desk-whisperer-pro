@@ -91,6 +91,65 @@ const stats = [
 
 const countries = ["India", "Singapore", "USA", "Canada", "UK", "Europe"];
 
+const navMenus: { label: string; items: { title: string; desc: string; href: string }[] }[] = [
+  {
+    label: "About us",
+    items: [
+      { title: "Our Story", desc: "Why we built HR Greatly", href: "#about" },
+      { title: "Customers", desc: "Teams who trust us", href: "#testimonial" },
+      { title: "Careers", desc: "Join our mission", href: "#careers" },
+      { title: "Contact Us", desc: "Get in touch", href: "mailto:hello@hrgreatly.com" },
+    ],
+  },
+  {
+    label: "Pricing",
+    items: [
+      { title: "Plans", desc: "Simple, transparent pricing", href: "#pricing" },
+      { title: "Free Trial", desc: "15 days, full access", href: "/login?mode=signup" },
+      { title: "Enterprise", desc: "Built for scale", href: "#pricing" },
+    ],
+  },
+  {
+    label: "Blogs",
+    items: [
+      { title: "Latest Articles", desc: "Fresh HR insights", href: "#blogs" },
+      { title: "Guides", desc: "Step-by-step playbooks", href: "#blogs" },
+      { title: "Case Studies", desc: "Real customer stories", href: "#blogs" },
+    ],
+  },
+  {
+    label: "Partners",
+    items: [
+      { title: "Become a Partner", desc: "Grow with HR Greatly", href: "#partners" },
+      { title: "Integrations", desc: "Tools that play nice", href: "#partners" },
+      { title: "Resellers", desc: "Channel programme", href: "#partners" },
+    ],
+  },
+  {
+    label: "Product",
+    items: [
+      { title: "Features", desc: "Everything in the box", href: "#features" },
+      { title: "How it works", desc: "From signup to payroll", href: "#how" },
+      { title: "Watch demo", desc: "2-minute walkthrough", href: "#video" },
+    ],
+  },
+];
+
+const trustedCompanies = [
+  { name: "Northwind", icon: Cloud },
+  { name: "Acme Corp", icon: Rocket },
+  { name: "Globex", icon: Globe },
+  { name: "Initech", icon: Cpu },
+  { name: "Umbrella", icon: Shield },
+  { name: "Soylent", icon: Leaf },
+  { name: "Hooli", icon: Star },
+  { name: "Pied Piper", icon: Feather },
+  { name: "Stark Inc.", icon: Zap },
+  { name: "Wayne Co.", icon: Anchor },
+  { name: "Vandelay", icon: Briefcase },
+  { name: "Massive Dyn.", icon: Flame },
+];
+
 const Landing = () => {
   const [country, setCountry] = useState("India");
 
