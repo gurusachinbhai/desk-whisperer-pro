@@ -2053,6 +2053,74 @@ const Index = () => {
           </div>
         )}
       </div>
+
+      {/* All bookings — admin view of who booked what */}
+      <div className="rounded-[1.5rem] bg-surface-raised p-4 shadow-card">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <div>
+            <h3 className="font-display text-lg font-extrabold">All bookings</h3>
+            <p className="text-xs font-semibold text-muted-foreground">
+              Who booked which seat or meeting room, and the shift
+            </p>
+          </div>
+          <span className="rounded-full bg-muted px-3 py-1 text-xs font-extrabold">
+            {confirmedBookings.length}
+          </span>
+        </div>
+        {confirmedBookings.length === 0 ? (
+          <p className="rounded-2xl bg-background p-4 text-center text-sm font-semibold text-muted-foreground">
+            No bookings yet. Bookings made by employees will appear here.
+          </p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-left text-xs sm:text-sm">
+              <thead>
+                <tr className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+                  <th className="px-3 py-2">Person</th>
+                  <th className="px-3 py-2">Type</th>
+                  <th className="px-3 py-2">Spot</th>
+                  <th className="px-3 py-2">Floor / Area</th>
+                  <th className="px-3 py-2">Shift</th>
+                  <th className="px-3 py-2">Date</th>
+                  <th className="px-3 py-2">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {confirmedBookings.map((b) => {
+                  const isActive = !b.released && b.endsAt > nowTs;
+                  return (
+                    <tr key={b.id} className="border-t border-border bg-background">
+                      <td className="px-3 py-2 font-bold">
+                        {currentUser?.displayName ?? "Employee"}
+                      </td>
+                      <td className="px-3 py-2 font-semibold">
+                        {b.kind === "desk" ? "Seat" : "Meeting room"}
+                      </td>
+                      <td className="px-3 py-2 font-extrabold text-primary">{b.spot}</td>
+                      <td className="px-3 py-2">Floor {b.floor} · {b.area}</td>
+                      <td className="px-3 py-2">
+                        {b.shift} <span className="text-muted-foreground">({b.shiftRange})</span>
+                      </td>
+                      <td className="px-3 py-2">{b.date}</td>
+                      <td className="px-3 py-2">
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-[10px] font-extrabold uppercase ${
+                            isActive
+                              ? "bg-success/15 text-success"
+                              : "bg-muted text-muted-foreground"
+                          }`}
+                        >
+                          {isActive ? "Occupied" : b.released ? "Released" : "Ended"}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 
