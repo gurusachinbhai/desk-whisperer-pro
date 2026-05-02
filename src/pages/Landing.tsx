@@ -199,31 +199,100 @@ const Landing = () => {
       </div>
 
       {/* Header */}
-      <header className="sticky top-0 z-30 w-full border-b border-border/60 bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/70">
-        <div className="mx-auto flex h-28 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+      <header className="sticky top-0 z-30 w-full border-b border-border/60 bg-background/90 backdrop-blur supports-[backdrop-filter]:bg-background/75">
+        <div className="mx-auto flex min-h-[120px] max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:min-h-[140px] sm:px-6 lg:px-8">
           <Link to="/" className="flex items-center gap-3">
-            <img src={hrgreatlyLogo} alt="HR Greatly" className="h-20 w-auto sm:h-24 lg:h-28" />
-            <span className="text-3xl font-extrabold tracking-tight text-primary sm:text-4xl">HR Greatly</span>
+            <img
+              src={hrgreatlyLogo}
+              alt="HR Greatly"
+              className="h-[88px] w-auto sm:h-[112px] lg:h-[140px]"
+            />
+            <span className="hidden text-3xl font-extrabold tracking-tight text-primary sm:inline lg:text-4xl">
+              HR Greatly
+            </span>
           </Link>
 
-          <nav className="hidden items-center gap-6 text-sm font-medium text-muted-foreground lg:flex">
-            <a href="#about" className="transition-colors hover:text-primary">About us</a>
-            <a href="#pricing" className="transition-colors hover:text-primary">Pricing</a>
-            <a href="#blogs" className="transition-colors hover:text-primary">Blogs</a>
-            <a href="#partners" className="transition-colors hover:text-primary">Partners</a>
-            <a href="#features" className="transition-colors hover:text-primary">Features</a>
-            <a href="#how" className="transition-colors hover:text-primary">How it works</a>
-            <a href="#video" className="transition-colors hover:text-primary">Watch demo</a>
-            <a href="#testimonial" className="transition-colors hover:text-primary">Customers</a>
+          {/* Desktop nav with dropdowns */}
+          <nav className="hidden items-center gap-1 lg:flex">
+            {navMenus.map((m) => (
+              <DropdownMenu key={m.label}>
+                <DropdownMenuTrigger className="group inline-flex items-center gap-1 rounded-md px-3 py-2 text-sm font-bold text-foreground outline-none transition-colors hover:bg-primary/10 hover:text-primary focus-visible:ring-2 focus-visible:ring-ring">
+                  {m.label}
+                  <ChevronDown className="h-3.5 w-3.5 transition-transform group-data-[state=open]:rotate-180" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="min-w-[260px] p-2">
+                  {m.items.map((it) => (
+                    <DropdownMenuItem key={it.title} asChild className="cursor-pointer rounded-md p-3 focus:bg-primary/10">
+                      <a href={it.href} className="flex flex-col items-start gap-0.5">
+                        <span className="text-sm font-semibold text-foreground">{it.title}</span>
+                        <span className="text-xs text-muted-foreground">{it.desc}</span>
+                      </a>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ))}
           </nav>
 
           <div className="flex items-center gap-2">
-            <Button asChild variant="ghost" size="sm" className="md:hidden">
+            <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex lg:hidden">
               <Link to="/login">Login</Link>
             </Button>
-            <Button asChild size="sm">
+            <Button asChild size="sm" className="hidden sm:inline-flex">
               <Link to="/login?mode=signup">Start free trial</Link>
             </Button>
+
+            {/* Mobile / tablet menu */}
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="outline" size="icon" className="lg:hidden" aria-label="Open menu">
+                  <Menu className="h-5 w-5" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-[88vw] max-w-sm overflow-y-auto">
+                <div className="mt-6 flex items-center gap-2">
+                  <img src={hrgreatlyLogo} alt="HR Greatly" className="h-12 w-auto" />
+                  <span className="text-xl font-extrabold text-primary">HR Greatly</span>
+                </div>
+                <nav className="mt-8 flex flex-col gap-1">
+                  {navMenus.map((m) => (
+                    <details key={m.label} className="group rounded-md border border-border/60">
+                      <summary className="flex cursor-pointer list-none items-center justify-between px-3 py-3 text-sm font-bold text-foreground">
+                        {m.label}
+                        <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" />
+                      </summary>
+                      <div className="flex flex-col border-t border-border/60 bg-muted/30 px-3 py-2">
+                        {m.items.map((it) => (
+                          <a
+                            key={it.title}
+                            href={it.href}
+                            className="rounded px-2 py-2 text-sm font-medium text-foreground/80 hover:bg-primary/10 hover:text-primary"
+                          >
+                            {it.title}
+                          </a>
+                        ))}
+                      </div>
+                    </details>
+                  ))}
+                </nav>
+                <div className="mt-6 flex flex-col gap-2">
+                  <Button asChild variant="outline">
+                    <Link to="/login">Login</Link>
+                  </Button>
+                  <Button asChild>
+                    <Link to="/login?mode=signup">Start free trial</Link>
+                  </Button>
+                </div>
+                <div className="mt-6 border-t border-border/60 pt-4 text-xs text-muted-foreground">
+                  <a href="mailto:support@hrgreatly.com" className="flex items-center gap-2 py-1">
+                    <LifeBuoy className="h-3.5 w-3.5" /> Support
+                  </a>
+                  <p className="flex items-center gap-2 py-1">
+                    <MapPin className="h-3.5 w-3.5" /> {country}
+                  </p>
+                </div>
+              </SheetContent>
+            </Sheet>
           </div>
         </div>
       </header>
