@@ -2845,27 +2845,7 @@ const Index = () => {
         </div>
       </div>
 
-      {/* Time dropdown — based on selected shift */}
-      <div className="mt-4">
-        <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
-          Time · {currentShift.label} ({currentShift.range})
-        </p>
-        <Select
-          value={selectedHourlySlot}
-          onValueChange={(value) => setSelectedHourlySlot(value)}
-        >
-          <SelectTrigger className="mt-2 h-12 rounded-2xl border-border bg-background text-sm font-extrabold">
-            <SelectValue placeholder="Select time" />
-          </SelectTrigger>
-          <SelectContent className="rounded-2xl">
-            {currentShift.times.map((slot) => (
-              <SelectItem key={slot} value={slot} className="text-sm font-bold">
-                {slot}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      {/* Time is determined by shift — no per-hour picker */}
 
       {/* Summary + confirm */}
       <div className="mt-4 rounded-2xl bg-background p-4">
@@ -2874,7 +2854,7 @@ const Index = () => {
           {bookingKind === "desk" ? "Seat" : "Room"} {bookingKind === "desk" ? selectedSeat : selectedRoom} · Floor {selectedFloor} · {selectedArea}
         </p>
         <p className="mt-1 text-sm font-semibold text-muted-foreground">
-          {format(bookingDate, "EEE, MMM d")} · {currentShift.label} ({currentShift.range}) · {selectedHourlySlot}
+          {format(bookingDate, "EEE, MMM d")} · {currentShift.label} ({currentShift.range})
         </p>
         <p className="mt-2 text-sm font-semibold text-primary">{bookingText}</p>
         <button
