@@ -1,7 +1,6 @@
 import { Link } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import hrgreatlyLogo from "@/assets/hrgreatly-logo.png";
+import PageLayout from "@/components/PageLayout";
 
 const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
   <section className="mt-12">
@@ -19,30 +18,12 @@ const Sub = ({ title, children }: { title: string; children: React.ReactNode }) 
 
 const About = () => {
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <header className="sticky top-0 z-30 border-b border-border/60 bg-background/90 backdrop-blur">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4 sm:px-6">
-          <Link to="/" className="flex items-center gap-3">
-            <img src={hrgreatlyLogo} alt="HR Greatly" className="h-12 w-auto sm:h-14" />
-            <span className="text-xl font-extrabold text-primary sm:text-2xl">HR Greatly</span>
-          </Link>
-          <Button asChild variant="outline" size="sm" className="gap-2">
-            <Link to="/">
-              <ArrowLeft className="h-4 w-4" /> Back to Home
-            </Link>
-          </Button>
-        </div>
-      </header>
-
-      <main className="mx-auto max-w-4xl px-4 py-12 sm:px-6 sm:py-16">
-        <div className="text-center">
-          <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-xs font-medium text-primary">
-            About Us
-          </span>
-          <h1 className="mt-4 text-balance text-4xl font-extrabold tracking-tight sm:text-5xl">
-            🌟 Our Story: Why We Built HR Greatly
-          </h1>
-        </div>
+    <PageLayout
+      eyebrow="About Us"
+      title="🌟 Our Story: Why We Built HR Greatly"
+      subtitle="Where HR meets heart — our mission to make work feel human again."
+    >
+      <div>
 
         <Section title="Introduction">
           <p>
