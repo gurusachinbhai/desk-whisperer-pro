@@ -19,7 +19,7 @@ export const DeviceShell: React.FC<{ children: React.ReactNode }> = ({ children 
   const shellClass = cn(
     "min-h-screen w-full bg-background text-foreground transition-colors",
     device.isDesktop && "device-desktop",
-    device.isTablet && "device-tablet mx-auto max-w-6xl",
+    device.isTablet && "device-tablet",
     device.isMobile && "device-mobile",
     device.isTouch && "[--tap-size:44px]",
   );
