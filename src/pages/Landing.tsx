@@ -9,6 +9,13 @@ import {
   ShieldCheck,
   CheckCircle2,
   Quote,
+  LifeBuoy,
+  MapPin,
+  LogIn,
+  Globe2,
+  Building2,
+  Users,
+  PlayCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import hrgreatlyLogo from "@/assets/hrgreatly-logo.png";
@@ -28,9 +35,33 @@ const steps = [
   { n: "03", title: "Run HR, end-to-end", desc: "Attendance, leave and payroll move on autopilot from day one." },
 ];
 
+const stats = [
+  { icon: Globe2, value: "25+", label: "Countries" },
+  { icon: Building2, value: "20,000+", label: "Companies" },
+  { icon: Users, value: "2M+", label: "Active Users" },
+];
+
 const Landing = () => {
   return (
     <div className="min-h-screen bg-background text-foreground">
+      {/* Utility top bar */}
+      <div className="hidden border-b border-border/60 bg-muted/40 text-xs text-muted-foreground md:block">
+        <div className="mx-auto flex h-9 max-w-7xl items-center justify-end gap-6 px-4 sm:px-6 lg:px-8">
+          <a href="mailto:support@hrgreatly.com" className="flex items-center gap-1.5 hover:text-foreground transition-colors">
+            <LifeBuoy className="h-3.5 w-3.5" />
+            Support
+          </a>
+          <span className="flex items-center gap-1.5">
+            <MapPin className="h-3.5 w-3.5" />
+            Bengaluru, India
+          </span>
+          <Link to="/login" className="flex items-center gap-1.5 hover:text-foreground transition-colors">
+            <LogIn className="h-3.5 w-3.5" />
+            Login
+          </Link>
+        </div>
+      </div>
+
       {/* Header */}
       <header className="sticky top-0 z-30 w-full border-b border-border/60 bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/70">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
@@ -42,15 +73,16 @@ const Landing = () => {
           <nav className="hidden items-center gap-8 text-sm text-muted-foreground md:flex">
             <a href="#features" className="hover:text-foreground transition-colors">Features</a>
             <a href="#how" className="hover:text-foreground transition-colors">How it works</a>
+            <a href="#video" className="hover:text-foreground transition-colors">Watch demo</a>
             <a href="#testimonial" className="hover:text-foreground transition-colors">Customers</a>
           </nav>
 
           <div className="flex items-center gap-2">
-            <Button asChild variant="ghost" size="sm">
-              <Link to="/login">Sign in</Link>
+            <Button asChild variant="ghost" size="sm" className="md:hidden">
+              <Link to="/login">Login</Link>
             </Button>
             <Button asChild size="sm">
-              <Link to="/login?mode=signup">Get started</Link>
+              <Link to="/login?mode=signup">Start free trial</Link>
             </Button>
           </div>
         </div>
@@ -63,7 +95,7 @@ const Landing = () => {
           <div className="absolute bottom-0 right-0 h-[300px] w-[300px] rounded-full bg-accent/10 blur-3xl" />
         </div>
 
-        <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 sm:py-28 lg:px-8 lg:py-32">
+        <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 sm:py-24 lg:px-8">
           <div className="mx-auto max-w-3xl text-center">
             <span className="inline-flex items-center gap-2 rounded-full border border-border/70 bg-card/60 px-3 py-1 text-xs font-medium text-muted-foreground">
               <span className="h-1.5 w-1.5 rounded-full bg-primary" />
@@ -71,19 +103,17 @@ const Landing = () => {
             </span>
 
             <h1 className="mt-6 text-balance text-4xl font-semibold tracking-tight sm:text-5xl lg:text-6xl">
-              Run your entire HR — attendance, leave, payroll —{" "}
-              <span className="text-primary">from one calm place.</span>
+              Welcome to <span className="text-primary">HR Greatly</span>
             </h1>
 
-            <p className="mt-6 text-pretty text-lg text-muted-foreground sm:text-xl">
-              HR Greatly brings every people-process into a single, beautifully simple workspace —
-              so HR teams stop juggling spreadsheets and start doing their best work.
+            <p className="mt-5 text-pretty text-lg text-muted-foreground sm:text-xl">
+              Run your entire HR — attendance, leave, payroll — from one calm place.
             </p>
 
             <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <Button asChild size="lg" className="gap-2">
                 <Link to="/login?mode=signup">
-                  Get started <ArrowRight className="h-4 w-4" />
+                  Start a Free Account <ArrowRight className="h-4 w-4" />
                 </Link>
               </Button>
               <Button asChild size="lg" variant="outline">
@@ -92,35 +122,53 @@ const Landing = () => {
             </div>
 
             <p className="mt-4 text-xs text-muted-foreground">
-              No credit card required · Free for the first 10 employees
+              Free for 15 days · No credit card required
             </p>
           </div>
 
-          {/* Mock dashboard preview */}
+          {/* Stats strip */}
           <div className="mx-auto mt-16 max-w-5xl">
-            <div className="rounded-2xl border border-border/70 bg-card p-2 shadow-2xl shadow-primary/10">
-              <div className="rounded-xl bg-gradient-to-br from-muted/50 to-background p-6 sm:p-10">
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                  {[
-                    { label: "Present today", value: "184", sub: "of 200" },
-                    { label: "On leave", value: "9", sub: "this week" },
-                    { label: "Payroll cycle", value: "Ready", sub: "Apr 2026" },
-                  ].map((s) => (
-                    <div key={s.label} className="rounded-lg border border-border/60 bg-card p-5">
-                      <p className="text-sm text-muted-foreground">{s.label}</p>
-                      <p className="mt-2 text-3xl font-semibold tracking-tight">{s.value}</p>
-                      <p className="mt-1 text-xs text-muted-foreground">{s.sub}</p>
-                    </div>
-                  ))}
+            <div className="grid grid-cols-1 gap-4 rounded-2xl border border-border/70 bg-card p-6 shadow-sm sm:grid-cols-3 sm:p-8">
+              {stats.map((s) => (
+                <div
+                  key={s.label}
+                  className="flex flex-col items-center justify-center gap-2 px-4 py-3 text-center sm:border-r sm:border-border/60 sm:last:border-r-0"
+                >
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+                    <s.icon className="h-5 w-5" />
+                  </div>
+                  <p className="text-3xl font-semibold tracking-tight sm:text-4xl">{s.value}</p>
+                  <p className="text-sm text-muted-foreground">{s.label}</p>
                 </div>
-              </div>
+              ))}
             </div>
           </div>
         </div>
       </section>
 
+      {/* Free trial CTA */}
+      <section className="border-y border-border/60 bg-gradient-to-br from-primary/10 via-muted/30 to-background">
+        <div className="mx-auto max-w-5xl px-4 py-14 sm:px-6 lg:px-8">
+          <div className="flex flex-col items-center gap-6 text-center md:flex-row md:justify-between md:text-left">
+            <div className="max-w-xl">
+              <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+                Start a Free Account with HR Greatly for 15 Days
+              </h2>
+              <p className="mt-2 text-muted-foreground">
+                Full access to every module. No credit card. Cancel anytime.
+              </p>
+            </div>
+            <Button asChild size="lg" className="gap-2 whitespace-nowrap">
+              <Link to="/login?mode=signup">
+                Start Free Trial <ArrowRight className="h-4 w-4" />
+              </Link>
+            </Button>
+          </div>
+        </div>
+      </section>
+
       {/* Trusted by */}
-      <section className="border-y border-border/60 bg-muted/30">
+      <section className="bg-muted/20">
         <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
           <p className="text-center text-xs font-medium uppercase tracking-widest text-muted-foreground">
             Trusted by people teams at
@@ -165,8 +213,41 @@ const Landing = () => {
         </div>
       </section>
 
+      {/* YouTube video section */}
+      <section id="video" className="border-t border-border/60 bg-muted/20">
+        <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-24 lg:px-8">
+          <div className="mx-auto max-w-2xl text-center">
+            <span className="inline-flex items-center gap-2 rounded-full border border-border/70 bg-card/60 px-3 py-1 text-xs font-medium text-muted-foreground">
+              <PlayCircle className="h-3.5 w-3.5 text-primary" />
+              Product walkthrough
+            </span>
+            <h2 className="mt-5 text-3xl font-semibold tracking-tight sm:text-4xl">
+              See HR Greatly in action
+            </h2>
+            <p className="mt-4 text-lg text-muted-foreground">
+              A two-minute tour of attendance, leave and payroll — end to end.
+            </p>
+          </div>
+
+          <div className="mx-auto mt-12 max-w-5xl">
+            <div className="overflow-hidden rounded-2xl border border-border/70 bg-card p-2 shadow-2xl shadow-primary/10">
+              <div className="aspect-video w-full overflow-hidden rounded-xl bg-black">
+                <iframe
+                  className="h-full w-full"
+                  src="https://www.youtube.com/embed/dQw4w9WgXcQ"
+                  title="HR Greatly product walkthrough"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowFullScreen
+                  loading="lazy"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* How it works */}
-      <section id="how" className="border-t border-border/60 bg-muted/20">
+      <section id="how" className="border-t border-border/60">
         <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 sm:py-24 lg:px-8">
           <div className="mx-auto max-w-2xl text-center">
             <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">
@@ -248,6 +329,10 @@ const Landing = () => {
             <p className="mt-3 text-sm text-muted-foreground">
               Run your entire HR from one calm place.
             </p>
+            <p className="mt-3 flex items-center gap-1.5 text-sm text-muted-foreground">
+              <MapPin className="h-3.5 w-3.5" />
+              Bengaluru, India
+            </p>
           </div>
 
           <div>
@@ -255,7 +340,7 @@ const Landing = () => {
             <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
               <li><a href="#features" className="hover:text-foreground">Features</a></li>
               <li><a href="#how" className="hover:text-foreground">How it works</a></li>
-              <li><Link to="/login" className="hover:text-foreground">Sign in</Link></li>
+              <li><a href="#video" className="hover:text-foreground">Watch demo</a></li>
             </ul>
           </div>
 
@@ -263,15 +348,17 @@ const Landing = () => {
             <p className="text-sm font-semibold">Company</p>
             <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
               <li><a href="mailto:hello@hrgreatly.com" className="hover:text-foreground">Contact</a></li>
+              <li><a href="mailto:support@hrgreatly.com" className="hover:text-foreground">Support</a></li>
               <li><a href="#testimonial" className="hover:text-foreground">Customers</a></li>
             </ul>
           </div>
 
           <div>
-            <p className="text-sm font-semibold">Legal</p>
+            <p className="text-sm font-semibold">Account</p>
             <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
+              <li><Link to="/login" className="hover:text-foreground">Login</Link></li>
+              <li><Link to="/login?mode=signup" className="hover:text-foreground">Start free trial</Link></li>
               <li><a href="#" className="hover:text-foreground">Privacy</a></li>
-              <li><a href="#" className="hover:text-foreground">Terms</a></li>
             </ul>
           </div>
         </div>
