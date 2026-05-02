@@ -75,37 +75,89 @@ All colors MUST be HSL.
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
 
-  /* Dark mode disabled — sky blue light theme everywhere.
-     Keep .dark selector defined but mirror the light tokens so any legacy
-     `.dark` class on <html> won't switch the UI to a dark palette. */
-  .dark {
-    --background: 204 100% 97%;
-    --foreground: 215 45% 14%;
-    --card: 0 0% 100%;
-    --card-foreground: 215 45% 14%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 215 45% 14%;
-    --primary: 200 95% 45%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 199 89% 60%;
-    --secondary-foreground: 215 45% 14%;
-    --muted: 204 50% 94%;
-    --muted-foreground: 215 20% 42%;
-    --accent: 199 95% 74%;
-    --accent-foreground: 215 45% 14%;
-    --destructive: 0 84.2% 60.2%;
+  /* Dark theme — opt-in via .theme-dark on <html>.
+     Restores the previous dark palette as a user-selectable option. */
+  .theme-dark {
+    --background: 222 47% 8%;
+    --foreground: 210 40% 96%;
+
+    --card: 222 47% 11%;
+    --card-foreground: 210 40% 96%;
+
+    --popover: 222 47% 11%;
+    --popover-foreground: 210 40% 96%;
+
+    --primary: 200 95% 55%;
+    --primary-foreground: 222 47% 10%;
+
+    --secondary: 199 89% 48%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20% 70%;
+
+    --accent: 199 95% 35%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
-    --border: 204 40% 86%;
-    --input: 204 40% 86%;
-    --ring: 200 95% 45%;
-    --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 215 45% 14%;
-    --sidebar-primary: 200 95% 45%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 204 60% 96%;
-    --sidebar-accent-foreground: 215 45% 14%;
-    --sidebar-border: 204 40% 86%;
-    --sidebar-ring: 200 95% 45%;
+
+    --border: 217 33% 22%;
+    --input: 217 33% 22%;
+    --ring: 200 95% 55%;
+
+    --surface: 222 47% 12%;
+    --surface-raised: 222 47% 14%;
+    --surface-muted: 222 47% 10%;
+    --surface-glass: 222 47% 12% / 0.78;
+    --success: 160 70% 45%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 95% 56%;
+    --warning-foreground: 32 65% 12%;
+    --occupied: 356 73% 56%;
+    --occupied-foreground: 0 0% 100%;
+
+    --gradient-hero: radial-gradient(circle at 18% 18%, hsl(217 60% 22%), transparent 32%), radial-gradient(circle at 82% 10%, hsl(200 80% 18%), transparent 30%), linear-gradient(135deg, hsl(222 47% 8%), hsl(217 47% 12%));
+    --gradient-panel: linear-gradient(135deg, hsl(222 47% 14% / 0.94), hsl(217 33% 18% / 0.84));
+    --gradient-action: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--secondary)));
+    --shadow-soft: 0 24px 70px -38px hsl(0 0% 0% / 0.7);
+    --shadow-glow: 0 18px 46px -20px hsl(var(--primary) / 0.5);
+    --shadow-card: 0 16px 42px -30px hsl(0 0% 0% / 0.7);
+
+    --sidebar-background: 222 47% 11%;
+    --sidebar-foreground: 210 40% 96%;
+    --sidebar-primary: 200 95% 55%;
+    --sidebar-primary-foreground: 222 47% 10%;
+    --sidebar-accent: 217 33% 17%;
+    --sidebar-accent-foreground: 210 40% 96%;
+    --sidebar-border: 217 33% 22%;
+    --sidebar-ring: 200 95% 55%;
+  }
+
+  /* Legacy `.dark` class — mirror dark theme so existing usages still work. */
+  .dark {
+    color-scheme: dark;
+  }
+  .dark, html.dark {
+    --background: 222 47% 8%;
+    --foreground: 210 40% 96%;
+    --card: 222 47% 11%;
+    --card-foreground: 210 40% 96%;
+    --popover: 222 47% 11%;
+    --popover-foreground: 210 40% 96%;
+    --primary: 200 95% 55%;
+    --primary-foreground: 222 47% 10%;
+    --secondary: 199 89% 48%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20% 70%;
+    --accent: 199 95% 35%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 217 33% 22%;
+    --input: 217 33% 22%;
+    --ring: 200 95% 55%;
   }
 }
 
