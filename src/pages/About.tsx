@@ -207,8 +207,8 @@ const About = () => {
             <Link to="/login?mode=signup">Start your free trial</Link>
           </Button>
         </div>
-      </main>
-    </div>
+      </div>
+    </PageLayout>
   );
 };
 
