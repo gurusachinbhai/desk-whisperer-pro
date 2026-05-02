@@ -36,6 +36,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import SiteHeader from "@/components/SiteHeader";
+import SiteFooter from "@/components/SiteFooter";
 import hrgreatlyLogo from "@/assets/hrgreatly-logo.png";
 import featAttendance from "@/assets/feat-attendance.png";
 import featLeave from "@/assets/feat-leave.png";
