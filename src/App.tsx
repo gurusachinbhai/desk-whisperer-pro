@@ -7,6 +7,16 @@ import Index from "./pages/Index.tsx";
 import Landing from "./pages/Landing.tsx";
 import Admin from "./pages/Admin.tsx";
 import About from "./pages/About.tsx";
+import Customers from "./pages/Customers.tsx";
+import Careers from "./pages/Careers.tsx";
+import Contact from "./pages/Contact.tsx";
+import Plans from "./pages/Plans.tsx";
+import FreeTrial from "./pages/FreeTrial.tsx";
+import Enterprise from "./pages/Enterprise.tsx";
+import Blogs from "./pages/Blogs.tsx";
+import BlogPost from "./pages/BlogPost.tsx";
+import Guides from "./pages/Guides.tsx";
+import CaseStudies from "./pages/CaseStudies.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import DeviceShell from "./components/DeviceShell";
 
