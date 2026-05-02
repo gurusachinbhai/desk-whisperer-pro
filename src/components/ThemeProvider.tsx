@@ -9,7 +9,7 @@ type ThemeContextValue = {
 
 const ThemeContext = React.createContext<ThemeContextValue | undefined>(undefined);
 
-const STORAGE_KEY = "hrgreatly.theme";
+const STORAGE_KEY = "hrgreatly.theme.v2";
 
 function applyTheme(theme: ThemeName) {
   const root = document.documentElement;
