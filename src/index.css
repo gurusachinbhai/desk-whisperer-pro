@@ -19,11 +19,11 @@ All colors MUST be HSL.
     --popover: 0 0% 100%;
     --popover-foreground: 240 35% 12%;
 
-    --primary: 248 75% 58%;
-    --primary-foreground: 240 100% 99%;
+    --primary: 152 70% 38%;
+    --primary-foreground: 150 100% 99%;
 
-    --secondary: 280 70% 60%;
-    --secondary-foreground: 280 100% 99%;
+    --secondary: 200 95% 50%;
+    --secondary-foreground: 200 100% 99%;
 
     --muted: 240 20% 94%;
     --muted-foreground: 240 12% 42%;
@@ -36,7 +36,7 @@ All colors MUST be HSL.
 
     --border: 240 20% 88%;
     --input: 240 20% 88%;
-    --ring: 248 75% 58%;
+    --ring: 152 70% 38%;
 
     --surface: 184 33% 92%;
     --surface-raised: 0 0% 100%;
