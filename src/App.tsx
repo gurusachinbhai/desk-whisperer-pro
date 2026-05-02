@@ -7,6 +7,16 @@ import Index from "./pages/Index.tsx";
 import Landing from "./pages/Landing.tsx";
 import Admin from "./pages/Admin.tsx";
 import About from "./pages/About.tsx";
+import Customers from "./pages/Customers.tsx";
+import Careers from "./pages/Careers.tsx";
+import Contact from "./pages/Contact.tsx";
+import Plans from "./pages/Plans.tsx";
+import FreeTrial from "./pages/FreeTrial.tsx";
+import Enterprise from "./pages/Enterprise.tsx";
+import Blogs from "./pages/Blogs.tsx";
+import BlogPost from "./pages/BlogPost.tsx";
+import Guides from "./pages/Guides.tsx";
+import CaseStudies from "./pages/CaseStudies.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import DeviceShell from "./components/DeviceShell";
 
@@ -24,6 +34,16 @@ const App = () => (
             <Route path="/login" element={<Index />} />
             <Route path="/admin" element={<Admin />} />
             <Route path="/about" element={<About />} />
+            <Route path="/customers" element={<Customers />} />
+            <Route path="/careers" element={<Careers />} />
+            <Route path="/contact" element={<Contact />} />
+            <Route path="/pricing/plans" element={<Plans />} />
+            <Route path="/pricing/free-trial" element={<FreeTrial />} />
+            <Route path="/pricing/enterprise" element={<Enterprise />} />
+            <Route path="/blogs" element={<Blogs />} />
+            <Route path="/blogs/:slug" element={<BlogPost />} />
+            <Route path="/guides" element={<Guides />} />
+            <Route path="/case-studies" element={<CaseStudies />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
