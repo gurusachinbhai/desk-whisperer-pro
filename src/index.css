@@ -80,19 +80,19 @@ All colors MUST be HSL.
      `.dark` class on <html> won't switch the UI to a dark palette. */
   .dark {
     --background: 204 100% 97%;
-    --foreground: 215 45% 14%;
+    --foreground: 130 55% 42%;
     --card: 0 0% 100%;
-    --card-foreground: 215 45% 14%;
+    --card-foreground: 130 55% 42%;
     --popover: 0 0% 100%;
-    --popover-foreground: 215 45% 14%;
+    --popover-foreground: 130 55% 42%;
     --primary: 200 95% 45%;
     --primary-foreground: 0 0% 100%;
     --secondary: 199 89% 60%;
-    --secondary-foreground: 215 45% 14%;
+    --secondary-foreground: 130 55% 42%;
     --muted: 204 50% 94%;
-    --muted-foreground: 215 20% 42%;
+    --muted-foreground: 130 40% 45%;
     --accent: 199 95% 74%;
-    --accent-foreground: 215 45% 14%;
+    --accent-foreground: 130 55% 42%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 100%;
     --border: 204 40% 86%;
