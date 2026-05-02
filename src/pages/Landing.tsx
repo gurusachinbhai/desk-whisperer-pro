@@ -129,8 +129,8 @@ const Landing = () => {
       <header className="sticky top-0 z-30 w-full border-b border-border/60 bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/70">
         <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           <Link to="/" className="flex items-center gap-3">
-            <img src={hrgreatlyLogo} alt="HR Greatly" className="h-12 w-auto sm:h-14" />
-            <span className="text-xl font-bold tracking-tight sm:text-2xl">HR Greatly</span>
+            <img src={hrgreatlyLogo} alt="HR Greatly" className="h-16 w-auto sm:h-20" />
+            <span className="text-2xl font-extrabold tracking-tight text-primary sm:text-3xl">HR Greatly</span>
           </Link>
 
           <nav className="hidden items-center gap-8 text-sm font-medium text-muted-foreground md:flex">
