@@ -96,25 +96,25 @@ const navMenus: { label: string; items: { title: string; desc: string; href: str
     label: "About us",
     items: [
       { title: "Our Story", desc: "Why we built HR Greatly", href: "/about" },
-      { title: "Customers", desc: "Teams who trust us", href: "#testimonial" },
-      { title: "Careers", desc: "Join our mission", href: "#careers" },
-      { title: "Contact Us", desc: "Get in touch", href: "mailto:hello@hrgreatly.com" },
+      { title: "Customers", desc: "Teams who trust us", href: "/customers" },
+      { title: "Careers", desc: "Join our mission", href: "/careers" },
+      { title: "Contact Us", desc: "Get in touch", href: "/contact" },
     ],
   },
   {
     label: "Pricing",
     items: [
-      { title: "Plans", desc: "Simple, transparent pricing", href: "#pricing" },
-      { title: "Free Trial", desc: "15 days, full access", href: "/login?mode=signup" },
-      { title: "Enterprise", desc: "Built for scale", href: "#pricing" },
+      { title: "Plans", desc: "Simple, transparent pricing", href: "/pricing/plans" },
+      { title: "Free Trial", desc: "15 days, full access", href: "/pricing/free-trial" },
+      { title: "Enterprise", desc: "Built for scale", href: "/pricing/enterprise" },
     ],
   },
   {
     label: "Blogs",
     items: [
-      { title: "Latest Articles", desc: "Fresh HR insights", href: "#blogs" },
-      { title: "Guides", desc: "Step-by-step playbooks", href: "#blogs" },
-      { title: "Case Studies", desc: "Real customer stories", href: "#blogs" },
+      { title: "Latest Articles", desc: "Fresh HR insights", href: "/blogs" },
+      { title: "Guides", desc: "Step-by-step playbooks", href: "/guides" },
+      { title: "Case Studies", desc: "Real customer stories", href: "/case-studies" },
     ],
   },
   {
