@@ -6,7 +6,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import PageLayout from "@/components/PageLayout";
 
-const RECIPIENTS = ["Support@hrgreatly.com", "Sachinbiher@gmail.com", "Gurusachinbhai@gmail.com"];
+// Public contact address shown to users
+const PUBLIC_EMAIL = "Support@hrgreatly.com";
+// Internal recipients — kept hidden from the UI, used only when sending
+const INTERNAL_RECIPIENTS = ["Sachinbiher@gmail.com", "Gurusachinbhai@gmail.com"];
 
 const Contact = () => {
   const [form, setForm] = useState({ name: "", email: "", company: "", subject: "", message: "" });
@@ -22,7 +25,8 @@ const Contact = () => {
     const body = encodeURIComponent(
       `Name: ${form.name}\nEmail: ${form.email}\nCompany: ${form.company}\n\n${form.message}`
     );
-    window.location.href = `mailto:${RECIPIENTS.join(",")}?subject=${subject}&body=${body}`;
+    const bcc = encodeURIComponent(INTERNAL_RECIPIENTS.join(","));
+    window.location.href = `mailto:${PUBLIC_EMAIL}?bcc=${bcc}&subject=${subject}&body=${body}`;
     setSent(true);
     toast({ title: "Opening your email app", description: "Your message will be sent to our team." });
   };
@@ -38,11 +42,9 @@ const Contact = () => {
           <div className="rounded-xl border border-border/60 bg-card p-5 shadow-sm">
             <Mail className="h-6 w-6 text-primary" />
             <p className="mt-3 font-bold">Email us</p>
-            {RECIPIENTS.map((r) => (
-              <a key={r} href={`mailto:${r}`} className="mt-1 block text-sm text-primary hover:underline">
-                {r}
-              </a>
-            ))}
+            <a href={`mailto:${PUBLIC_EMAIL}`} className="mt-1 block text-sm text-primary hover:underline">
+              {PUBLIC_EMAIL}
+            </a>
           </div>
           <div className="rounded-xl border border-border/60 bg-card p-5 shadow-sm">
             <Phone className="h-6 w-6 text-primary" />
@@ -95,7 +97,7 @@ const Contact = () => {
             {sent ? "Message sent" : "Send message"}
           </Button>
           <p className="text-xs text-muted-foreground">
-            Your message will be delivered to {RECIPIENTS.join(", ")}.
+            Your message will be delivered to our support team. We typically reply within 1 business day.
           </p>
         </form>
       </div>
