@@ -14,21 +14,23 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <DeviceShell>
-          <Routes>
-            <Route path="/" element={<Landing />} />
-            <Route path="/login" element={<Index />} />
-            <Route path="/admin" element={<Admin />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </DeviceShell>
-      </BrowserRouter>
-    </TooltipProvider>
+    <ThemeProvider defaultTheme="sky">
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <DeviceShell>
+            <Routes>
+              <Route path="/" element={<Landing />} />
+              <Route path="/login" element={<Index />} />
+              <Route path="/admin" element={<Admin />} />
+              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </DeviceShell>
+        </BrowserRouter>
+      </TooltipProvider>
+    </ThemeProvider>
   </QueryClientProvider>
 );
 
