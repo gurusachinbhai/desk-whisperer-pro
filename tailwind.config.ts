@@ -54,6 +54,7 @@ export default {
         surface: {
           DEFAULT: "hsl(var(--surface))",
           raised: "hsl(var(--surface-raised))",
+          muted: "hsl(var(--surface-muted))",
           glass: "hsl(var(--surface-glass))",
         },
         success: {
