@@ -144,3 +144,46 @@ All colors MUST be HSL.
     scroll-behavior: auto !important;
   }
 }
+
+/* ===========================================================
+   Device-specific UI tuning.
+   The <html> element gets data-device="desktop|tablet|mobile"
+   and data-os="ios|android|windows|macos|linux|other" via the
+   useDeviceType() hook. Use these hooks to tune density without
+   forking components.
+   =========================================================== */
+
+/* Touch devices: enlarge default tap targets to meet a11y minimum */
+html[data-touch="true"] button,
+html[data-touch="true"] [role="button"],
+html[data-touch="true"] a.btn,
+html[data-touch="true"] input[type="button"],
+html[data-touch="true"] input[type="submit"] {
+  min-height: 44px;
+}
+
+/* Desktop: more generous content max-width and spacing */
+html[data-device="desktop"] body {
+  font-size: 16px;
+}
+
+/* Tablet: medium density, slightly larger base for readability */
+html[data-device="tablet"] body {
+  font-size: 16px;
+}
+
+/* Mobile: compact base, prevent iOS auto-zoom on inputs */
+html[data-device="mobile"] body {
+  font-size: 15px;
+}
+html[data-device="mobile"] input,
+html[data-device="mobile"] select,
+html[data-device="mobile"] textarea {
+  font-size: 16px; /* iOS won't zoom when input font-size ≥ 16px */
+}
+
+/* Respect iOS safe areas (notch / home indicator) */
+html[data-os="ios"] body {
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+}
