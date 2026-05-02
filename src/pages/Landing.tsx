@@ -14,6 +14,19 @@ import {
   Megaphone,
   ChevronDown,
   Sparkles,
+  Menu,
+  Cloud,
+  Rocket,
+  Briefcase,
+  Cpu,
+  Leaf,
+  Flame,
+  Anchor,
+  Zap,
+  Star,
+  Shield,
+  Globe,
+  Feather,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,6 +35,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import hrgreatlyLogo from "@/assets/hrgreatly-logo.png";
 import featAttendance from "@/assets/feat-attendance.png";
 import featLeave from "@/assets/feat-leave.png";
