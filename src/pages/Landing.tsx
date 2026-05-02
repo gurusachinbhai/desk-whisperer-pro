@@ -43,7 +43,6 @@ import featPayroll from "@/assets/feat-payroll.png";
 import featBooking from "@/assets/feat-booking.png";
 import featAdmin from "@/assets/feat-admin.png";
 import featReports from "@/assets/feat-reports.png";
-import ThemeSwitcher from "@/components/ThemeSwitcher";
 
 const features = [
   {
@@ -236,7 +235,6 @@ const Landing = () => {
           </nav>
 
           <div className="flex items-center gap-2">
-            <ThemeSwitcher />
             <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex lg:hidden">
               <Link to="/login">Login</Link>
             </Button>

@@ -65,7 +65,6 @@ import {
 } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import ThemeSwitcher from "@/components/ThemeSwitcher";
 
 type Desk = {
   dbId?: string;
@@ -4897,7 +4896,6 @@ const Index = () => {
                 </span>
               )}
             </button>
-            <ThemeSwitcher className="border-primary-foreground/30 bg-primary-foreground/10 text-primary-foreground hover:bg-primary-foreground/20 hover:text-primary-foreground" />
           </div>
         </div>
 
