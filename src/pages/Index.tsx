@@ -4801,104 +4801,121 @@ const Index = () => {
   }
 
   return (
-    <main className="min-h-screen bg-hero-field px-4 py-6 text-foreground">
-      <div className="mx-auto flex w-full max-w-[460px] justify-center">
-        <section className="w-full rounded-[2.25rem] border-[10px] border-foreground bg-foreground p-2 shadow-soft">
-          <div className="min-h-[820px] overflow-hidden rounded-[1.65rem] bg-background">
-            <div className="flex items-center justify-between bg-primary px-5 pb-4 pt-5 text-primary-foreground">
+    <main className="min-h-screen bg-hero-field text-foreground">
+      {/* Top app bar */}
+      <header className="sticky top-0 z-30 border-b border-border bg-primary text-primary-foreground shadow-card">
+        <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8">
+          <div className="flex items-center gap-3 min-w-0">
+            <button
+              type="button"
+              onClick={() => setActiveTab("home")}
+              className="focus-premium grid h-10 w-10 place-items-center rounded-xl hover:bg-primary-foreground/10"
+              aria-label="Home"
+            >
               <ArrowLeft className="h-5 w-5" />
-              <div className="h-6 w-28 rounded-full bg-primary-foreground/20" />
-              <button
-                type="button"
-                onClick={() => {
-                  setShowNotifications(true);
-                  markAllAnnouncementsRead();
-                }}
-                className="focus-premium relative grid h-9 w-9 place-items-center rounded-full hover:bg-primary-foreground/10"
-                aria-label="Notifications"
-              >
-                <Bell className="h-5 w-5" />
-                {unreadAnnouncementCount > 0 && (
-                  <span className="absolute -right-0.5 -top-0.5 grid h-5 min-w-[1.25rem] place-items-center rounded-full bg-destructive px-1 text-[10px] font-extrabold text-destructive-foreground">
-                    {unreadAnnouncementCount > 9 ? "9+" : unreadAnnouncementCount}
-                  </span>
-                )}
-              </button>
-            </div>
-
-            <div className="bg-primary px-5 pb-6 text-primary-foreground">
-              <div className="flex items-center gap-3">
-                <div className="grid h-12 w-12 place-items-center overflow-hidden rounded-2xl bg-primary-foreground/15">
-                  {userAvatar ? (
-                    <img src={userAvatar} alt="Your profile" className="h-full w-full object-cover" />
-                  ) : (
-                    <UserIcon className="h-6 w-6" />
-                  )}
-                </div>
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold opacity-80">{companyProfile?.name}</p>
-                  <h1 className="truncate font-display text-2xl font-extrabold">Hi, {currentUser?.displayName}</h1>
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-5 px-5 py-5">
-              {subscriptionExpired && activeTab !== "billing" ? (
-                <div className="rounded-[1.5rem] border-2 border-destructive bg-destructive/5 p-5 shadow-card">
-                  <div className="flex items-center gap-3">
-                    <div className="grid h-10 w-10 place-items-center rounded-2xl bg-destructive/15 text-destructive">
-                      <Lock className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold uppercase tracking-wide text-destructive">Access blocked</p>
-                      <h2 className="font-display text-xl font-extrabold">Subscription expired</h2>
-                    </div>
-                  </div>
-                  <p className="mt-3 text-sm font-semibold leading-6 text-muted-foreground">
-                    {isAdmin
-                      ? "Your company's subscription has lapsed. Renew now to restore access for your whole team."
-                      : "Your company's subscription has lapsed. Please ask your admin to renew to restore access."}
-                  </p>
-                  {isAdmin && (
-                    <button
-                      onClick={() => setActiveTab("billing")}
-                      className="focus-premium mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 font-extrabold text-primary-foreground shadow-glow"
-                    >
-                      <CreditCard className="h-5 w-5" /> Go to billing
-                    </button>
-                  )}
-                </div>
-              ) : (
-                <>
-                  {activeTab === "home" && renderHomeScreen()}
-                  {isAdmin && activeTab === "admin" && renderAdminPanel()}
-                  {activeTab === "team" && renderTeamPanel()}
-                  {activeTab === "attendance" && renderAttendancePanel()}
-                  {activeTab === "leave" && renderLeavePanel()}
-                  {activeTab === "payroll" && renderPayrollPanel()}
-                  {activeTab === "billing" && renderBillingPanel()}
-                  {isAdmin && activeTab === "reports" && renderReportsPanel()}
-                  {activeTab === "book" && renderBookingPanel()}
-                  {activeTab === "map" && renderMapPanel()}
-                  {activeTab === "rooms" && renderRoomsPanel()}
-                  {activeTab === "directory" && renderDirectoryPanel()}
-                </>
-              )}
-            </div>
-
-            <div className={`sticky bottom-0 grid ${isAdmin ? "grid-cols-6" : "grid-cols-5"} border-t border-border bg-surface-raised px-2 py-2`}>
-              {bottomTabs.filter((t) => t.id !== "admin" || isAdmin).map((tab) => (
-                <button
-                  key={tab.label}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`focus-premium flex flex-col items-center gap-1 rounded-2xl py-2 text-xs font-extrabold ${activeTab === tab.id ? "text-primary" : "text-muted-foreground"}`}
-                >
-                  <tab.icon className="h-5 w-5" /> {tab.label}
-                </button>
-              ))}
+            </button>
+            <img src={hrgreatlyLogo} alt="HR Greatly" className="h-9 w-auto object-contain sm:h-11" />
+            <div className="hidden min-w-0 sm:block">
+              <p className="truncate font-display text-sm font-extrabold sm:text-base">
+                {companyProfile?.name ?? "Workspace"}
+              </p>
+              <p className="truncate text-[11px] font-semibold opacity-80">
+                Hi, {currentUser?.displayName}
+              </p>
             </div>
           </div>
-        </section>
+          <div className="flex items-center gap-2">
+            <div className="hidden h-10 w-10 place-items-center overflow-hidden rounded-xl bg-primary-foreground/15 sm:grid">
+              {userAvatar ? (
+                <img src={userAvatar} alt="Your profile" className="h-full w-full object-cover" />
+              ) : (
+                <UserIcon className="h-5 w-5" />
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setShowNotifications(true);
+                markAllAnnouncementsRead();
+              }}
+              className="focus-premium relative grid h-10 w-10 place-items-center rounded-xl hover:bg-primary-foreground/10"
+              aria-label="Notifications"
+            >
+              <Bell className="h-5 w-5" />
+              {unreadAnnouncementCount > 0 && (
+                <span className="absolute -right-0.5 -top-0.5 grid h-5 min-w-[1.25rem] place-items-center rounded-full bg-destructive px-1 text-[10px] font-extrabold text-destructive-foreground">
+                  {unreadAnnouncementCount > 9 ? "9+" : unreadAnnouncementCount}
+                </span>
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* Primary navigation — horizontal, scrollable on small screens */}
+        <nav className="mx-auto w-full max-w-7xl overflow-x-auto px-2 pb-2 sm:px-4 lg:px-6">
+          <div className="flex w-max min-w-full items-center gap-1">
+            {bottomTabs.filter((t) => t.id !== "admin" || isAdmin).map((tab) => (
+              <button
+                key={tab.label}
+                onClick={() => setActiveTab(tab.id)}
+                className={`focus-premium flex items-center gap-2 whitespace-nowrap rounded-xl px-3 py-2 text-xs font-extrabold transition-colors sm:text-sm ${
+                  activeTab === tab.id
+                    ? "bg-primary-foreground text-primary shadow-card"
+                    : "text-primary-foreground/80 hover:bg-primary-foreground/10"
+                }`}
+              >
+                <tab.icon className="h-4 w-4" /> {tab.label}
+              </button>
+            ))}
+          </div>
+        </nav>
+      </header>
+
+      {/* Content area — fluid, full width up to a comfortable max */}
+      <div className="mx-auto w-full max-w-7xl space-y-5 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+        {subscriptionExpired && activeTab !== "billing" ? (
+          <div className="rounded-[1.5rem] border-2 border-destructive bg-destructive/5 p-5 shadow-card">
+            <div className="flex items-center gap-3">
+              <div className="grid h-10 w-10 place-items-center rounded-2xl bg-destructive/15 text-destructive">
+                <Lock className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wide text-destructive">Access blocked</p>
+                <h2 className="font-display text-xl font-extrabold">Subscription expired</h2>
+              </div>
+            </div>
+            <p className="mt-3 text-sm font-semibold leading-6 text-muted-foreground">
+              {isAdmin
+                ? "Your company's subscription has lapsed. Renew now to restore access for your whole team."
+                : "Your company's subscription has lapsed. Please ask your admin to renew to restore access."}
+            </p>
+            {isAdmin && (
+              <button
+                onClick={() => setActiveTab("billing")}
+                className="focus-premium mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 font-extrabold text-primary-foreground shadow-glow sm:w-auto"
+              >
+                <CreditCard className="h-5 w-5" /> Go to billing
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="grid gap-5 lg:grid-cols-12">
+            <section className="space-y-5 lg:col-span-12">
+              {activeTab === "home" && renderHomeScreen()}
+              {isAdmin && activeTab === "admin" && renderAdminPanel()}
+              {activeTab === "team" && renderTeamPanel()}
+              {activeTab === "attendance" && renderAttendancePanel()}
+              {activeTab === "leave" && renderLeavePanel()}
+              {activeTab === "payroll" && renderPayrollPanel()}
+              {activeTab === "billing" && renderBillingPanel()}
+              {isAdmin && activeTab === "reports" && renderReportsPanel()}
+              {activeTab === "book" && renderBookingPanel()}
+              {activeTab === "map" && renderMapPanel()}
+              {activeTab === "rooms" && renderRoomsPanel()}
+              {activeTab === "directory" && renderDirectoryPanel()}
+            </section>
+          </div>
+        )}
       </div>
 
       <Dialog open={showNotifications} onOpenChange={setShowNotifications}>
