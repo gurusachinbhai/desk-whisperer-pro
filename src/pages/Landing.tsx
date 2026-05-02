@@ -127,7 +127,7 @@ const Landing = () => {
 
       {/* Header */}
       <header className="sticky top-0 z-30 w-full border-b border-border/60 bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/70">
-        <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto flex h-24 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           <Link to="/" className="flex items-center gap-3">
             <img src={hrgreatlyLogo} alt="HR Greatly" className="h-16 w-auto sm:h-20" />
             <span className="text-2xl font-extrabold tracking-tight text-primary sm:text-3xl">HR Greatly</span>
@@ -165,7 +165,7 @@ const Landing = () => {
               The HR platform built for ambitious teams
             </span>
 
-            <h1 className="mt-6 text-balance text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
+            <h1 className="mt-6 text-balance text-5xl font-extrabold tracking-tight text-foreground sm:text-6xl lg:text-7xl">
               Welcome to{" "}
               <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
                 HR Greatly
@@ -218,7 +218,7 @@ const Landing = () => {
         <div className="mx-auto max-w-5xl px-4 py-14 sm:px-6 lg:px-8">
           <div className="flex flex-col items-center gap-6 text-center md:flex-row md:justify-between md:text-left">
             <div className="max-w-xl">
-              <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
+              <h2 className="text-3xl font-extrabold tracking-tight text-primary sm:text-4xl">
                 Start a Free Account with HR Greatly for 15 Days
               </h2>
               <p className="mt-2 text-muted-foreground">
@@ -253,7 +253,7 @@ const Landing = () => {
       {/* Features */}
       <section id="features" className="mx-auto max-w-7xl px-4 py-20 sm:px-6 sm:py-24 lg:px-8">
         <div className="mx-auto max-w-2xl text-center">
-          <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
+          <h2 className="text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl">
             One platform. Every HR moment that matters.
           </h2>
           <p className="mt-4 text-lg text-muted-foreground">
@@ -277,7 +277,7 @@ const Landing = () => {
                   className="h-full w-full object-contain"
                 />
               </div>
-              <h3 className="mt-5 text-lg font-bold tracking-tight">{f.title}</h3>
+              <h3 className="mt-5 text-xl font-extrabold tracking-tight text-primary">{f.title}</h3>
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{f.desc}</p>
             </div>
           ))}
@@ -292,7 +292,7 @@ const Landing = () => {
               <PlayCircle className="h-3.5 w-3.5" />
               Product walkthrough
             </span>
-            <h2 className="mt-5 text-3xl font-bold tracking-tight sm:text-4xl">See HR Greatly in action</h2>
+            <h2 className="mt-5 text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl">See HR Greatly in action</h2>
             <p className="mt-4 text-lg text-muted-foreground">
               A two-minute tour of attendance, leave and payroll — end to end, beginning to brilliant.
             </p>
@@ -319,7 +319,7 @@ const Landing = () => {
       <section id="how" className="border-t border-border/60">
         <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 sm:py-24 lg:px-8">
           <div className="mx-auto max-w-2xl text-center">
-            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Live in three steps</h2>
+            <h2 className="text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl">Live in three steps</h2>
             <p className="mt-4 text-lg text-muted-foreground">
               From signup to your first payroll run — in a single afternoon.
             </p>
@@ -329,7 +329,7 @@ const Landing = () => {
             {steps.map((s) => (
               <div key={s.n} className="relative rounded-2xl border border-border/70 bg-card p-7">
                 <span className="text-sm font-bold text-primary">{s.n}</span>
-                <h3 className="mt-3 text-xl font-bold tracking-tight">{s.title}</h3>
+                <h3 className="mt-3 text-2xl font-extrabold tracking-tight text-primary">{s.title}</h3>
                 <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{s.desc}</p>
                 <CheckCircle2 className="absolute right-6 top-6 h-5 w-5 text-primary/40" />
               </div>
@@ -363,7 +363,7 @@ const Landing = () => {
         <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 sm:py-24 lg:px-8">
           <div className="overflow-hidden rounded-2xl border border-border/70 bg-gradient-to-br from-primary/15 via-card to-secondary/10 p-10 sm:p-14">
             <div className="mx-auto max-w-2xl text-center">
-              <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
+              <h2 className="text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl">
                 Ready to make HR feel calm?
               </h2>
               <p className="mt-4 text-lg text-muted-foreground">
@@ -479,9 +479,9 @@ const Landing = () => {
           <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
             <div className="flex flex-col items-start gap-4 md:flex-row md:items-center md:justify-between">
               <div className="flex items-center gap-4">
-                <img src={hrgreatlyLogo} alt="HR Greatly" className="h-14 w-auto sm:h-16" />
+                <img src={hrgreatlyLogo} alt="HR Greatly" className="h-20 w-auto sm:h-24" />
                 <div>
-                  <p className="text-xl font-bold tracking-tight">HR Greatly</p>
+                  <p className="text-2xl font-extrabold tracking-tight text-primary sm:text-3xl">HR Greatly</p>
                   <p className="mt-1 flex items-start gap-1.5 text-sm text-muted-foreground">
                     <MapPin className="mt-0.5 h-4 w-4 shrink-0" />
                     Sector 17, Chandigarh, Punjab, India — Pin 140603
