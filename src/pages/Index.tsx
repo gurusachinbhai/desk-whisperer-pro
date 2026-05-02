@@ -4737,25 +4737,59 @@ const Index = () => {
     );
   };
 
-  // Login-only view: full screen, no bottom nav, no marketing column
+  // Login-only view: full screen responsive layout (mobile, tablet, desktop)
   if (!isAuthenticated) {
     return (
-      <main className="min-h-screen bg-hero-field px-4 py-6 text-foreground">
-        <div className="mx-auto flex min-h-[calc(100vh-3rem)] w-full max-w-[460px] items-center justify-center">
-          <section className="w-full rounded-[2.25rem] border-[10px] border-foreground bg-foreground p-2 shadow-soft">
-            <div className="overflow-hidden rounded-[1.65rem] bg-background">
-              <div className="bg-background px-5 pb-4 pt-6">
-                <div className="flex flex-col items-center gap-2 text-center">
-                  <img
-                    src={hrgreatlyLogo}
-                    alt="HR Greatly — HR & Workspace Flow"
-                    className="h-20 w-auto object-contain"
-                  />
-                  <h1 className="font-display text-lg font-extrabold text-foreground">Sign in to your workspace</h1>
-                  <p className="text-xs font-semibold text-muted-foreground">hrgreatly.com</p>
-                </div>
+      <main className="relative min-h-screen w-full overflow-hidden bg-background text-foreground">
+        {/* Decorative background */}
+        <div className="pointer-events-none absolute inset-0 -z-10 bg-hero-field" />
+        <div className="pointer-events-none absolute -top-40 -left-40 -z-10 h-[520px] w-[520px] rounded-full bg-primary/15 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-40 -right-40 -z-10 h-[520px] w-[520px] rounded-full bg-secondary/15 blur-3xl" />
+
+        <div className="mx-auto grid min-h-screen w-full max-w-7xl grid-cols-1 gap-8 px-4 py-8 sm:px-6 lg:grid-cols-2 lg:gap-12 lg:px-10 lg:py-12">
+          {/* Left: brand / marketing column (desktop + tablet) */}
+          <aside className="hidden flex-col justify-between rounded-3xl border border-border/60 bg-gradient-to-br from-primary/10 via-card to-secondary/10 p-8 shadow-card lg:flex xl:p-12">
+            <div>
+              <img
+                src={hrgreatlyLogo}
+                alt="HR Greatly"
+                className="h-20 w-auto object-contain xl:h-24"
+              />
+              <h2 className="mt-8 font-display text-4xl font-extrabold leading-tight tracking-tight text-foreground xl:text-5xl">
+                Welcome back to{" "}
+                <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+                  HR Greatly
+                </span>
+              </h2>
+              <p className="mt-4 max-w-md text-base text-muted-foreground xl:text-lg">
+                Run your entire HR — attendance, leave, payroll — from one calm place.
+                Sign in and pick up where you left off.
+              </p>
+            </div>
+            <ul className="mt-10 grid gap-3 text-sm font-medium text-foreground/80">
+              <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-primary" /> Secure, role-based access</li>
+              <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-primary" /> 25+ countries · 20,000+ teams</li>
+              <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-primary" /> 15-day free trial — no card required</li>
+            </ul>
+          </aside>
+
+          {/* Right: auth form (all sizes) */}
+          <section className="flex items-center justify-center">
+            <div className="w-full max-w-md rounded-2xl border border-border/60 bg-card p-6 shadow-card sm:max-w-lg sm:p-8 md:max-w-xl md:p-10">
+              <div className="flex flex-col items-center gap-3 text-center lg:hidden">
+                <img
+                  src={hrgreatlyLogo}
+                  alt="HR Greatly"
+                  className="h-16 w-auto object-contain sm:h-20"
+                />
               </div>
-              <div className="space-y-5 px-5 py-5">
+              <div className="mt-2 text-center">
+                <h1 className="font-display text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">
+                  Sign in to your workspace
+                </h1>
+                <p className="mt-1 text-sm font-medium text-muted-foreground">hrgreatly.com</p>
+              </div>
+              <div className="mt-6 space-y-5">
                 {inviteToken && renderTeamPanel()}
                 {renderEmployeeAuth()}
               </div>
