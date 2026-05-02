@@ -127,17 +127,21 @@ const Landing = () => {
 
       {/* Header */}
       <header className="sticky top-0 z-30 w-full border-b border-border/60 bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/70">
-        <div className="mx-auto flex h-24 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto flex h-28 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           <Link to="/" className="flex items-center gap-3">
-            <img src={hrgreatlyLogo} alt="HR Greatly" className="h-16 w-auto sm:h-20" />
-            <span className="text-2xl font-extrabold tracking-tight text-primary sm:text-3xl">HR Greatly</span>
+            <img src={hrgreatlyLogo} alt="HR Greatly" className="h-20 w-auto sm:h-24 lg:h-28" />
+            <span className="text-3xl font-extrabold tracking-tight text-primary sm:text-4xl">HR Greatly</span>
           </Link>
 
-          <nav className="hidden items-center gap-8 text-sm font-medium text-muted-foreground md:flex">
-            <a href="#about" className="transition-colors hover:text-foreground">About us</a>
-            <a href="#pricing" className="transition-colors hover:text-foreground">Pricing</a>
-            <a href="#blogs" className="transition-colors hover:text-foreground">Blogs</a>
-            <a href="#partners" className="transition-colors hover:text-foreground">Partners</a>
+          <nav className="hidden items-center gap-6 text-sm font-medium text-muted-foreground lg:flex">
+            <a href="#about" className="transition-colors hover:text-primary">About us</a>
+            <a href="#pricing" className="transition-colors hover:text-primary">Pricing</a>
+            <a href="#blogs" className="transition-colors hover:text-primary">Blogs</a>
+            <a href="#partners" className="transition-colors hover:text-primary">Partners</a>
+            <a href="#features" className="transition-colors hover:text-primary">Features</a>
+            <a href="#how" className="transition-colors hover:text-primary">How it works</a>
+            <a href="#video" className="transition-colors hover:text-primary">Watch demo</a>
+            <a href="#testimonial" className="transition-colors hover:text-primary">Customers</a>
           </nav>
 
           <div className="flex items-center gap-2">
@@ -479,9 +483,9 @@ const Landing = () => {
           <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
             <div className="flex flex-col items-start gap-4 md:flex-row md:items-center md:justify-between">
               <div className="flex items-center gap-4">
-                <img src={hrgreatlyLogo} alt="HR Greatly" className="h-20 w-auto sm:h-24" />
+                <img src={hrgreatlyLogo} alt="HR Greatly" className="h-24 w-auto sm:h-28" />
                 <div>
-                  <p className="text-2xl font-extrabold tracking-tight text-primary sm:text-3xl">HR Greatly</p>
+                  <p className="text-3xl font-extrabold tracking-tight text-primary sm:text-4xl">HR Greatly</p>
                   <p className="mt-1 flex items-start gap-1.5 text-sm text-muted-foreground">
                     <MapPin className="mt-0.5 h-4 w-4 shrink-0" />
                     Sector 17, Chandigarh, Punjab, India — Pin 140603
