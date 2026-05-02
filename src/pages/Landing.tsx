@@ -95,7 +95,7 @@ const navMenus: { label: string; items: { title: string; desc: string; href: str
   {
     label: "About us",
     items: [
-      { title: "Our Story", desc: "Why we built HR Greatly", href: "#about" },
+      { title: "Our Story", desc: "Why we built HR Greatly", href: "/about" },
       { title: "Customers", desc: "Teams who trust us", href: "#testimonial" },
       { title: "Careers", desc: "Join our mission", href: "#careers" },
       { title: "Contact Us", desc: "Get in touch", href: "mailto:hello@hrgreatly.com" },
