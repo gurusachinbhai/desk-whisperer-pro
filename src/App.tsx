@@ -17,6 +17,9 @@ import Blogs from "./pages/Blogs.tsx";
 import BlogPost from "./pages/BlogPost.tsx";
 import Guides from "./pages/Guides.tsx";
 import CaseStudies from "./pages/CaseStudies.tsx";
+import Privacy from "./pages/Privacy.tsx";
+import Terms from "./pages/Terms.tsx";
+import Security from "./pages/Security.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import DeviceShell from "./components/DeviceShell";
 
@@ -44,6 +47,9 @@ const App = () => (
             <Route path="/blogs/:slug" element={<BlogPost />} />
             <Route path="/guides" element={<Guides />} />
             <Route path="/case-studies" element={<CaseStudies />} />
+            <Route path="/privacy" element={<Privacy />} />
+            <Route path="/terms" element={<Terms />} />
+            <Route path="/security" element={<Security />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
