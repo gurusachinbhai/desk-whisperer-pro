@@ -2239,8 +2239,8 @@ const Index = () => {
     [confirmedBookings, nowTs],
   );
 
-  const handleConfirmBooking = async () => {
-    const spot = bookingKind === "desk" ? selectedSeat : selectedRoom;
+  const handleConfirmBooking = async (overrideSeat?: string) => {
+    const spot = bookingKind === "desk" ? (overrideSeat ?? selectedSeat) : selectedRoom;
     const dateKey = format(bookingDate, "yyyy-MM-dd");
 
     if (bookingKind === "desk") {
@@ -2262,9 +2262,10 @@ const Index = () => {
         if (cb.booking_date !== dateKey) return false;
         let meta: any = {};
         try { meta = cb.notes ? JSON.parse(cb.notes) : {}; } catch { /* ignore */ }
-        const cbShiftKey = meta.shiftKey || "";
-        // If we know the shift key, require match; else assume conflict (full day fallback)
-        return !cbShiftKey || cbShiftKey === selectedShift;
+        const cbFloor = Number(meta.floor ?? cb.floor) || 0;
+        const cbArea = (cb.area || meta.area || "").toUpperCase();
+        const cbShiftKey = (meta.shiftKey || cb.time_slot?.toLowerCase() || "") as ShiftKey | "";
+        return cbFloor === selectedFloor && cbArea === selectedArea.toUpperCase() && shiftOverlaps(cbShiftKey, selectedShift);
       });
       if (taken) {
         toast.error("This seat is already booked.", {
@@ -2286,21 +2287,16 @@ const Index = () => {
         shiftRange: currentShift.range,
         endsAt: computeShiftEnd(bookingDate, currentShift),
       });
-      const { data, error } = await supabase
-        .from("desk_reservations")
-        .insert({
-          company_id: companyProfile.id,
-          user_id: authUserId,
-          user_name: currentUser?.displayName ?? "Employee",
-          desk_label: spot,
-          floor: String(selectedFloor),
-          booking_date: dateKey,
-          time_slot: currentShift.label || "Full Day",
-          status: "confirmed",
-          notes: meta,
-        })
-        .select()
-        .maybeSingle();
+      const { data, error } = await supabase.rpc("book_desk_reservation", {
+        _company_id: companyProfile.id,
+        _desk_label: spot,
+        _floor: String(selectedFloor),
+        _area: selectedArea,
+        _booking_date: dateKey,
+        _time_slot: currentShift.label || "Full Day",
+        _user_name: currentUser?.displayName ?? "Employee",
+        _notes: meta,
+      });
 
       if (error) {
         const msg = error.message || "";
