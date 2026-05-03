@@ -1079,6 +1079,54 @@ const Index = () => {
     setBookings: setConfirmedBookings,
   });
 
+  // Company-wide desk reservations (everyone in the same company) so the seat map
+  // can show colleague-booked seats in light red with the booker's name and prevent
+  // double-booking.
+  type CompanyBooking = {
+    id: string;
+    user_id: string;
+    user_name: string;
+    desk_label: string;
+    floor: string | null;
+    booking_date: string;
+    time_slot: string;
+    status: string;
+    notes: string | null;
+  };
+  const [companyBookings, setCompanyBookings] = useState<CompanyBooking[]>([]);
+
+  useEffect(() => {
+    if (!companyProfile?.id) {
+      setCompanyBookings([]);
+      return;
+    }
+    let cancelled = false;
+    const load = async () => {
+      const { data } = await supabase
+        .from("desk_reservations")
+        .select("id,user_id,user_name,desk_label,floor,booking_date,time_slot,status,notes")
+        .eq("company_id", companyProfile.id)
+        .neq("status", "released")
+        .neq("status", "cancelled");
+      if (!cancelled && data) setCompanyBookings(data as CompanyBooking[]);
+    };
+    load();
+
+    const channel = supabase
+      .channel(`desk-reservations-${companyProfile.id}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "desk_reservations", filter: `company_id=eq.${companyProfile.id}` },
+        () => load(),
+      )
+      .subscribe();
+
+    return () => {
+      cancelled = true;
+      supabase.removeChannel(channel);
+    };
+  }, [companyProfile?.id]);
+
   useEffect(() => {
     const acceptInvite = async () => {
       if (!inviteToken) return;
