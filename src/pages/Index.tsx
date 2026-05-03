@@ -46,6 +46,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { lovable } from "@/integrations/lovable";
 import { supabase } from "@/integrations/supabase/client";
+import { useRecordsPersistence } from "@/hooks/use-records-persistence";
 import hrgreatlyLogo from "@/assets/hrgreatly-logo.png";
 import {
   Select,
