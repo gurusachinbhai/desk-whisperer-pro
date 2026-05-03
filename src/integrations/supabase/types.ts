@@ -335,6 +335,7 @@ export type Database = {
       }
       support_ticket_comments: {
         Row: {
+          attachments: string[]
           author_name: string
           author_user_id: string
           body: string
@@ -344,6 +345,7 @@ export type Database = {
           ticket_id: string
         }
         Insert: {
+          attachments?: string[]
           author_name: string
           author_user_id: string
           body: string
@@ -353,6 +355,7 @@ export type Database = {
           ticket_id: string
         }
         Update: {
+          attachments?: string[]
           author_name?: string
           author_user_id?: string
           body?: string
@@ -376,18 +379,24 @@ export type Database = {
           assigned_group: string | null
           assignee_name: string | null
           assignee_user_id: string | null
+          category: string | null
           closed_at: string | null
           company_id: string
+          contact_type: string | null
           created_at: string
           created_by: string
           description: string
+          hold_reason: string | null
           id: string
+          location: string | null
+          opened_for: string | null
           priority: Database["public"]["Enums"]["support_ticket_priority"]
           requester_email: string | null
           requester_name: string
           resolution: string | null
           resolved_at: string | null
           status: Database["public"]["Enums"]["support_ticket_status"]
+          subcategory: string | null
           subject: string
           ticket_number: string
           ticket_type: Database["public"]["Enums"]["support_ticket_type"]
@@ -397,18 +406,24 @@ export type Database = {
           assigned_group?: string | null
           assignee_name?: string | null
           assignee_user_id?: string | null
+          category?: string | null
           closed_at?: string | null
           company_id: string
+          contact_type?: string | null
           created_at?: string
           created_by: string
           description: string
+          hold_reason?: string | null
           id?: string
+          location?: string | null
+          opened_for?: string | null
           priority?: Database["public"]["Enums"]["support_ticket_priority"]
           requester_email?: string | null
           requester_name: string
           resolution?: string | null
           resolved_at?: string | null
           status?: Database["public"]["Enums"]["support_ticket_status"]
+          subcategory?: string | null
           subject: string
           ticket_number: string
           ticket_type?: Database["public"]["Enums"]["support_ticket_type"]
@@ -418,18 +433,24 @@ export type Database = {
           assigned_group?: string | null
           assignee_name?: string | null
           assignee_user_id?: string | null
+          category?: string | null
           closed_at?: string | null
           company_id?: string
+          contact_type?: string | null
           created_at?: string
           created_by?: string
           description?: string
+          hold_reason?: string | null
           id?: string
+          location?: string | null
+          opened_for?: string | null
           priority?: Database["public"]["Enums"]["support_ticket_priority"]
           requester_email?: string | null
           requester_name?: string
           resolution?: string | null
           resolved_at?: string | null
           status?: Database["public"]["Enums"]["support_ticket_status"]
+          subcategory?: string | null
           subject?: string
           ticket_number?: string
           ticket_type?: Database["public"]["Enums"]["support_ticket_type"]
@@ -811,11 +832,13 @@ export type Database = {
       deskflow_desk_status: "available" | "occupied"
       support_ticket_priority: "P1" | "P2" | "P3" | "P4"
       support_ticket_status:
+        | "new"
         | "open"
         | "in_progress"
         | "on_hold"
         | "resolved"
         | "closed"
+        | "cancelled"
       support_ticket_type: "incident" | "request"
     }
     CompositeTypes: {
@@ -954,11 +977,13 @@ export const Constants = {
       deskflow_desk_status: ["available", "occupied"],
       support_ticket_priority: ["P1", "P2", "P3", "P4"],
       support_ticket_status: [
+        "new",
         "open",
         "in_progress",
         "on_hold",
         "resolved",
         "closed",
+        "cancelled",
       ],
       support_ticket_type: ["incident", "request"],
     },

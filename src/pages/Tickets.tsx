@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, FormEvent } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { z } from "zod";
 import { toast } from "sonner";
@@ -11,6 +11,9 @@ import {
   ShieldCheck,
   AlertTriangle,
   Loader2,
+  Paperclip,
+  X,
+  ImageIcon,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -29,7 +32,7 @@ import { Badge } from "@/components/ui/badge";
 
 type TicketType = "incident" | "request";
 type TicketPriority = "P1" | "P2" | "P3" | "P4";
-type TicketStatus = "open" | "in_progress" | "on_hold" | "resolved" | "closed";
+type TicketStatus = "new" | "open" | "in_progress" | "on_hold" | "resolved" | "closed" | "cancelled";
 
 type Ticket = {
   id: string;
@@ -47,6 +50,12 @@ type Ticket = {
   assignee_name: string | null;
   assigned_group: string | null;
   resolution: string | null;
+  hold_reason: string | null;
+  opened_for: string | null;
+  location: string | null;
+  contact_type: string | null;
+  category: string | null;
+  subcategory: string | null;
   created_at: string;
   updated_at: string;
   resolved_at: string | null;
@@ -60,6 +69,7 @@ type Comment = {
   author_name: string;
   body: string;
   is_internal: boolean;
+  attachments: string[];
   created_at: string;
 };
 
@@ -71,12 +81,69 @@ const PRIORITY_LABEL: Record<TicketPriority, string> = {
 };
 
 const STATUS_LABEL: Record<TicketStatus, string> = {
+  new: "New",
   open: "Open",
   in_progress: "In Progress",
   on_hold: "On Hold",
   resolved: "Resolved",
   closed: "Closed",
+  cancelled: "Cancelled",
 };
+
+const STATUS_ORDER: TicketStatus[] = [
+  "new",
+  "in_progress",
+  "on_hold",
+  "resolved",
+  "closed",
+  "cancelled",
+];
+
+const HOLD_REASONS = [
+  "Awaiting Vendor",
+  "Awaiting Change",
+  "Awaiting Program",
+  "Awaiting Caller",
+] as const;
+
+const CONTACT_TYPES = [
+  "Self service",
+  "Email",
+  "Chat",
+  "Virtual agent",
+  "Walk up",
+  "Web API",
+  "Phone",
+] as const;
+
+const CATEGORIES = [
+  "Inquiry/Help",
+  "Software",
+  "Hardware",
+  "Network",
+  "Database",
+  "Facilities",
+  "Procurement",
+  "HR Facility",
+  "Desk Booking",
+  "Others",
+] as const;
+
+const SUBCATEGORIES = [
+  "Performance",
+  "Send/Receive",
+  "Add-in Issues",
+  "Update/Upgrade",
+  "Crashing",
+  "Error Message",
+  "Configuration",
+  "Reset/Restart",
+  "No Issues Found",
+  "Connectivity",
+  "Access Related",
+  "Capacity",
+  "Other",
+] as const;
 
 const priorityClass = (p: TicketPriority) =>
   p === "P1"
@@ -87,8 +154,14 @@ const priorityClass = (p: TicketPriority) =>
     ? "bg-amber-500 text-white"
     : "bg-muted text-foreground";
 
-const statusVariant = (s: TicketStatus): "default" | "secondary" | "outline" =>
-  s === "resolved" || s === "closed" ? "secondary" : s === "open" ? "default" : "outline";
+const statusVariant = (s: TicketStatus): "default" | "secondary" | "outline" | "destructive" =>
+  s === "resolved" || s === "closed"
+    ? "secondary"
+    : s === "cancelled"
+    ? "destructive"
+    : s === "new"
+    ? "default"
+    : "outline";
 
 const ticketSchema = z.object({
   subject: z.string().trim().min(3, "Subject must be at least 3 characters").max(200),
@@ -97,6 +170,11 @@ const ticketSchema = z.object({
   priority: z.enum(["P1", "P2", "P3", "P4"]),
   assigned_group: z.string().trim().max(80).optional(),
   assignee_name: z.string().trim().max(120).optional(),
+  opened_for: z.string().trim().max(120).optional(),
+  location: z.string().trim().max(120).optional(),
+  contact_type: z.string().trim().max(40).optional(),
+  category: z.string().trim().max(40).optional(),
+  subcategory: z.string().trim().max(40).optional(),
 });
 
 const Tickets = () => {
@@ -119,6 +197,8 @@ const Tickets = () => {
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState("");
   const [internalNote, setInternalNote] = useState(false);
+  const [commentFiles, setCommentFiles] = useState<File[]>([]);
+  const [uploadingComment, setUploadingComment] = useState(false);
 
   const [form, setForm] = useState({
     subject: "",
@@ -127,14 +207,19 @@ const Tickets = () => {
     priority: "P3" as TicketPriority,
     assigned_group: "",
     assignee_name: "",
+    opened_for: "",
+    location: "",
+    contact_type: "",
+    category: "",
+    subcategory: "",
   });
   const [submitting, setSubmitting] = useState(false);
+  const [createFiles, setCreateFiles] = useState<File[]>([]);
 
   const [lookupNumber, setLookupNumber] = useState(searchParams.get("ticket") || "");
   const [lookupResult, setLookupResult] = useState<Ticket | null>(null);
   const [lookupChecked, setLookupChecked] = useState(false);
 
-  // Bootstrap auth + role + company
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -174,7 +259,6 @@ const Tickets = () => {
       await loadTickets();
       setLoading(false);
 
-      // If query has ticket number, auto-lookup
       const t = searchParams.get("ticket");
       if (t) {
         setTab("lookup");
@@ -217,6 +301,34 @@ const Tickets = () => {
     await loadComments(t.id);
   };
 
+  const uploadFiles = async (files: File[], uid: string): Promise<string[]> => {
+    if (files.length === 0) return [];
+    const urls: string[] = [];
+    for (const file of files) {
+      if (!file.type.startsWith("image/")) {
+        toast.error(`Skipping ${file.name}: only images allowed`);
+        continue;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error(`Skipping ${file.name}: max 5MB`);
+        continue;
+      }
+      const ext = file.name.split(".").pop() || "png";
+      const path = `${uid}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const { error: upErr } = await supabase.storage.from("ticket-attachments").upload(path, file, {
+        cacheControl: "3600",
+        upsert: false,
+      });
+      if (upErr) {
+        toast.error(`Upload failed: ${file.name}`, { description: upErr.message });
+        continue;
+      }
+      const { data: pub } = supabase.storage.from("ticket-attachments").getPublicUrl(path);
+      urls.push(pub.publicUrl);
+    }
+    return urls;
+  };
+
   const handleCreate = async (e: FormEvent) => {
     e.preventDefault();
     if (!userId || !companyId) {
@@ -244,15 +356,37 @@ const Tickets = () => {
         priority: parsed.data.priority,
         assigned_group: parsed.data.assigned_group || null,
         assignee_name: parsed.data.assignee_name || null,
+        opened_for: parsed.data.opened_for || null,
+        location: parsed.data.location || null,
+        contact_type: parsed.data.contact_type || null,
+        category: parsed.data.category || null,
+        subcategory: parsed.data.subcategory || null,
         ticket_number: "",
       })
       .select("*")
       .single();
-    setSubmitting(false);
     if (error) {
+      setSubmitting(false);
       toast.error("Couldn't raise ticket", { description: error.message });
       return;
     }
+
+    // Upload any attached images as the first activity-note comment
+    if (createFiles.length > 0) {
+      const urls = await uploadFiles(createFiles, uid);
+      if (urls.length > 0) {
+        await supabase.from("support_ticket_comments").insert({
+          ticket_id: (data as Ticket).id,
+          author_user_id: uid,
+          author_name: displayName || email,
+          body: "Attached images at submission",
+          is_internal: false,
+          attachments: urls,
+        });
+      }
+    }
+
+    setSubmitting(false);
     toast.success(`Ticket ${data.ticket_number} raised`);
     setForm({
       subject: "",
@@ -261,7 +395,13 @@ const Tickets = () => {
       priority: "P3",
       assigned_group: "",
       assignee_name: "",
+      opened_for: "",
+      location: "",
+      contact_type: "",
+      category: "",
+      subcategory: "",
     });
+    setCreateFiles([]);
     await loadTickets();
     setTab("list");
     setSelectedTicket(data as Ticket);
@@ -270,20 +410,26 @@ const Tickets = () => {
 
   const handleAddComment = async (e: FormEvent) => {
     e.preventDefault();
-    if (!selectedTicket || !userId || !newComment.trim()) return;
+    if (!selectedTicket || !userId) return;
+    if (!newComment.trim() && commentFiles.length === 0) return;
+    setUploadingComment(true);
+    const urls = await uploadFiles(commentFiles, userId);
     const { error } = await supabase.from("support_ticket_comments").insert({
       ticket_id: selectedTicket.id,
       author_user_id: userId,
       author_name: displayName || email,
-      body: newComment.trim().slice(0, 4000),
+      body: (newComment.trim() || "(image attached)").slice(0, 4000),
       is_internal: isAdmin || isSuperAdmin ? internalNote : false,
+      attachments: urls,
     });
+    setUploadingComment(false);
     if (error) {
       toast.error("Couldn't post comment", { description: error.message });
       return;
     }
     setNewComment("");
     setInternalNote(false);
+    setCommentFiles([]);
     await loadComments(selectedTicket.id);
   };
 
@@ -362,21 +508,21 @@ const Tickets = () => {
   return (
     <main className="min-h-screen bg-background text-foreground">
       <header className="border-b border-border bg-card">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
           <div className="flex items-center gap-3">
-            <div className="grid h-10 w-10 place-items-center rounded-xl bg-primary/10 text-primary">
-              <TicketIcon className="h-5 w-5" />
+            <div className="grid h-10 w-10 place-items-center rounded-xl bg-primary/10 text-primary sm:h-12 sm:w-12">
+              <TicketIcon className="h-5 w-5 sm:h-6 sm:w-6" />
             </div>
             <div>
               <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Help & support</p>
-              <h1 className="text-lg font-extrabold leading-tight">Ticketing tool</h1>
+              <h1 className="text-lg font-extrabold leading-tight sm:text-2xl">Ticketing tool</h1>
             </div>
           </div>
           <Button variant="outline" size="sm" onClick={() => navigate(-1)}>
             <ArrowLeft className="mr-1 h-4 w-4" /> Back
           </Button>
         </div>
-        <nav className="mx-auto flex max-w-6xl gap-1 overflow-x-auto px-4 pb-3 text-xs font-bold">
+        <nav className="mx-auto flex max-w-7xl gap-1 overflow-x-auto px-4 pb-3 text-xs font-bold sm:px-6 sm:text-sm">
           {[
             { id: "list", label: canManage ? "All tickets" : "My tickets" },
             { id: "new", label: "Raise a ticket" },
@@ -385,7 +531,7 @@ const Tickets = () => {
             <button
               key={t.id}
               onClick={() => setTab(t.id as typeof tab)}
-              className={`rounded-xl px-3 py-2 ${
+              className={`min-h-[44px] whitespace-nowrap rounded-xl px-4 py-2 ${
                 tab === t.id ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
               }`}
             >
@@ -395,9 +541,9 @@ const Tickets = () => {
         </nav>
       </header>
 
-      <section className="mx-auto max-w-6xl px-4 py-6">
+      <section className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
         {tab === "list" && (
-          <div className="grid gap-4 lg:grid-cols-[1fr_1.3fr]">
+          <div className="grid gap-4 lg:grid-cols-[1fr_1.4fr]">
             <Card>
               <CardHeader>
                 <CardTitle className="text-base">{canManage ? "All tickets in your company" : "Your tickets"}</CardTitle>
@@ -424,6 +570,11 @@ const Tickets = () => {
                         <p className="mt-1 text-xs text-muted-foreground">
                           {t.requester_name} · {new Date(t.created_at).toLocaleDateString()}
                         </p>
+                        {(t.category || t.location) && (
+                          <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
+                            {[t.category, t.location].filter(Boolean).join(" · ")}
+                          </p>
+                        )}
                       </div>
                       <div className="flex shrink-0 flex-col items-end gap-1">
                         <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${priorityClass(t.priority)}`}>
@@ -449,6 +600,9 @@ const Tickets = () => {
                   setNewComment={setNewComment}
                   internalNote={internalNote}
                   setInternalNote={setInternalNote}
+                  commentFiles={commentFiles}
+                  setCommentFiles={setCommentFiles}
+                  uploading={uploadingComment}
                   onAddComment={handleAddComment}
                   onUpdate={updateTicket}
                 />
@@ -464,90 +618,155 @@ const Tickets = () => {
         )}
 
         {tab === "new" && (
-          <Card className="mx-auto max-w-2xl">
+          <Card className="mx-auto max-w-3xl">
             <CardHeader>
-              <CardTitle>Raise a ticket</CardTitle>
-              <CardDescription>
+              <CardTitle className="text-xl sm:text-2xl">Raise a ticket</CardTitle>
+              <CardDescription className="text-sm sm:text-base">
                 You'll get a unique ticket number you can use to track progress anytime.
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleCreate} className="space-y-4">
+              <form onSubmit={handleCreate} className="space-y-5">
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-1.5">
-                    <Label>Type</Label>
+                  <Field label="Type">
                     <Select
                       value={form.ticket_type}
                       onValueChange={(v) => setForm((f) => ({ ...f, ticket_type: v as TicketType }))}
                     >
-                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="incident">Incident</SelectItem>
                         <SelectItem value="request">Request</SelectItem>
                       </SelectContent>
                     </Select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>SLA / Priority</Label>
+                  </Field>
+                  <Field label="SLA / Priority">
                     <Select
                       value={form.priority}
                       onValueChange={(v) => setForm((f) => ({ ...f, priority: v as TicketPriority }))}
                     >
-                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         {(["P1", "P2", "P3", "P4"] as const).map((p) => (
                           <SelectItem key={p} value={p}>{PRIORITY_LABEL[p]}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
-                  </div>
+                  </Field>
                 </div>
 
-                <div className="space-y-1.5">
-                  <Label>Subject</Label>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Field label="Opened for" hint="Person this ticket is for">
+                    <Input
+                      className="h-11 text-base"
+                      value={form.opened_for}
+                      onChange={(e) => setForm((f) => ({ ...f, opened_for: e.target.value }))}
+                      maxLength={120}
+                      placeholder="e.g. Jane Doe"
+                    />
+                  </Field>
+                  <Field label="Location">
+                    <Input
+                      className="h-11 text-base"
+                      value={form.location}
+                      onChange={(e) => setForm((f) => ({ ...f, location: e.target.value }))}
+                      maxLength={120}
+                      placeholder="e.g. Mumbai HQ, Floor 3"
+                    />
+                  </Field>
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <Field label="Contact type">
+                    <Select
+                      value={form.contact_type}
+                      onValueChange={(v) => setForm((f) => ({ ...f, contact_type: v }))}
+                    >
+                      <SelectTrigger className="h-11"><SelectValue placeholder="Select…" /></SelectTrigger>
+                      <SelectContent>
+                        {CONTACT_TYPES.map((c) => (
+                          <SelectItem key={c} value={c}>{c}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </Field>
+                  <Field label="Category">
+                    <Select
+                      value={form.category}
+                      onValueChange={(v) => setForm((f) => ({ ...f, category: v }))}
+                    >
+                      <SelectTrigger className="h-11"><SelectValue placeholder="Select…" /></SelectTrigger>
+                      <SelectContent>
+                        {CATEGORIES.map((c) => (
+                          <SelectItem key={c} value={c}>{c}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </Field>
+                  <Field label="Subcategory">
+                    <Select
+                      value={form.subcategory}
+                      onValueChange={(v) => setForm((f) => ({ ...f, subcategory: v }))}
+                    >
+                      <SelectTrigger className="h-11"><SelectValue placeholder="Select…" /></SelectTrigger>
+                      <SelectContent>
+                        {SUBCATEGORIES.map((c) => (
+                          <SelectItem key={c} value={c}>{c}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </Field>
+                </div>
+
+                <Field label="Subject">
                   <Input
+                    className="h-11 text-base"
                     value={form.subject}
                     onChange={(e) => setForm((f) => ({ ...f, subject: e.target.value }))}
                     maxLength={200}
                     placeholder="Short summary of the issue or request"
                     required
                   />
-                </div>
+                </Field>
 
-                <div className="space-y-1.5">
-                  <Label>Details</Label>
+                <Field label="Details">
                   <Textarea
+                    className="min-h-[140px] text-base"
                     value={form.description}
                     onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
                     maxLength={4000}
-                    rows={5}
+                    rows={6}
                     placeholder="What happened? What did you expect? Steps to reproduce."
                     required
                   />
-                </div>
+                </Field>
 
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-1.5">
-                    <Label>Assigned group <span className="text-xs text-muted-foreground">(optional)</span></Label>
+                  <Field label="Assigned group" hint="Optional">
                     <Input
+                      className="h-11 text-base"
                       value={form.assigned_group}
                       onChange={(e) => setForm((f) => ({ ...f, assigned_group: e.target.value }))}
                       maxLength={80}
                       placeholder="e.g. IT Helpdesk, HR, Facilities"
                     />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>Assignee <span className="text-xs text-muted-foreground">(optional)</span></Label>
+                  </Field>
+                  <Field label="Assignee" hint="Optional">
                     <Input
+                      className="h-11 text-base"
                       value={form.assignee_name}
                       onChange={(e) => setForm((f) => ({ ...f, assignee_name: e.target.value }))}
                       maxLength={120}
                       placeholder="Person's name"
                     />
-                  </div>
+                  </Field>
                 </div>
 
-                <Button type="submit" disabled={submitting} className="w-full">
+                <Field label="Attach images" hint="Optional · max 5MB each">
+                  <FileChips files={createFiles} onChange={setCreateFiles} />
+                </Field>
+
+                <Button type="submit" disabled={submitting} className="h-12 w-full text-base">
                   {submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
                   Raise ticket
                 </Button>
@@ -559,7 +778,7 @@ const Tickets = () => {
         {tab === "lookup" && (
           <Card className="mx-auto max-w-2xl">
             <CardHeader>
-              <CardTitle>Track a ticket</CardTitle>
+              <CardTitle className="text-xl">Track a ticket</CardTitle>
               <CardDescription>Enter the ticket number you received (e.g. TKT-2026-000001).</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -568,15 +787,16 @@ const Tickets = () => {
                   e.preventDefault();
                   runLookup();
                 }}
-                className="flex gap-2"
+                className="flex flex-col gap-2 sm:flex-row"
               >
                 <Input
+                  className="h-11 text-base"
                   value={lookupNumber}
                   onChange={(e) => setLookupNumber(e.target.value)}
                   placeholder="TKT-YYYY-000000"
                   maxLength={32}
                 />
-                <Button type="submit"><Search className="mr-2 h-4 w-4" /> Check</Button>
+                <Button type="submit" className="h-11"><Search className="mr-2 h-4 w-4" /> Check</Button>
               </form>
 
               {lookupChecked && !lookupResult && (
@@ -587,7 +807,7 @@ const Tickets = () => {
               )}
               {lookupResult && (
                 <div className="rounded-lg border border-border p-4">
-                  <div className="flex items-start justify-between gap-3">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
                       <p className="font-mono text-xs font-bold text-primary">{lookupResult.ticket_number}</p>
                       <h3 className="mt-1 text-base font-extrabold">{lookupResult.subject}</h3>
@@ -606,8 +826,14 @@ const Tickets = () => {
                   <p className="mt-3 whitespace-pre-wrap text-sm text-foreground/90">{lookupResult.description}</p>
                   <div className="mt-3 grid gap-2 text-xs sm:grid-cols-2">
                     <Info label="Type" value={lookupResult.ticket_type === "incident" ? "Incident" : "Request"} />
+                    <Info label="Category" value={lookupResult.category || "—"} />
+                    <Info label="Subcategory" value={lookupResult.subcategory || "—"} />
+                    <Info label="Location" value={lookupResult.location || "—"} />
                     <Info label="Assignee" value={lookupResult.assignee_name || "—"} />
                     <Info label="Group" value={lookupResult.assigned_group || "—"} />
+                    {lookupResult.status === "on_hold" && (
+                      <Info label="Hold reason" value={lookupResult.hold_reason || "—"} />
+                    )}
                     <Info label="Last update" value={new Date(lookupResult.updated_at).toLocaleString()} />
                   </div>
                   <Button
@@ -632,12 +858,77 @@ const Tickets = () => {
   );
 };
 
+const Field = ({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) => (
+  <div className="space-y-1.5">
+    <Label className="text-sm font-semibold">
+      {label}
+      {hint && <span className="ml-1 text-xs font-normal text-muted-foreground">({hint})</span>}
+    </Label>
+    {children}
+  </div>
+);
+
 const Info = ({ label, value }: { label: string; value: string }) => (
   <div className="rounded-md bg-muted/40 px-3 py-2">
     <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">{label}</p>
-    <p className="text-sm font-semibold">{value}</p>
+    <p className="text-sm font-semibold break-words">{value}</p>
   </div>
 );
+
+const FileChips = ({ files, onChange }: { files: File[]; onChange: (f: File[]) => void }) => {
+  const ref = useRef<HTMLInputElement>(null);
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-10"
+          onClick={() => ref.current?.click()}
+        >
+          <Paperclip className="mr-2 h-4 w-4" /> Add image
+        </Button>
+        <input
+          ref={ref}
+          type="file"
+          accept="image/*"
+          multiple
+          className="hidden"
+          onChange={(e) => {
+            const list = Array.from(e.target.files ?? []);
+            onChange([...files, ...list]);
+            if (ref.current) ref.current.value = "";
+          }}
+        />
+        {files.length === 0 && (
+          <span className="text-xs text-muted-foreground">No images attached</span>
+        )}
+      </div>
+      {files.length > 0 && (
+        <ul className="flex flex-wrap gap-2">
+          {files.map((f, i) => (
+            <li
+              key={i}
+              className="flex items-center gap-2 rounded-full border border-border bg-muted/40 px-3 py-1 text-xs"
+            >
+              <ImageIcon className="h-3 w-3" />
+              <span className="max-w-[160px] truncate">{f.name}</span>
+              <button
+                type="button"
+                onClick={() => onChange(files.filter((_, idx) => idx !== i))}
+                className="rounded-full p-0.5 hover:bg-destructive/10 hover:text-destructive"
+                aria-label="Remove"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+};
 
 const TicketDetail = ({
   ticket,
@@ -647,6 +938,9 @@ const TicketDetail = ({
   setNewComment,
   internalNote,
   setInternalNote,
+  commentFiles,
+  setCommentFiles,
+  uploading,
   onAddComment,
   onUpdate,
 }: {
@@ -657,6 +951,9 @@ const TicketDetail = ({
   setNewComment: (v: string) => void;
   internalNote: boolean;
   setInternalNote: (v: boolean) => void;
+  commentFiles: File[];
+  setCommentFiles: (f: File[]) => void;
+  uploading: boolean;
   onAddComment: (e: FormEvent) => void;
   onUpdate: (p: Partial<Ticket>) => void;
 }) => {
@@ -670,13 +967,26 @@ const TicketDetail = ({
     setResolutionDraft(ticket.resolution ?? "");
   }, [ticket.id]);
 
+  const handleStatusChange = (s: TicketStatus) => {
+    if (s === "on_hold") {
+      const reason = window.prompt(
+        "Hold reason (Awaiting Vendor / Awaiting Change / Awaiting Program / Awaiting Caller):",
+        ticket.hold_reason ?? "Awaiting Vendor",
+      );
+      if (!reason) return;
+      onUpdate({ status: s, hold_reason: reason });
+    } else {
+      onUpdate({ status: s, hold_reason: null });
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <p className="font-mono text-xs font-bold text-primary">{ticket.ticket_number}</p>
-            <CardTitle className="mt-1">{ticket.subject}</CardTitle>
+            <CardTitle className="mt-1 text-lg sm:text-xl">{ticket.subject}</CardTitle>
             <CardDescription>
               {ticket.requester_name} · {new Date(ticket.created_at).toLocaleString()}
             </CardDescription>
@@ -692,70 +1002,90 @@ const TicketDetail = ({
       <CardContent className="space-y-5">
         <p className="whitespace-pre-wrap rounded-md bg-muted/40 p-3 text-sm text-foreground/90">{ticket.description}</p>
 
-        <div className="grid gap-2 text-xs sm:grid-cols-2">
+        <div className="grid gap-2 text-xs sm:grid-cols-2 lg:grid-cols-3">
           <Info label="Type" value={ticket.ticket_type === "incident" ? "Incident" : "Request"} />
+          <Info label="Category" value={ticket.category || "—"} />
+          <Info label="Subcategory" value={ticket.subcategory || "—"} />
+          <Info label="Contact type" value={ticket.contact_type || "—"} />
+          <Info label="Opened for" value={ticket.opened_for || "—"} />
+          <Info label="Location" value={ticket.location || "—"} />
           <Info label="Group" value={ticket.assigned_group || "—"} />
           <Info label="Assignee" value={ticket.assignee_name || "—"} />
           <Info label="Last update" value={new Date(ticket.updated_at).toLocaleString()} />
+          {ticket.status === "on_hold" && (
+            <Info label="Hold reason" value={ticket.hold_reason || "—"} />
+          )}
         </div>
 
         {canManage && (
-          <div className="rounded-lg border border-border p-3">
+          <div className="rounded-lg border border-border p-3 sm:p-4">
             <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Admin controls</p>
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label className="text-xs">Status</Label>
-                <Select value={ticket.status} onValueChange={(v) => onUpdate({ status: v as TicketStatus })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+              <Field label="Status">
+                <Select value={ticket.status} onValueChange={(v) => handleStatusChange(v as TicketStatus)}>
+                  <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {(Object.keys(STATUS_LABEL) as TicketStatus[]).map((s) => (
+                    {STATUS_ORDER.map((s) => (
                       <SelectItem key={s} value={s}>{STATUS_LABEL[s]}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">Priority</Label>
+              </Field>
+              <Field label="Priority">
                 <Select value={ticket.priority} onValueChange={(v) => onUpdate({ priority: v as TicketPriority })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {(["P1", "P2", "P3", "P4"] as const).map((p) => (
                       <SelectItem key={p} value={p}>{PRIORITY_LABEL[p]}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">Assigned group</Label>
+              </Field>
+              {ticket.status === "on_hold" && (
+                <Field label="Hold reason">
+                  <Select
+                    value={ticket.hold_reason ?? ""}
+                    onValueChange={(v) => onUpdate({ hold_reason: v })}
+                  >
+                    <SelectTrigger className="h-11"><SelectValue placeholder="Select…" /></SelectTrigger>
+                    <SelectContent>
+                      {HOLD_REASONS.map((r) => (
+                        <SelectItem key={r} value={r}>{r}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </Field>
+              )}
+              <Field label="Assigned group">
                 <div className="flex gap-2">
-                  <Input value={groupDraft} onChange={(e) => setGroupDraft(e.target.value)} maxLength={80} />
-                  <Button size="sm" variant="outline" onClick={() => onUpdate({ assigned_group: groupDraft || null })}>
+                  <Input className="h-11" value={groupDraft} onChange={(e) => setGroupDraft(e.target.value)} maxLength={80} />
+                  <Button size="sm" variant="outline" className="h-11" onClick={() => onUpdate({ assigned_group: groupDraft || null })}>
                     Save
                   </Button>
                 </div>
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">Assignee</Label>
+              </Field>
+              <Field label="Assignee">
                 <div className="flex gap-2">
-                  <Input value={assigneeDraft} onChange={(e) => setAssigneeDraft(e.target.value)} maxLength={120} />
-                  <Button size="sm" variant="outline" onClick={() => onUpdate({ assignee_name: assigneeDraft || null })}>
+                  <Input className="h-11" value={assigneeDraft} onChange={(e) => setAssigneeDraft(e.target.value)} maxLength={120} />
+                  <Button size="sm" variant="outline" className="h-11" onClick={() => onUpdate({ assignee_name: assigneeDraft || null })}>
                     Save
                   </Button>
                 </div>
-              </div>
-              <div className="space-y-1.5 sm:col-span-2">
-                <Label className="text-xs">Resolution notes</Label>
-                <div className="flex gap-2">
-                  <Textarea
-                    value={resolutionDraft}
-                    onChange={(e) => setResolutionDraft(e.target.value)}
-                    maxLength={2000}
-                    rows={2}
-                  />
-                  <Button size="sm" variant="outline" onClick={() => onUpdate({ resolution: resolutionDraft || null })}>
-                    Save
-                  </Button>
-                </div>
+              </Field>
+              <div className="sm:col-span-2">
+                <Field label="Resolution notes">
+                  <div className="flex gap-2">
+                    <Textarea
+                      value={resolutionDraft}
+                      onChange={(e) => setResolutionDraft(e.target.value)}
+                      maxLength={2000}
+                      rows={2}
+                    />
+                    <Button size="sm" variant="outline" className="h-11" onClick={() => onUpdate({ resolution: resolutionDraft || null })}>
+                      Save
+                    </Button>
+                  </div>
+                </Field>
               </div>
             </div>
           </div>
@@ -763,12 +1093,12 @@ const TicketDetail = ({
 
         <div>
           <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
-            Comments · {comments.length}
+            Activity notes · {comments.length}
           </p>
           <div className="mt-3 space-y-3">
             {comments.length === 0 && (
               <p className="rounded-md border border-dashed border-border p-3 text-center text-xs text-muted-foreground">
-                No comments yet.
+                No activity yet.
               </p>
             )}
             {comments.map((c) => (
@@ -786,6 +1116,26 @@ const TicketDetail = ({
                   </span>
                 </div>
                 <p className="mt-1.5 whitespace-pre-wrap text-sm">{c.body}</p>
+                {c.attachments && c.attachments.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {c.attachments.map((url) => (
+                      <a
+                        key={url}
+                        href={url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="block overflow-hidden rounded-md border border-border"
+                      >
+                        <img
+                          src={url}
+                          alt="attachment"
+                          className="h-24 w-24 object-cover sm:h-32 sm:w-32"
+                          loading="lazy"
+                        />
+                      </a>
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -796,9 +1146,11 @@ const TicketDetail = ({
               onChange={(e) => setNewComment(e.target.value)}
               maxLength={4000}
               rows={3}
-              placeholder="Add a reply…"
+              className="text-base"
+              placeholder="Add a reply or activity note…"
             />
-            <div className="flex items-center justify-between">
+            <FileChips files={commentFiles} onChange={setCommentFiles} />
+            <div className="flex flex-wrap items-center justify-between gap-2">
               {canManage ? (
                 <label className="flex items-center gap-2 text-xs text-muted-foreground">
                   <input
@@ -811,8 +1163,18 @@ const TicketDetail = ({
               ) : (
                 <span />
               )}
-              <Button type="submit" size="sm" disabled={!newComment.trim()}>
-                <MessageSquare className="mr-2 h-4 w-4" /> Post comment
+              <Button
+                type="submit"
+                size="sm"
+                className="h-11"
+                disabled={uploading || (!newComment.trim() && commentFiles.length === 0)}
+              >
+                {uploading ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <MessageSquare className="mr-2 h-4 w-4" />
+                )}
+                Post
               </Button>
             </div>
           </form>
