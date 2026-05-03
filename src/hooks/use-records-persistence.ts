@@ -249,6 +249,14 @@ export function useRecordsPersistence({
         return merged;
       });
 
+      // Replace bookings entirely with DB rows (this state is per-user only)
+      bookingDbIdMap.current.clear();
+      dbBookings.forEach((b) => bookingDbIdMap.current.set(b.id, b.id));
+      setBookings(() => {
+        lastBookingsJson.current = JSON.stringify(dbBookings);
+        return dbBookings;
+      });
+
       hydratedRef.current = true;
     };
 
