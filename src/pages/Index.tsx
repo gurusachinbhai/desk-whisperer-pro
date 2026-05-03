@@ -232,6 +232,14 @@ const computeShiftEnd = (date: Date, shift: typeof shiftDefinitions[number]) => 
   return d.getTime() + shift.endHour * 60 * 60 * 1000;
 };
 
+const shiftOverlaps = (a: ShiftKey | "", b: ShiftKey | "") => {
+  if (!a || !b) return true;
+  const first = shiftDefinitions.find((shift) => shift.id === a);
+  const second = shiftDefinitions.find((shift) => shift.id === b);
+  if (!first || !second) return true;
+  return first.startHour < second.endHour && second.startHour < first.endHour;
+};
+
 const getClientSessionId = () => {
   const storageKey = "deskflow-client-session-id";
   const existingSessionId = window.localStorage.getItem(storageKey);
