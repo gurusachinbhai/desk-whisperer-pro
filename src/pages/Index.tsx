@@ -2229,9 +2229,12 @@ const Index = () => {
     [confirmedBookings, nowTs],
   );
 
-  const handleConfirmBooking = () => {
+  const handleConfirmBooking = async () => {
+    const spot = bookingKind === "desk" ? selectedSeat : selectedRoom;
+    const dateKey = format(bookingDate, "yyyy-MM-dd");
+
     if (bookingKind === "desk") {
-      const dateKey = format(bookingDate, "yyyy-MM-dd");
+      // 1) Don't let same user book two seats for the same shift
       const conflict = activeBookings.find(
         (b) => b.kind === "desk" && b.shiftKey === selectedShift && b.date === dateKey,
       );
@@ -2241,10 +2244,91 @@ const Index = () => {
         });
         return;
       }
+
+      // 2) Pre-check company-wide bookings (seat already taken by a colleague)
+      const taken = companyBookings.find((cb) => {
+        if (cb.user_id === authUserId) return false;
+        if (cb.desk_label !== spot) return false;
+        if (cb.booking_date !== dateKey) return false;
+        let meta: any = {};
+        try { meta = cb.notes ? JSON.parse(cb.notes) : {}; } catch { /* ignore */ }
+        const cbShiftKey = meta.shiftKey || "";
+        // If we know the shift key, require match; else assume conflict (full day fallback)
+        return !cbShiftKey || cbShiftKey === selectedShift;
+      });
+      if (taken) {
+        toast.error("This seat is already booked.", {
+          description: `Booked by ${taken.user_name || "another employee"}.`,
+        });
+        return;
+      }
     }
 
-    const spot = bookingKind === "desk" ? selectedSeat : selectedRoom;
-    const dateKey = format(bookingDate, "yyyy-MM-dd");
+    // 3) DB-first insert for desks so the unique-index / overlap-trigger is authoritative
+    if (bookingKind === "desk" && authUserId && companyProfile?.id) {
+      const meta = JSON.stringify({
+        kind: "desk",
+        floor: selectedFloor,
+        area: selectedArea,
+        time: selectedHourlySlot,
+        shift: currentShift.label,
+        shiftKey: currentShift.id,
+        shiftRange: currentShift.range,
+        endsAt: computeShiftEnd(bookingDate, currentShift),
+      });
+      const { data, error } = await supabase
+        .from("desk_reservations")
+        .insert({
+          company_id: companyProfile.id,
+          user_id: authUserId,
+          user_name: currentUser?.displayName ?? "Employee",
+          desk_label: spot,
+          floor: String(selectedFloor),
+          booking_date: dateKey,
+          time_slot: currentShift.label || "Full Day",
+          status: "confirmed",
+          notes: meta,
+        })
+        .select()
+        .maybeSingle();
+
+      if (error) {
+        const msg = error.message || "";
+        if (error.code === "23505" || /already booked|duplicate key|overlap/i.test(msg)) {
+          toast.error("This seat is already booked.", {
+            description: "Please pick another seat or time slot.",
+          });
+        } else {
+          toast.error("Could not book seat", { description: msg });
+        }
+        return;
+      }
+
+      const newBooking: ConfirmedBooking = {
+        id: data?.id ?? `${Date.now()}`,
+        kind: "desk",
+        floor: selectedFloor,
+        area: selectedArea,
+        spot,
+        time: selectedHourlySlot,
+        shift: currentShift.label,
+        shiftKey: currentShift.id,
+        shiftRange: currentShift.range,
+        date: dateKey,
+        endsAt: computeShiftEnd(bookingDate, currentShift),
+        released: false,
+      };
+      setConfirmedBookings((current) => [newBooking, ...current].slice(0, 12));
+      setBookingText(
+        `Seat ${spot} · Floor ${selectedFloor} · ${selectedArea} · ${currentShift.label} (${currentShift.range})`,
+      );
+      toast.success(`Seat ${spot} booked`, {
+        description: `Floor ${selectedFloor} · ${selectedArea} · ${currentShift.label} · ${currentShift.range}`,
+      });
+      return;
+    }
+
+    // Rooms (or unauthenticated demo) — keep local-only flow
     const newBooking: ConfirmedBooking = {
       id: `${Date.now()}`,
       kind: bookingKind,
