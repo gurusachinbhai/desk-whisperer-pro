@@ -2410,12 +2410,12 @@ const Index = () => {
       if (cb.booking_date !== dateKey) return;
       let meta: any = {};
       try { meta = cb.notes ? JSON.parse(cb.notes) : {}; } catch { /* ignore */ }
-      const cbFloor = Number(meta.floor) || Number(cb.floor) || 0;
-      const cbArea = meta.area || "";
-      const cbShiftKey = meta.shiftKey || "";
+      const cbFloor = Number(meta.floor ?? cb.floor) || 0;
+      const cbArea = (cb.area || meta.area || "").toUpperCase();
+      const cbShiftKey = (meta.shiftKey || cb.time_slot?.toLowerCase() || "") as ShiftKey | "";
       if (cbFloor !== selectedFloor) return;
-      if (cbArea && cbArea !== selectedArea) return;
-      if (cbShiftKey && cbShiftKey !== selectedShift) return;
+      if (cbArea !== selectedArea.toUpperCase()) return;
+      if (!shiftOverlaps(cbShiftKey, selectedShift)) return;
       if (seatOccupants.has(cb.desk_label)) return;
       seatOccupants.set(cb.desk_label, {
         spot: cb.desk_label,
@@ -2446,7 +2446,7 @@ const Index = () => {
       setBookingKind("desk");
       setSelectedSeat(seatId);
       setSelectedDeskId(seatId);
-      setTimeout(() => handleConfirmBooking(seatId), 0);
+      setTimeout(() => handleConfirmBooking(seatId, "desk"), 0);
     };
 
     return (
