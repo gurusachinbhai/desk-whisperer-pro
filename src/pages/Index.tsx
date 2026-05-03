@@ -1096,6 +1096,7 @@ const Index = () => {
     user_name: string;
     desk_label: string;
     floor: string | null;
+    area: string | null;
     booking_date: string;
     time_slot: string;
     status: string;
@@ -1110,9 +1111,10 @@ const Index = () => {
     }
     let cancelled = false;
     const load = async () => {
+      await supabase.rpc("release_expired_desk_reservations", { _company_id: companyProfile.id });
       const { data } = await supabase
         .from("desk_reservations")
-        .select("id,user_id,user_name,desk_label,floor,booking_date,time_slot,status,notes")
+        .select("id,user_id,user_name,desk_label,floor,area,booking_date,time_slot,status,notes")
         .eq("company_id", companyProfile.id)
         .neq("status", "released")
         .neq("status", "cancelled");
