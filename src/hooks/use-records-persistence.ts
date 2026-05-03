@@ -362,4 +362,69 @@ export function useRecordsPersistence({
 
     return () => window.clearTimeout(t);
   }, [leaves, authUserId, companyId, userName, setLeaves]);
+
+  // ---------- SYNC DESK BOOKINGS ON CHANGE ----------
+  useEffect(() => {
+    if (!hydratedRef.current || !authUserId || !companyId) return;
+    const json = JSON.stringify(bookings);
+    if (json === lastBookingsJson.current) return;
+    const previousJson = lastBookingsJson.current;
+    lastBookingsJson.current = json;
+
+    const t = window.setTimeout(async () => {
+      // Detect deletions (released-from-list scenarios are handled by status update below)
+      try {
+        const prev: ConfirmedBooking[] = previousJson ? JSON.parse(previousJson) : [];
+        const removed = prev.filter((p) => !bookings.some((b) => b.id === p.id));
+        for (const r of removed) {
+          const dbId = bookingDbIdMap.current.get(r.id) ?? (/^[0-9a-f-]{36}$/i.test(r.id) ? r.id : null);
+          if (dbId) {
+            await supabase.from("desk_reservations").delete().eq("id", dbId);
+            bookingDbIdMap.current.delete(r.id);
+          }
+        }
+      } catch {
+        /* ignore */
+      }
+
+      for (const b of bookings) {
+        const meta = JSON.stringify({
+          kind: b.kind,
+          floor: b.floor,
+          area: b.area,
+          time: b.time,
+          shift: b.shift,
+          shiftKey: b.shiftKey,
+          shiftRange: b.shiftRange,
+          endsAt: b.endsAt,
+        });
+        const payload = {
+          company_id: companyId,
+          user_id: authUserId,
+          user_name: userName,
+          desk_label: b.spot,
+          floor: String(b.floor),
+          booking_date: b.date,
+          time_slot: b.shift || "Full Day",
+          status: b.released ? "released" : "confirmed",
+          notes: meta,
+        };
+        const dbId = bookingDbIdMap.current.get(b.id) ?? (/^[0-9a-f-]{36}$/i.test(b.id) ? b.id : null);
+        if (dbId) {
+          await supabase.from("desk_reservations").update(payload).eq("id", dbId);
+        } else {
+          const { data, error } = await supabase
+            .from("desk_reservations")
+            .insert(payload)
+            .select()
+            .maybeSingle();
+          if (!error && data) {
+            bookingDbIdMap.current.set(b.id, data.id as string);
+          }
+        }
+      }
+    }, 400);
+
+    return () => window.clearTimeout(t);
+  }, [bookings, authUserId, companyId, userName]);
 }
