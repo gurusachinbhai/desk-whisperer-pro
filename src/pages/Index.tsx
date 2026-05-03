@@ -1560,7 +1560,7 @@ const Index = () => {
 
       // Also save to permanent per-user history (survives publishes & reloads)
       if (authUserId && companyProfile?.id) {
-        await supabase.from("desk_reservations").insert({
+        const { error: insertErr } = await supabase.from("desk_reservations").insert({
           company_id: companyProfile.id,
           user_id: authUserId,
           user_name: currentUser?.displayName ?? "Employee",
@@ -1571,6 +1571,17 @@ const Index = () => {
           status: "confirmed",
           notes: JSON.stringify({ source: "deskflow_rpc" }),
         });
+        if (insertErr) {
+          // Unique-index / overlap-trigger conflict → another user grabbed it first
+          const msg = insertErr.message || "";
+          if (insertErr.code === "23505" || /already booked|duplicate key/i.test(msg)) {
+            toast.error(`Desk ${selectedDesk.id} was just booked by someone else`, {
+              description: "Please pick another seat or time slot.",
+            });
+          } else {
+            toast.error("Could not save booking history", { description: msg });
+          }
+        }
       }
     } finally {
       setIsBookingDesk(false);
