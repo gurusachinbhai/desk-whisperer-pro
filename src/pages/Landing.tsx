@@ -130,9 +130,10 @@ const navMenus: { label: string; items: { title: string; desc: string; href: str
   {
     label: "Product",
     items: [
-      { title: "Features", desc: "Everything in the box", href: "#features" },
-      { title: "How it works", desc: "From signup to payroll", href: "#how" },
-      { title: "Watch demo", desc: "2-minute walkthrough", href: "#video" },
+      { title: "Desk Booking", desc: "Open desks, live floor maps", href: "/product/desk-booking" },
+      { title: "HR Payroll Application", desc: "Run payroll without panic", href: "/product/payroll" },
+      { title: "HR Attendance & Leave", desc: "Smart sign-in and time off", href: "/product/attendance-leave" },
+      { title: "CRM Application", desc: "Customer relationships, simplified", href: "/product/crm" },
     ],
   },
 ];
