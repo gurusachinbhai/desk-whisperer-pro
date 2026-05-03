@@ -1,4 +1,6 @@
-import { Building2, Users, Globe2, Quote } from "lucide-react";
+import { Building2, Users, Globe2, Quote, LifeBuoy, Ticket } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
 import PageLayout from "@/components/PageLayout";
 
 const customers = [
@@ -45,6 +47,26 @@ const Customers = () => (
           </div>
         </div>
       ))}
+    </div>
+
+    <div className="mt-16 grid gap-4 rounded-2xl border border-primary/30 bg-primary/5 p-6 sm:grid-cols-[auto_1fr_auto] sm:items-center">
+      <div className="grid h-12 w-12 place-items-center rounded-xl bg-primary/15 text-primary">
+        <LifeBuoy className="h-6 w-6" />
+      </div>
+      <div>
+        <h3 className="text-lg font-extrabold">Customer Help & Support</h3>
+        <p className="text-sm text-muted-foreground">
+          Browse FAQs, contact our team, or raise a ticket and track it end-to-end.
+        </p>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <Button asChild>
+          <Link to="/help">Help center</Link>
+        </Button>
+        <Button asChild variant="outline">
+          <Link to="/tickets"><Ticket className="mr-2 h-4 w-4" /> Tickets</Link>
+        </Button>
+      </div>
     </div>
   </PageLayout>
 );
