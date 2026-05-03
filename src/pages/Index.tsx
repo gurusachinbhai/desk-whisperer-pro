@@ -1509,6 +1509,21 @@ const Index = () => {
 
       setBookingText(`Desk ${selectedDesk.id} · ${selectedSlot} confirmed`);
       toast.success(`Desk ${selectedDesk.id} booked`, { description: "Booking persisted and synced across devices." });
+
+      // Also save to permanent per-user history (survives publishes & reloads)
+      if (authUserId && companyProfile?.id) {
+        await supabase.from("desk_reservations").insert({
+          company_id: companyProfile.id,
+          user_id: authUserId,
+          user_name: currentUser?.displayName ?? "Employee",
+          desk_label: selectedDesk.id,
+          floor: null,
+          booking_date: format(new Date(), "yyyy-MM-dd"),
+          time_slot: selectedSlot,
+          status: "confirmed",
+          notes: JSON.stringify({ source: "deskflow_rpc" }),
+        });
+      }
     } finally {
       setIsBookingDesk(false);
     }
