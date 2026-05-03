@@ -2446,22 +2446,32 @@ const Index = () => {
                   {seatColumns.map((col) => {
                     const seatId = `${row}${col}`;
                     const occ = occupiedMap.get(seatId);
-                    const isMine =
-                      occ &&
-                      currentUser &&
-                      // own bookings have same id pattern; we just dim by spot
-                      false;
-                    const tone = occ
-                      ? "bg-destructive/10 text-destructive border-destructive/30"
-                      : "bg-success/10 text-success border-success/30 hover:bg-success/20";
+                    const isMine = !!occ?.isMine;
+                    // Available = green; My booking = primary ring; Colleague booking = light red
+                    const tone = !occ
+                      ? "bg-success/10 text-success border-success/30 hover:bg-success/20"
+                      : isMine
+                        ? "bg-primary/15 text-primary border-primary/40"
+                        : "bg-red-200/60 text-red-700 border-red-300 cursor-not-allowed dark:bg-red-500/20 dark:text-red-300 dark:border-red-500/40";
+                    const titleText = occ
+                      ? isMine
+                        ? `${seatId} · booked by you`
+                        : `${seatId} · booked by ${occ.bookerName}`
+                      : `${seatId} · available`;
                     return (
                       <button
                         key={seatId}
                         onClick={() => handleMapSeatClick(seatId)}
-                        className={`focus-premium aspect-square rounded-xl border-2 text-xs font-extrabold transition ${tone} ${isMine ? "ring-2 ring-primary" : ""}`}
-                        title={occ ? `${seatId} · booked` : `${seatId} · available`}
+                        disabled={!!occ && !isMine}
+                        className={`focus-premium aspect-square rounded-xl border-2 text-xs font-extrabold transition ${tone}`}
+                        title={titleText}
                       >
-                        {seatId}
+                        <span className="block leading-tight">{seatId}</span>
+                        {occ && !isMine && (
+                          <span className="mt-0.5 block truncate px-1 text-[8px] font-bold opacity-80">
+                            {occ.bookerName.split(" ")[0]}
+                          </span>
+                        )}
                       </button>
                     );
                   })}
@@ -2469,12 +2479,15 @@ const Index = () => {
               ))}
             </div>
 
-            <div className="mt-4 flex items-center justify-center gap-4 text-[11px] font-extrabold">
+            <div className="mt-4 flex flex-wrap items-center justify-center gap-4 text-[11px] font-extrabold">
               <span className="flex items-center gap-1.5">
-                <span className="h-3 w-3 rounded bg-success/30 ring-1 ring-success/50" /> Free
+                <span className="h-3 w-3 rounded bg-success/30 ring-1 ring-success/50" /> Available
               </span>
               <span className="flex items-center gap-1.5">
-                <span className="h-3 w-3 rounded bg-destructive/30 ring-1 ring-destructive/50" /> Booked
+                <span className="h-3 w-3 rounded bg-primary/30 ring-1 ring-primary/50" /> Your seat
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="h-3 w-3 rounded bg-red-300 ring-1 ring-red-400 dark:bg-red-500/40 dark:ring-red-500/60" /> Booked by colleague
               </span>
             </div>
           </div>
@@ -2486,8 +2499,8 @@ const Index = () => {
               </p>
               <ul className="mt-2 space-y-1">
                 {cellsForArea.map((b) => (
-                  <li key={b.id} className="flex items-center justify-between rounded-xl border border-border bg-surface-muted px-3 py-2 text-xs font-extrabold">
-                    <span>{b.spot}</span>
+                  <li key={b.spot} className="flex items-center justify-between rounded-xl border border-border bg-surface-muted px-3 py-2 text-xs font-extrabold">
+                    <span>{b.spot} · <span className="font-bold text-muted-foreground">{b.isMine ? "You" : b.bookerName}</span></span>
                     <span className="text-muted-foreground">{b.shiftRange}</span>
                   </li>
                 ))}
