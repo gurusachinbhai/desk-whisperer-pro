@@ -288,6 +288,7 @@ const Index = () => {
   const [bookingText, setBookingText] = useState("No active booking yet");
   const [clientSessionId] = useState(getClientSessionId);
   const [currentUser, setCurrentUser] = useState<{ displayName: string; email: string } | null>(null);
+  const [authUserId, setAuthUserId] = useState<string | null>(null);
   const [theme, setTheme] = useState<"light" | "dark">(() =>
     (typeof window !== "undefined" && window.localStorage.getItem("deskflow-theme") === "dark") ? "dark" : "light"
   );
