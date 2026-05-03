@@ -811,11 +811,13 @@ export type Database = {
       deskflow_desk_status: "available" | "occupied"
       support_ticket_priority: "P1" | "P2" | "P3" | "P4"
       support_ticket_status:
+        | "new"
         | "open"
         | "in_progress"
         | "on_hold"
         | "resolved"
         | "closed"
+        | "cancelled"
       support_ticket_type: "incident" | "request"
     }
     CompositeTypes: {
@@ -954,11 +956,13 @@ export const Constants = {
       deskflow_desk_status: ["available", "occupied"],
       support_ticket_priority: ["P1", "P2", "P3", "P4"],
       support_ticket_status: [
+        "new",
         "open",
         "in_progress",
         "on_hold",
         "resolved",
         "closed",
+        "cancelled",
       ],
       support_ticket_type: ["incident", "request"],
     },
