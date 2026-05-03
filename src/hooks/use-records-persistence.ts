@@ -145,8 +145,8 @@ export function useRecordsPersistence({
     if (!authUserId || !companyId) return;
 
     const run = async () => {
-      // Load attendance + leaves from DB (RLS scopes to my own rows)
-      const [attRes, lvRes] = await Promise.all([
+      // Load attendance + leaves + desk reservations from DB
+      const [attRes, lvRes, dkRes] = await Promise.all([
         supabase
           .from("attendance_records")
           .select("*")
@@ -157,11 +157,18 @@ export function useRecordsPersistence({
           .select("*")
           .eq("user_id", authUserId)
           .order("start_date", { ascending: false }),
+        supabase
+          .from("desk_reservations")
+          .select("*")
+          .eq("user_id", authUserId)
+          .order("booking_date", { ascending: false })
+          .limit(50),
       ]);
       if (cancelled) return;
 
       const dbAttendance = (attRes.data ?? []).map(fromDbAttendance);
       const dbLeaves = (lvRes.data ?? []).map(fromDbLeave);
+      const dbBookings = (dkRes.data ?? []).map(fromDbBooking);
 
       // Migrate any local (pre-DB) records keyed by company id
       const localAttRaw = window.localStorage.getItem(`deskflow-attendance-${companyId}`);
