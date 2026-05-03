@@ -46,6 +46,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { lovable } from "@/integrations/lovable";
 import { supabase } from "@/integrations/supabase/client";
+import { useRecordsPersistence } from "@/hooks/use-records-persistence";
 import hrgreatlyLogo from "@/assets/hrgreatly-logo.png";
 import {
   Select,
@@ -287,6 +288,7 @@ const Index = () => {
   const [bookingText, setBookingText] = useState("No active booking yet");
   const [clientSessionId] = useState(getClientSessionId);
   const [currentUser, setCurrentUser] = useState<{ displayName: string; email: string } | null>(null);
+  const [authUserId, setAuthUserId] = useState<string | null>(null);
   const [theme, setTheme] = useState<"light" | "dark">(() =>
     (typeof window !== "undefined" && window.localStorage.getItem("deskflow-theme") === "dark") ? "dark" : "light"
   );
@@ -302,6 +304,7 @@ const Index = () => {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setCurrentUser(null);
+    setAuthUserId(null);
     setCompanyProfile(null);
     setIsAdmin(false);
     setInvites([]);
@@ -1050,15 +1053,31 @@ const Index = () => {
   useEffect(() => {
     const loadSession = async () => {
       await loadEmployerWorkspace();
+      const { data } = await supabase.auth.getSession();
+      setAuthUserId(data.session?.user?.id ?? null);
     };
 
-    const { data: listener } = supabase.auth.onAuthStateChange(() => {
+    const { data: listener } = supabase.auth.onAuthStateChange((_evt, session) => {
+      setAuthUserId(session?.user?.id ?? null);
       setTimeout(() => loadEmployerWorkspace(), 0);
     });
 
     loadSession();
     return () => listener.subscription.unsubscribe();
   }, []);
+
+  // Persist attendance, leave & desk bookings to the database (per-user)
+  useRecordsPersistence({
+    authUserId,
+    companyId: companyProfile?.id ?? null,
+    userName: currentUser?.displayName ?? "Employee",
+    attendance,
+    setAttendance,
+    leaves,
+    setLeaves,
+    bookings: confirmedBookings,
+    setBookings: setConfirmedBookings,
+  });
 
   useEffect(() => {
     const acceptInvite = async () => {
@@ -1490,6 +1509,21 @@ const Index = () => {
 
       setBookingText(`Desk ${selectedDesk.id} · ${selectedSlot} confirmed`);
       toast.success(`Desk ${selectedDesk.id} booked`, { description: "Booking persisted and synced across devices." });
+
+      // Also save to permanent per-user history (survives publishes & reloads)
+      if (authUserId && companyProfile?.id) {
+        await supabase.from("desk_reservations").insert({
+          company_id: companyProfile.id,
+          user_id: authUserId,
+          user_name: currentUser?.displayName ?? "Employee",
+          desk_label: selectedDesk.id,
+          floor: null,
+          booking_date: format(new Date(), "yyyy-MM-dd"),
+          time_slot: selectedSlot,
+          status: "confirmed",
+          notes: JSON.stringify({ source: "deskflow_rpc" }),
+        });
+      }
     } finally {
       setIsBookingDesk(false);
     }
@@ -2981,7 +3015,7 @@ const Index = () => {
 
   // ============== ATTENDANCE HELPERS & RENDER ==============
   const todayKey = format(new Date(nowTs), "yyyy-MM-dd");
-  const myUserId = currentUser?.email ?? "anon";
+  const myUserId = authUserId ?? currentUser?.email ?? "anon";
   const myName = currentUser?.displayName ?? "You";
   const myTodayRecord = attendance.find((r) => r.userId === myUserId && r.date === todayKey) ?? null;
 
