@@ -3000,7 +3000,7 @@ const Index = () => {
 
   // ============== ATTENDANCE HELPERS & RENDER ==============
   const todayKey = format(new Date(nowTs), "yyyy-MM-dd");
-  const myUserId = currentUser?.email ?? "anon";
+  const myUserId = authUserId ?? currentUser?.email ?? "anon";
   const myName = currentUser?.displayName ?? "You";
   const myTodayRecord = attendance.find((r) => r.userId === myUserId && r.date === todayKey) ?? null;
 
