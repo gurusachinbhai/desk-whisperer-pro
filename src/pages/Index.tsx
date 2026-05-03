@@ -2445,7 +2445,7 @@ const Index = () => {
       setBookingKind("desk");
       setSelectedSeat(seatId);
       setSelectedDeskId(seatId);
-      setTimeout(() => handleConfirmBooking(), 0);
+      setTimeout(() => handleConfirmBooking(seatId), 0);
     };
 
     return (
@@ -3167,7 +3167,7 @@ const Index = () => {
         <p className="mt-2 text-sm font-semibold text-primary">{bookingText}</p>
         <button
           type="button"
-          onClick={handleConfirmBooking}
+          onClick={() => handleConfirmBooking()}
           className="focus-premium mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 font-extrabold text-primary-foreground shadow-glow transition-transform hover:-translate-y-0.5"
         >
           <CalendarCheck className="h-5 w-5" /> Confirm booking
