@@ -52,11 +52,11 @@ const SiteFooter = () => (
           <Button size="sm" type="submit">Subscribe</Button>
         </form>
         <div className="mt-5 flex gap-3 text-xs text-muted-foreground">
-          <a href="#" className="hover:text-foreground">Privacy</a>
+          <Link to="/privacy" className="hover:text-foreground">Privacy</Link>
           <span>·</span>
-          <a href="#" className="hover:text-foreground">Terms</a>
+          <Link to="/terms" className="hover:text-foreground">Terms</Link>
           <span>·</span>
-          <a href="#" className="hover:text-foreground">Security</a>
+          <Link to="/security" className="hover:text-foreground">Security</Link>
         </div>
       </div>
     </div>
