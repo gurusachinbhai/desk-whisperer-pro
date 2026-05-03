@@ -21,6 +21,7 @@ import {
   Globe2,
   History,
   KeyRound,
+  LifeBuoy,
   Lock,
   LogOut,
   Mail,
