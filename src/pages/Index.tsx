@@ -4231,6 +4231,46 @@ const Index = () => {
     const floorEntries = Object.entries(floorCounts).sort((a, b) => b[1] - a[1]);
     const maxFloor = Math.max(1, ...floorEntries.map(([, n]) => n));
 
+    // ===== Desk occupancy analytics (last 14 days) =====
+    const last14 = Array.from({ length: 14 }, (_, i) => {
+      const d = new Date();
+      d.setDate(d.getDate() - (13 - i));
+      return format(d, "yyyy-MM-dd");
+    });
+    const uniqueFloors = Array.from(new Set(confirmedBookings.map((b) => b.floor))).sort((a, b) => a - b);
+    const floorPalette = ["bg-primary", "bg-primary/70", "bg-primary/50", "bg-primary/30", "bg-amber-500/70", "bg-emerald-500/70"];
+    const occupancyByDate = last14.map((day) => {
+      const perFloor: Record<number, number> = {};
+      let total = 0;
+      confirmedBookings.forEach((b) => {
+        if (b.date === day) {
+          perFloor[b.floor] = (perFloor[b.floor] ?? 0) + 1;
+          total += 1;
+        }
+      });
+      return { day, perFloor, total };
+    });
+    const maxDay = Math.max(1, ...occupancyByDate.map((d) => d.total));
+    const peakDay = occupancyByDate.reduce((a, b) => (b.total > a.total ? b : a), occupancyByDate[0]);
+
+    // Peak shift / hours
+    const shiftPeak: Record<string, number> = {};
+    confirmedBookings.forEach((b) => {
+      const k = `${b.shift} (${b.shiftRange})`;
+      shiftPeak[k] = (shiftPeak[k] ?? 0) + 1;
+    });
+    const peakShiftEntries = Object.entries(shiftPeak).sort((a, b) => b[1] - a[1]);
+    const peakShift = peakShiftEntries[0];
+
+    // Utilization per floor for last 14 days (assume each floor has ~20 desks/day capacity baseline)
+    const FLOOR_CAPACITY = 20;
+    const floorUtilization = uniqueFloors.map((f) => {
+      const used = confirmedBookings.filter((b) => b.floor === f && last14.includes(b.date)).length;
+      const capacity = FLOOR_CAPACITY * last14.length;
+      const pct = Math.min(100, Math.round((used / capacity) * 100));
+      return { floor: f, used, capacity, pct };
+    });
+
     // Attendance trend (last 7 days)
     const attendanceByDay = last7.map((day) => {
       const recs = attendance.filter((r) => r.date === day);
