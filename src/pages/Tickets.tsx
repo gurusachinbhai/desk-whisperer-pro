@@ -229,11 +229,13 @@ const Tickets = () => {
       return;
     }
     setSubmitting(true);
+    const cid: string = companyId;
+    const uid: string = userId;
     const { data, error } = await supabase
       .from("support_tickets")
       .insert({
-        company_id: companyId,
-        created_by: userId,
+        company_id: cid,
+        created_by: uid,
         requester_name: displayName || email,
         requester_email: email || null,
         subject: parsed.data.subject,
