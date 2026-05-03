@@ -1052,15 +1052,31 @@ const Index = () => {
   useEffect(() => {
     const loadSession = async () => {
       await loadEmployerWorkspace();
+      const { data } = await supabase.auth.getSession();
+      setAuthUserId(data.session?.user?.id ?? null);
     };
 
-    const { data: listener } = supabase.auth.onAuthStateChange(() => {
+    const { data: listener } = supabase.auth.onAuthStateChange((_evt, session) => {
+      setAuthUserId(session?.user?.id ?? null);
       setTimeout(() => loadEmployerWorkspace(), 0);
     });
 
     loadSession();
     return () => listener.subscription.unsubscribe();
   }, []);
+
+  // Persist attendance, leave & desk bookings to the database (per-user)
+  useRecordsPersistence({
+    authUserId,
+    companyId: companyProfile?.id ?? null,
+    userName: currentUser?.displayName ?? "Employee",
+    attendance,
+    setAttendance,
+    leaves,
+    setLeaves,
+    bookings: confirmedBookings,
+    setBookings: setConfirmedBookings,
+  });
 
   useEffect(() => {
     const acceptInvite = async () => {
