@@ -4370,6 +4370,125 @@ const Index = () => {
           </div>
         </div>
 
+        {/* Desk occupancy analytics */}
+        <div className="rounded-[1.5rem] bg-surface-raised p-5 shadow-card">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Desk occupancy · last 14 days</p>
+              <h3 className="mt-1 font-display text-lg font-extrabold">Trend by date & floor</h3>
+            </div>
+            <div className="flex flex-wrap gap-2 text-[10px] font-extrabold">
+              {uniqueFloors.map((f, i) => (
+                <span key={f} className="inline-flex items-center gap-1 rounded-full bg-surface-muted px-2 py-1">
+                  <span className={`h-2 w-2 rounded-full ${floorPalette[i % floorPalette.length]}`} />
+                  Floor {f}
+                </span>
+              ))}
+              {uniqueFloors.length === 0 && (
+                <span className="text-muted-foreground">No floor data yet</span>
+              )}
+            </div>
+          </div>
+
+          <div className="mt-4 grid grid-cols-3 gap-3">
+            <StatCard
+              label="Peak day"
+              value={peakDay && peakDay.total > 0 ? `${peakDay.total}` : "—"}
+              sub={peakDay && peakDay.total > 0 ? format(new Date(peakDay.day), "EEE, MMM d") : "No bookings"}
+            />
+            <StatCard
+              label="Peak shift"
+              value={peakShift ? `${peakShift[1]}` : "—"}
+              sub={peakShift ? peakShift[0] : "No data"}
+            />
+            <StatCard
+              label="Avg / day"
+              value={`${(occupancyByDate.reduce((a, b) => a + b.total, 0) / 14).toFixed(1)}`}
+              sub="bookings / day (14d)"
+            />
+          </div>
+
+          <div className="mt-4 flex h-40 items-end gap-1.5">
+            {occupancyByDate.map((d) => {
+              const isToday = d.day === todayStr;
+              return (
+                <div key={d.day} className="flex flex-1 flex-col items-center gap-1">
+                  <div className="flex w-full flex-1 flex-col-reverse overflow-hidden rounded-t-md bg-surface-muted/40">
+                    {uniqueFloors.map((f, i) => {
+                      const n = d.perFloor[f] ?? 0;
+                      if (n === 0) return null;
+                      const h = (n / maxDay) * 100;
+                      return (
+                        <div
+                          key={f}
+                          className={`${floorPalette[i % floorPalette.length]} w-full`}
+                          style={{ height: `${h}%` }}
+                          title={`Floor ${f}: ${n}`}
+                        />
+                      );
+                    })}
+                  </div>
+                  <p className={`text-[9px] font-extrabold ${isToday ? "text-primary" : "text-muted-foreground"}`}>
+                    {format(new Date(d.day), "d/M")}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+
+          {floorUtilization.length > 0 && (
+            <>
+              <p className="mt-5 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Utilization by floor (14d)</p>
+              <ul className="mt-2 space-y-2">
+                {floorUtilization.map((u, i) => (
+                  <li key={u.floor}>
+                    <div className="flex items-center justify-between text-xs font-extrabold">
+                      <span>Floor {u.floor}</span>
+                      <span className="text-muted-foreground">
+                        {u.used} / {u.capacity} · {u.pct}%
+                      </span>
+                    </div>
+                    <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-surface-muted">
+                      <div
+                        className={`h-full rounded-full ${floorPalette[i % floorPalette.length]}`}
+                        style={{ width: `${u.pct}%` }}
+                      />
+                    </div>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-2 text-[10px] font-semibold text-muted-foreground">
+                Capacity assumes {FLOOR_CAPACITY} desks/floor/day baseline.
+              </p>
+            </>
+          )}
+
+          {peakShiftEntries.length > 0 && (
+            <>
+              <p className="mt-5 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Peak hours by shift</p>
+              <ul className="mt-2 space-y-2">
+                {peakShiftEntries.map(([label, n], i) => {
+                  const max = peakShiftEntries[0][1];
+                  return (
+                    <li key={label}>
+                      <div className="flex items-center justify-between text-xs font-extrabold">
+                        <span>{label}</span>
+                        <span className="text-muted-foreground">{n}</span>
+                      </div>
+                      <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-surface-muted">
+                        <div
+                          className={`h-full rounded-full ${i === 0 ? "bg-primary" : "bg-primary/60"}`}
+                          style={{ width: `${(n / max) * 100}%` }}
+                        />
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </>
+          )}
+        </div>
+
         {/* Booking utilization */}
         <div className="rounded-[1.5rem] bg-surface-raised p-5 shadow-card">
           <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Booking utilization</p>
