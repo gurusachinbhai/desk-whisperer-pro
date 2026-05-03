@@ -55,6 +55,7 @@ export const navMenus: { label: string; items: { title: string; desc: string; hr
     label: "Product",
     items: [
       { title: "Features", desc: "Everything in the box", href: "/#features" },
+      { title: "Desk Booking", desc: "Open desks, live floor maps", href: "/product/desk-booking" },
       { title: "How it works", desc: "From signup to payroll", href: "/#how" },
       { title: "Watch demo", desc: "2-minute walkthrough", href: "/#video" },
     ],
