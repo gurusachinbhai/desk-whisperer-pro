@@ -244,6 +244,7 @@ const Tickets = () => {
         priority: parsed.data.priority,
         assigned_group: parsed.data.assigned_group || null,
         assignee_name: parsed.data.assignee_name || null,
+        ticket_number: "",
       })
       .select("*")
       .single();
