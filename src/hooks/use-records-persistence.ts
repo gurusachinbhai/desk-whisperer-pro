@@ -20,6 +20,21 @@ export type AttendanceRecord = {
   };
 };
 
+export type ConfirmedBooking = {
+  id: string;
+  kind: "desk" | "room";
+  floor: number;
+  area: string;
+  spot: string;
+  time: string;
+  shift: string;
+  shiftKey: string;
+  shiftRange: string;
+  date: string; // yyyy-MM-dd
+  endsAt: number;
+  released: boolean;
+};
+
 export type LeaveType = "casual" | "sick" | "earned" | "unpaid";
 export type LeaveRequest = {
   id: string;
