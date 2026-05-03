@@ -24,6 +24,8 @@ import DeskBooking from "./pages/DeskBooking.tsx";
 import Payroll from "./pages/Payroll.tsx";
 import AttendanceLeave from "./pages/AttendanceLeave.tsx";
 import CRM from "./pages/CRM.tsx";
+import Help from "./pages/Help.tsx";
+import Tickets from "./pages/Tickets.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import DeviceShell from "./components/DeviceShell";
 
@@ -58,6 +60,8 @@ const App = () => (
             <Route path="/product/payroll" element={<Payroll />} />
             <Route path="/product/attendance-leave" element={<AttendanceLeave />} />
             <Route path="/product/crm" element={<CRM />} />
+            <Route path="/help" element={<Help />} />
+            <Route path="/tickets" element={<Tickets />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
