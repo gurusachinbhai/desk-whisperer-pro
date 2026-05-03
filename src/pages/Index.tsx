@@ -1079,6 +1079,54 @@ const Index = () => {
     setBookings: setConfirmedBookings,
   });
 
+  // Company-wide desk reservations (everyone in the same company) so the seat map
+  // can show colleague-booked seats in light red with the booker's name and prevent
+  // double-booking.
+  type CompanyBooking = {
+    id: string;
+    user_id: string;
+    user_name: string;
+    desk_label: string;
+    floor: string | null;
+    booking_date: string;
+    time_slot: string;
+    status: string;
+    notes: string | null;
+  };
+  const [companyBookings, setCompanyBookings] = useState<CompanyBooking[]>([]);
+
+  useEffect(() => {
+    if (!companyProfile?.id) {
+      setCompanyBookings([]);
+      return;
+    }
+    let cancelled = false;
+    const load = async () => {
+      const { data } = await supabase
+        .from("desk_reservations")
+        .select("id,user_id,user_name,desk_label,floor,booking_date,time_slot,status,notes")
+        .eq("company_id", companyProfile.id)
+        .neq("status", "released")
+        .neq("status", "cancelled");
+      if (!cancelled && data) setCompanyBookings(data as CompanyBooking[]);
+    };
+    load();
+
+    const channel = supabase
+      .channel(`desk-reservations-${companyProfile.id}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "desk_reservations", filter: `company_id=eq.${companyProfile.id}` },
+        () => load(),
+      )
+      .subscribe();
+
+    return () => {
+      cancelled = true;
+      supabase.removeChannel(channel);
+    };
+  }, [companyProfile?.id]);
+
   useEffect(() => {
     const acceptInvite = async () => {
       if (!inviteToken) return;
@@ -2227,16 +2275,59 @@ const Index = () => {
   // ============== VISUAL FLOOR MAP ==============
   const renderMapPanel = () => {
     const dateKey = format(bookingDate, "yyyy-MM-dd");
-    const cellsForArea = confirmedBookings.filter(
-      (b) =>
+
+    // Merge: own (local) bookings + colleague (DB) bookings — colleagues take precedence visually only when not mine.
+    type SeatOcc = { spot: string; bookerName: string; isMine: boolean; shift: string; shiftRange: string; floor: number; area: string };
+    const seatOccupants = new Map<string, SeatOcc>();
+
+    // Own bookings (local state — already filtered by current user)
+    confirmedBookings.forEach((b) => {
+      if (
         b.kind === "desk" &&
         !b.released &&
         b.floor === selectedFloor &&
         b.area === selectedArea &&
         b.shiftKey === selectedShift &&
-        b.date === dateKey,
-    );
-    const occupiedMap = new Map(cellsForArea.map((b) => [b.spot, b]));
+        b.date === dateKey
+      ) {
+        seatOccupants.set(b.spot, {
+          spot: b.spot,
+          bookerName: currentUser?.displayName ?? "You",
+          isMine: true,
+          shift: b.shift,
+          shiftRange: b.shiftRange,
+          floor: b.floor,
+          area: b.area,
+        });
+      }
+    });
+
+    // Company-wide bookings (other employees) — same floor/shift/date
+    companyBookings.forEach((cb) => {
+      if (cb.user_id === authUserId) return; // mine already added above
+      if (cb.booking_date !== dateKey) return;
+      let meta: any = {};
+      try { meta = cb.notes ? JSON.parse(cb.notes) : {}; } catch { /* ignore */ }
+      const cbFloor = Number(meta.floor) || Number(cb.floor) || 0;
+      const cbArea = meta.area || "";
+      const cbShiftKey = meta.shiftKey || "";
+      if (cbFloor !== selectedFloor) return;
+      if (cbArea && cbArea !== selectedArea) return;
+      if (cbShiftKey && cbShiftKey !== selectedShift) return;
+      if (seatOccupants.has(cb.desk_label)) return;
+      seatOccupants.set(cb.desk_label, {
+        spot: cb.desk_label,
+        bookerName: cb.user_name || "Colleague",
+        isMine: false,
+        shift: meta.shift || cb.time_slot || "",
+        shiftRange: meta.shiftRange || "",
+        floor: cbFloor,
+        area: cbArea,
+      });
+    });
+
+    const cellsForArea = Array.from(seatOccupants.values());
+    const occupiedMap = seatOccupants;
 
     const totalSeats = seatRows.length * seatColumns.length;
     const occupiedCount = cellsForArea.length;
@@ -2245,8 +2336,8 @@ const Index = () => {
     const handleMapSeatClick = (seatId: string) => {
       const existing = occupiedMap.get(seatId);
       if (existing) {
-        toast.info(`${seatId} is booked for ${existing.shift}`, {
-          description: `Floor ${existing.floor} · ${existing.area} · ${existing.shiftRange}`,
+        toast.info(`${seatId} is already booked`, {
+          description: `Booked by ${existing.bookerName}${existing.shiftRange ? ` · ${existing.shiftRange}` : ""}`,
         });
         return;
       }
@@ -2355,22 +2446,32 @@ const Index = () => {
                   {seatColumns.map((col) => {
                     const seatId = `${row}${col}`;
                     const occ = occupiedMap.get(seatId);
-                    const isMine =
-                      occ &&
-                      currentUser &&
-                      // own bookings have same id pattern; we just dim by spot
-                      false;
-                    const tone = occ
-                      ? "bg-destructive/10 text-destructive border-destructive/30"
-                      : "bg-success/10 text-success border-success/30 hover:bg-success/20";
+                    const isMine = !!occ?.isMine;
+                    // Available = green; My booking = primary ring; Colleague booking = light red
+                    const tone = !occ
+                      ? "bg-success/10 text-success border-success/30 hover:bg-success/20"
+                      : isMine
+                        ? "bg-primary/15 text-primary border-primary/40"
+                        : "bg-red-200/60 text-red-700 border-red-300 cursor-not-allowed dark:bg-red-500/20 dark:text-red-300 dark:border-red-500/40";
+                    const titleText = occ
+                      ? isMine
+                        ? `${seatId} · booked by you`
+                        : `${seatId} · booked by ${occ.bookerName}`
+                      : `${seatId} · available`;
                     return (
                       <button
                         key={seatId}
                         onClick={() => handleMapSeatClick(seatId)}
-                        className={`focus-premium aspect-square rounded-xl border-2 text-xs font-extrabold transition ${tone} ${isMine ? "ring-2 ring-primary" : ""}`}
-                        title={occ ? `${seatId} · booked` : `${seatId} · available`}
+                        disabled={!!occ && !isMine}
+                        className={`focus-premium aspect-square rounded-xl border-2 text-xs font-extrabold transition ${tone}`}
+                        title={titleText}
                       >
-                        {seatId}
+                        <span className="block leading-tight">{seatId}</span>
+                        {occ && !isMine && (
+                          <span className="mt-0.5 block truncate px-1 text-[8px] font-bold opacity-80">
+                            {occ.bookerName.split(" ")[0]}
+                          </span>
+                        )}
                       </button>
                     );
                   })}
@@ -2378,12 +2479,15 @@ const Index = () => {
               ))}
             </div>
 
-            <div className="mt-4 flex items-center justify-center gap-4 text-[11px] font-extrabold">
+            <div className="mt-4 flex flex-wrap items-center justify-center gap-4 text-[11px] font-extrabold">
               <span className="flex items-center gap-1.5">
-                <span className="h-3 w-3 rounded bg-success/30 ring-1 ring-success/50" /> Free
+                <span className="h-3 w-3 rounded bg-success/30 ring-1 ring-success/50" /> Available
               </span>
               <span className="flex items-center gap-1.5">
-                <span className="h-3 w-3 rounded bg-destructive/30 ring-1 ring-destructive/50" /> Booked
+                <span className="h-3 w-3 rounded bg-primary/30 ring-1 ring-primary/50" /> Your seat
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="h-3 w-3 rounded bg-red-300 ring-1 ring-red-400 dark:bg-red-500/40 dark:ring-red-500/60" /> Booked by colleague
               </span>
             </div>
           </div>
@@ -2395,8 +2499,8 @@ const Index = () => {
               </p>
               <ul className="mt-2 space-y-1">
                 {cellsForArea.map((b) => (
-                  <li key={b.id} className="flex items-center justify-between rounded-xl border border-border bg-surface-muted px-3 py-2 text-xs font-extrabold">
-                    <span>{b.spot}</span>
+                  <li key={b.spot} className="flex items-center justify-between rounded-xl border border-border bg-surface-muted px-3 py-2 text-xs font-extrabold">
+                    <span>{b.spot} · <span className="font-bold text-muted-foreground">{b.isMine ? "You" : b.bookerName}</span></span>
                     <span className="text-muted-foreground">{b.shiftRange}</span>
                   </li>
                 ))}
