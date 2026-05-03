@@ -2239,11 +2239,12 @@ const Index = () => {
     [confirmedBookings, nowTs],
   );
 
-  const handleConfirmBooking = async (overrideSeat?: string) => {
-    const spot = bookingKind === "desk" ? (overrideSeat ?? selectedSeat) : selectedRoom;
+  const handleConfirmBooking = async (overrideSeat?: string, overrideKind?: BookingKind) => {
+    const effectiveKind = overrideKind ?? bookingKind;
+    const spot = effectiveKind === "desk" ? (overrideSeat ?? selectedSeat) : selectedRoom;
     const dateKey = format(bookingDate, "yyyy-MM-dd");
 
-    if (bookingKind === "desk") {
+    if (effectiveKind === "desk") {
       // 1) Don't let same user book two seats for the same shift
       const conflict = activeBookings.find(
         (b) => b.kind === "desk" && b.shiftKey === selectedShift && b.date === dateKey,
@@ -2276,7 +2277,7 @@ const Index = () => {
     }
 
     // 3) DB-first insert for desks so the unique-index / overlap-trigger is authoritative
-    if (bookingKind === "desk" && authUserId && companyProfile?.id) {
+    if (effectiveKind === "desk" && authUserId && companyProfile?.id) {
       const meta = JSON.stringify({
         kind: "desk",
         floor: selectedFloor,
@@ -2337,7 +2338,7 @@ const Index = () => {
     // Rooms (or unauthenticated demo) — keep local-only flow
     const newBooking: ConfirmedBooking = {
       id: `${Date.now()}`,
-      kind: bookingKind,
+      kind: effectiveKind,
       floor: selectedFloor,
       area: selectedArea,
       spot,
@@ -2351,10 +2352,10 @@ const Index = () => {
     };
     setConfirmedBookings((current) => [newBooking, ...current].slice(0, 12));
     setBookingText(
-      `${bookingKind === "desk" ? "Seat" : "Meeting room"} ${spot} · Floor ${selectedFloor} · ${selectedArea} · ${currentShift.label} (${currentShift.range})`,
+      `${effectiveKind === "desk" ? "Seat" : "Meeting room"} ${spot} · Floor ${selectedFloor} · ${selectedArea} · ${currentShift.label} (${currentShift.range})`,
     );
     toast.success(
-      `${bookingKind === "desk" ? "Seat" : "Meeting room"} ${spot} booked`,
+      `${effectiveKind === "desk" ? "Seat" : "Meeting room"} ${spot} booked`,
       { description: `Floor ${selectedFloor} · ${selectedArea} · ${currentShift.label} · ${currentShift.range}` },
     );
   };
