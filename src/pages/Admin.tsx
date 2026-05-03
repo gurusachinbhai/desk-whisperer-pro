@@ -15,6 +15,7 @@ import {
   KeyRound,
   Trash2,
   AlertTriangle,
+  Ticket as TicketIcon,
 } from "lucide-react";
 import hrgreatlyLogo from "@/assets/hrgreatly-logo.png";
 
@@ -221,12 +222,20 @@ export default function Admin() {
               <h1 className="font-display text-base font-extrabold leading-tight">HR Greatly Admin Console</h1>
             </div>
           </div>
-          <button
-            onClick={() => navigate("/")}
-            className="inline-flex items-center gap-2 rounded-xl border border-border bg-background px-3 py-2 text-xs font-extrabold"
-          >
-            <ArrowLeft className="h-4 w-4" /> Back to app
-          </button>
+          <div className="flex items-center gap-2">
+            <Link
+              to="/tickets"
+              className="inline-flex items-center gap-2 rounded-xl border border-border bg-background px-3 py-2 text-xs font-extrabold"
+            >
+              <TicketIcon className="h-4 w-4" /> Support tickets
+            </Link>
+            <button
+              onClick={() => navigate("/")}
+              className="inline-flex items-center gap-2 rounded-xl border border-border bg-background px-3 py-2 text-xs font-extrabold"
+            >
+              <ArrowLeft className="h-4 w-4" /> Back to app
+            </button>
+          </div>
         </div>
         <nav className="mx-auto flex max-w-6xl gap-1 overflow-x-auto px-4 pb-2 text-xs font-bold">
           {[
