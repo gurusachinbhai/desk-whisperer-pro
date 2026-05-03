@@ -976,7 +976,7 @@ const TicketDetail = ({
       if (!reason) return;
       onUpdate({ status: s, hold_reason: reason });
     } else {
-      onUpdate({ status: s, ...(s !== "on_hold" ? { hold_reason: null } : {}) });
+      onUpdate({ status: s, hold_reason: null });
     }
   };
 
