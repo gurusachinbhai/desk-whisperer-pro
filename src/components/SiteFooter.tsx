@@ -20,7 +20,8 @@ const SiteFooter = () => (
       <div>
         <p className="text-sm font-bold uppercase tracking-wider text-foreground">Customer</p>
         <ul className="mt-4 space-y-2.5 text-sm text-muted-foreground">
-          <li><a href="mailto:support@hrgreatly.com" className="hover:text-foreground">Help & Support</a></li>
+          <li><Link to="/help" className="hover:text-foreground">Help & Support</Link></li>
+          <li><Link to="/tickets" className="hover:text-foreground">Raise / Track a Ticket</Link></li>
           <li><Link to="/login" className="hover:text-foreground">Login</Link></li>
           <li><Link to="/login?mode=signup" className="hover:text-foreground">Sign up</Link></li>
           <li><Link to="/contact" className="hover:text-foreground">Contact Us</Link></li>

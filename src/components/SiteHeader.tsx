@@ -72,9 +72,9 @@ const SiteHeader = () => {
       {/* Utility top bar */}
       <div className="hidden border-b border-border/60 bg-muted/40 text-xs text-muted-foreground md:block">
         <div className="mx-auto flex h-9 max-w-7xl items-center justify-end gap-6 px-4 sm:px-6 lg:px-8">
-          <a href="mailto:support@hrgreatly.com" className="flex items-center gap-1.5 transition-colors hover:text-foreground">
-            <LifeBuoy className="h-3.5 w-3.5" /> Support
-          </a>
+          <Link to="/help" className="flex items-center gap-1.5 transition-colors hover:text-foreground">
+            <LifeBuoy className="h-3.5 w-3.5" /> Help & Support
+          </Link>
           <DropdownMenu>
             <DropdownMenuTrigger className="flex items-center gap-1.5 outline-none transition-colors hover:text-foreground">
               <MapPin className="h-3.5 w-3.5" />
