@@ -2247,7 +2247,7 @@ const Index = () => {
     if (effectiveKind === "desk") {
       // 1) Don't let same user book two seats for the same shift
       const conflict = activeBookings.find(
-        (b) => b.kind === "desk" && b.shiftKey === selectedShift && b.date === dateKey,
+        (b) => b.kind === "desk" && b.date === dateKey && shiftOverlaps(b.shiftKey, selectedShift),
       );
       if (conflict) {
         toast.error("You already have a seat for this shift", {
@@ -2360,10 +2360,13 @@ const Index = () => {
     );
   };
 
-  const handleReleaseBooking = (id: string) => {
+  const handleReleaseBooking = async (id: string) => {
     setConfirmedBookings((current) =>
       current.map((b) => (b.id === id ? { ...b, released: true } : b)),
     );
+    if (/^[0-9a-f-]{36}$/i.test(id)) {
+      await supabase.from("desk_reservations").update({ status: "released" }).eq("id", id);
+    }
     toast.success("Desk released", { description: "Seat is now available for others." });
   };
 
