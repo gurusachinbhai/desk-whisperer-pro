@@ -97,7 +97,7 @@ const SiteHeader = () => {
       <header className="sticky top-0 z-30 w-full border-b border-border/60 bg-background/90 backdrop-blur supports-[backdrop-filter]:bg-background/75">
         <div className="mx-auto flex min-h-[100px] max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
           <Link to="/" className="flex items-center gap-3">
-            <img src={hrgreatlyLogo} alt="HR Greatly" className="h-[45px] w-auto" />
+            <img src={hrgreatlyLogo} alt="HR Greatly" className="h-[90px] w-auto" />
             <span className="hidden text-2xl font-extrabold tracking-tight text-primary sm:inline lg:text-3xl">
               HR Greatly
             </span>
@@ -141,7 +141,7 @@ const SiteHeader = () => {
               </SheetTrigger>
               <SheetContent side="left" className="w-[88vw] max-w-sm overflow-y-auto">
                 <div className="mt-6 flex items-center gap-2">
-                  <img src={hrgreatlyLogo} alt="HR Greatly" className="h-[45px] w-auto" />
+                  <img src={hrgreatlyLogo} alt="HR Greatly" className="h-[90px] w-auto" />
                   <span className="text-xl font-extrabold text-primary">HR Greatly</span>
                 </div>
                 <nav className="mt-8 flex flex-col gap-1">

@@ -64,7 +64,7 @@ const SiteFooter = () => (
     <div className="border-t border-border/60">
       <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
         <div className="flex items-center gap-4">
-          <img src={hrgreatlyLogo} alt="HR Greatly" className="h-[45px] w-auto" />
+          <img src={hrgreatlyLogo} alt="HR Greatly" className="h-[90px] w-auto" />
           <div>
             <p className="text-3xl font-extrabold tracking-tight text-primary sm:text-4xl">HR Greatly</p>
             <p className="mt-1 flex items-start gap-1.5 text-sm text-muted-foreground">
