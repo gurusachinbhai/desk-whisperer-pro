@@ -2275,16 +2275,59 @@ const Index = () => {
   // ============== VISUAL FLOOR MAP ==============
   const renderMapPanel = () => {
     const dateKey = format(bookingDate, "yyyy-MM-dd");
-    const cellsForArea = confirmedBookings.filter(
-      (b) =>
+
+    // Merge: own (local) bookings + colleague (DB) bookings — colleagues take precedence visually only when not mine.
+    type SeatOcc = { spot: string; bookerName: string; isMine: boolean; shift: string; shiftRange: string; floor: number; area: string };
+    const seatOccupants = new Map<string, SeatOcc>();
+
+    // Own bookings (local state — already filtered by current user)
+    confirmedBookings.forEach((b) => {
+      if (
         b.kind === "desk" &&
         !b.released &&
         b.floor === selectedFloor &&
         b.area === selectedArea &&
         b.shiftKey === selectedShift &&
-        b.date === dateKey,
-    );
-    const occupiedMap = new Map(cellsForArea.map((b) => [b.spot, b]));
+        b.date === dateKey
+      ) {
+        seatOccupants.set(b.spot, {
+          spot: b.spot,
+          bookerName: currentUser?.displayName ?? "You",
+          isMine: true,
+          shift: b.shift,
+          shiftRange: b.shiftRange,
+          floor: b.floor,
+          area: b.area,
+        });
+      }
+    });
+
+    // Company-wide bookings (other employees) — same floor/shift/date
+    companyBookings.forEach((cb) => {
+      if (cb.user_id === authUserId) return; // mine already added above
+      if (cb.booking_date !== dateKey) return;
+      let meta: any = {};
+      try { meta = cb.notes ? JSON.parse(cb.notes) : {}; } catch { /* ignore */ }
+      const cbFloor = Number(meta.floor) || Number(cb.floor) || 0;
+      const cbArea = meta.area || "";
+      const cbShiftKey = meta.shiftKey || "";
+      if (cbFloor !== selectedFloor) return;
+      if (cbArea && cbArea !== selectedArea) return;
+      if (cbShiftKey && cbShiftKey !== selectedShift) return;
+      if (seatOccupants.has(cb.desk_label)) return;
+      seatOccupants.set(cb.desk_label, {
+        spot: cb.desk_label,
+        bookerName: cb.user_name || "Colleague",
+        isMine: false,
+        shift: meta.shift || cb.time_slot || "",
+        shiftRange: meta.shiftRange || "",
+        floor: cbFloor,
+        area: cbArea,
+      });
+    });
+
+    const cellsForArea = Array.from(seatOccupants.values());
+    const occupiedMap = seatOccupants;
 
     const totalSeats = seatRows.length * seatColumns.length;
     const occupiedCount = cellsForArea.length;
@@ -2293,8 +2336,8 @@ const Index = () => {
     const handleMapSeatClick = (seatId: string) => {
       const existing = occupiedMap.get(seatId);
       if (existing) {
-        toast.info(`${seatId} is booked for ${existing.shift}`, {
-          description: `Floor ${existing.floor} · ${existing.area} · ${existing.shiftRange}`,
+        toast.info(`${seatId} is already booked`, {
+          description: `Booked by ${existing.bookerName}${existing.shiftRange ? ` · ${existing.shiftRange}` : ""}`,
         });
         return;
       }
