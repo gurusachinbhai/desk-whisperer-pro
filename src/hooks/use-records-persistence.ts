@@ -108,8 +108,8 @@ const fromDbBooking = (r: any): ConfirmedBooking => {
   return {
     id: r.id,
     kind: (meta.kind as "desk" | "room") || "desk",
-    floor: Number(meta.floor) || 1,
-    area: meta.area || "",
+    floor: Number(meta.floor ?? r.floor) || 1,
+    area: r.area || meta.area || "",
     spot: r.desk_label,
     time: meta.time || "",
     shift: meta.shift || r.time_slot,
@@ -404,6 +404,7 @@ export function useRecordsPersistence({
           user_name: userName,
           desk_label: b.spot,
           floor: String(b.floor),
+          area: b.area,
           booking_date: b.date,
           time_slot: b.shift || "Full Day",
           status: b.released ? "released" : "confirmed",

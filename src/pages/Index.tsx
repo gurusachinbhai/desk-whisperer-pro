@@ -232,6 +232,14 @@ const computeShiftEnd = (date: Date, shift: typeof shiftDefinitions[number]) => 
   return d.getTime() + shift.endHour * 60 * 60 * 1000;
 };
 
+const shiftOverlaps = (a: ShiftKey | "", b: ShiftKey | "") => {
+  if (!a || !b) return true;
+  const first = shiftDefinitions.find((shift) => shift.id === a);
+  const second = shiftDefinitions.find((shift) => shift.id === b);
+  if (!first || !second) return true;
+  return first.startHour < second.endHour && second.startHour < first.endHour;
+};
+
 const getClientSessionId = () => {
   const storageKey = "deskflow-client-session-id";
   const existingSessionId = window.localStorage.getItem(storageKey);
@@ -1088,6 +1096,7 @@ const Index = () => {
     user_name: string;
     desk_label: string;
     floor: string | null;
+    area: string | null;
     booking_date: string;
     time_slot: string;
     status: string;
@@ -1102,9 +1111,10 @@ const Index = () => {
     }
     let cancelled = false;
     const load = async () => {
+      await supabase.rpc("release_expired_desk_reservations", { _company_id: companyProfile.id });
       const { data } = await supabase
         .from("desk_reservations")
-        .select("id,user_id,user_name,desk_label,floor,booking_date,time_slot,status,notes")
+        .select("id,user_id,user_name,desk_label,floor,area,booking_date,time_slot,status,notes")
         .eq("company_id", companyProfile.id)
         .neq("status", "released")
         .neq("status", "cancelled");
@@ -2229,14 +2239,15 @@ const Index = () => {
     [confirmedBookings, nowTs],
   );
 
-  const handleConfirmBooking = async () => {
-    const spot = bookingKind === "desk" ? selectedSeat : selectedRoom;
+  const handleConfirmBooking = async (overrideSeat?: string, overrideKind?: BookingKind) => {
+    const effectiveKind = overrideKind ?? bookingKind;
+    const spot = effectiveKind === "desk" ? (overrideSeat ?? selectedSeat) : selectedRoom;
     const dateKey = format(bookingDate, "yyyy-MM-dd");
 
-    if (bookingKind === "desk") {
+    if (effectiveKind === "desk") {
       // 1) Don't let same user book two seats for the same shift
       const conflict = activeBookings.find(
-        (b) => b.kind === "desk" && b.shiftKey === selectedShift && b.date === dateKey,
+        (b) => b.kind === "desk" && b.date === dateKey && shiftOverlaps(b.shiftKey, selectedShift),
       );
       if (conflict) {
         toast.error("You already have a seat for this shift", {
@@ -2252,9 +2263,10 @@ const Index = () => {
         if (cb.booking_date !== dateKey) return false;
         let meta: any = {};
         try { meta = cb.notes ? JSON.parse(cb.notes) : {}; } catch { /* ignore */ }
-        const cbShiftKey = meta.shiftKey || "";
-        // If we know the shift key, require match; else assume conflict (full day fallback)
-        return !cbShiftKey || cbShiftKey === selectedShift;
+        const cbFloor = Number(meta.floor ?? cb.floor) || 0;
+        const cbArea = (cb.area || meta.area || "").toUpperCase();
+        const cbShiftKey = (meta.shiftKey || cb.time_slot?.toLowerCase() || "") as ShiftKey | "";
+        return cbFloor === selectedFloor && cbArea === selectedArea.toUpperCase() && shiftOverlaps(cbShiftKey, selectedShift);
       });
       if (taken) {
         toast.error("This seat is already booked.", {
@@ -2265,7 +2277,7 @@ const Index = () => {
     }
 
     // 3) DB-first insert for desks so the unique-index / overlap-trigger is authoritative
-    if (bookingKind === "desk" && authUserId && companyProfile?.id) {
+    if (effectiveKind === "desk" && authUserId && companyProfile?.id) {
       const meta = JSON.stringify({
         kind: "desk",
         floor: selectedFloor,
@@ -2276,21 +2288,16 @@ const Index = () => {
         shiftRange: currentShift.range,
         endsAt: computeShiftEnd(bookingDate, currentShift),
       });
-      const { data, error } = await supabase
-        .from("desk_reservations")
-        .insert({
-          company_id: companyProfile.id,
-          user_id: authUserId,
-          user_name: currentUser?.displayName ?? "Employee",
-          desk_label: spot,
-          floor: String(selectedFloor),
-          booking_date: dateKey,
-          time_slot: currentShift.label || "Full Day",
-          status: "confirmed",
-          notes: meta,
-        })
-        .select()
-        .maybeSingle();
+      const { data, error } = await supabase.rpc("book_desk_reservation", {
+        _company_id: companyProfile.id,
+        _desk_label: spot,
+        _floor: String(selectedFloor),
+        _area: selectedArea,
+        _booking_date: dateKey,
+        _time_slot: currentShift.label || "Full Day",
+        _user_name: currentUser?.displayName ?? "Employee",
+        _notes: meta,
+      });
 
       if (error) {
         const msg = error.message || "";
@@ -2331,7 +2338,7 @@ const Index = () => {
     // Rooms (or unauthenticated demo) — keep local-only flow
     const newBooking: ConfirmedBooking = {
       id: `${Date.now()}`,
-      kind: bookingKind,
+      kind: effectiveKind,
       floor: selectedFloor,
       area: selectedArea,
       spot,
@@ -2345,18 +2352,21 @@ const Index = () => {
     };
     setConfirmedBookings((current) => [newBooking, ...current].slice(0, 12));
     setBookingText(
-      `${bookingKind === "desk" ? "Seat" : "Meeting room"} ${spot} · Floor ${selectedFloor} · ${selectedArea} · ${currentShift.label} (${currentShift.range})`,
+      `${effectiveKind === "desk" ? "Seat" : "Meeting room"} ${spot} · Floor ${selectedFloor} · ${selectedArea} · ${currentShift.label} (${currentShift.range})`,
     );
     toast.success(
-      `${bookingKind === "desk" ? "Seat" : "Meeting room"} ${spot} booked`,
+      `${effectiveKind === "desk" ? "Seat" : "Meeting room"} ${spot} booked`,
       { description: `Floor ${selectedFloor} · ${selectedArea} · ${currentShift.label} · ${currentShift.range}` },
     );
   };
 
-  const handleReleaseBooking = (id: string) => {
+  const handleReleaseBooking = async (id: string) => {
     setConfirmedBookings((current) =>
       current.map((b) => (b.id === id ? { ...b, released: true } : b)),
     );
+    if (/^[0-9a-f-]{36}$/i.test(id)) {
+      await supabase.from("desk_reservations").update({ status: "released" }).eq("id", id);
+    }
     toast.success("Desk released", { description: "Seat is now available for others." });
   };
 
@@ -2403,12 +2413,12 @@ const Index = () => {
       if (cb.booking_date !== dateKey) return;
       let meta: any = {};
       try { meta = cb.notes ? JSON.parse(cb.notes) : {}; } catch { /* ignore */ }
-      const cbFloor = Number(meta.floor) || Number(cb.floor) || 0;
-      const cbArea = meta.area || "";
-      const cbShiftKey = meta.shiftKey || "";
+      const cbFloor = Number(meta.floor ?? cb.floor) || 0;
+      const cbArea = (cb.area || meta.area || "").toUpperCase();
+      const cbShiftKey = (meta.shiftKey || cb.time_slot?.toLowerCase() || "") as ShiftKey | "";
       if (cbFloor !== selectedFloor) return;
-      if (cbArea && cbArea !== selectedArea) return;
-      if (cbShiftKey && cbShiftKey !== selectedShift) return;
+      if (cbArea !== selectedArea.toUpperCase()) return;
+      if (!shiftOverlaps(cbShiftKey, selectedShift)) return;
       if (seatOccupants.has(cb.desk_label)) return;
       seatOccupants.set(cb.desk_label, {
         spot: cb.desk_label,
@@ -2439,7 +2449,7 @@ const Index = () => {
       setBookingKind("desk");
       setSelectedSeat(seatId);
       setSelectedDeskId(seatId);
-      setTimeout(() => handleConfirmBooking(), 0);
+      setTimeout(() => handleConfirmBooking(seatId, "desk"), 0);
     };
 
     return (
@@ -3161,7 +3171,7 @@ const Index = () => {
         <p className="mt-2 text-sm font-semibold text-primary">{bookingText}</p>
         <button
           type="button"
-          onClick={handleConfirmBooking}
+          onClick={() => handleConfirmBooking()}
           className="focus-premium mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 font-extrabold text-primary-foreground shadow-glow transition-transform hover:-translate-y-0.5"
         >
           <CalendarCheck className="h-5 w-5" /> Confirm booking

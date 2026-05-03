@@ -127,6 +127,7 @@ export type Database = {
       }
       desk_reservations: {
         Row: {
+          area: string
           booking_date: string
           company_id: string
           created_at: string
@@ -134,6 +135,8 @@ export type Database = {
           floor: string | null
           id: string
           notes: string | null
+          slot_end_hour: number | null
+          slot_start_hour: number | null
           status: string
           time_slot: string
           updated_at: string
@@ -141,6 +144,7 @@ export type Database = {
           user_name: string
         }
         Insert: {
+          area?: string
           booking_date: string
           company_id: string
           created_at?: string
@@ -148,6 +152,8 @@ export type Database = {
           floor?: string | null
           id?: string
           notes?: string | null
+          slot_end_hour?: number | null
+          slot_start_hour?: number | null
           status?: string
           time_slot?: string
           updated_at?: string
@@ -155,6 +161,7 @@ export type Database = {
           user_name: string
         }
         Update: {
+          area?: string
           booking_date?: string
           company_id?: string
           created_at?: string
@@ -162,6 +169,8 @@ export type Database = {
           floor?: string | null
           id?: string
           notes?: string | null
+          slot_end_hour?: number | null
+          slot_start_hour?: number | null
           status?: string
           time_slot?: string
           updated_at?: string
@@ -738,6 +747,41 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      book_desk_reservation: {
+        Args: {
+          _area: string
+          _booking_date: string
+          _company_id: string
+          _desk_label: string
+          _floor: string
+          _notes?: string
+          _time_slot: string
+          _user_name: string
+        }
+        Returns: {
+          area: string
+          booking_date: string
+          company_id: string
+          created_at: string
+          desk_label: string
+          floor: string | null
+          id: string
+          notes: string | null
+          slot_end_hour: number | null
+          slot_start_hour: number | null
+          status: string
+          time_slot: string
+          updated_at: string
+          user_id: string
+          user_name: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "desk_reservations"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       create_employee_invite: {
         Args: {
           _company_id: string
@@ -764,6 +808,18 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      desk_reservation_json_text: {
+        Args: { _key: string; _notes: string }
+        Returns: string
+      }
+      desk_reservation_shift_end: {
+        Args: { _time_slot: string }
+        Returns: number
+      }
+      desk_reservation_shift_start: {
+        Args: { _time_slot: string }
+        Returns: number
       }
       deskflow_book_desk: {
         Args: {
@@ -886,6 +942,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      release_expired_desk_reservations: {
+        Args: { _company_id: string }
+        Returns: number
       }
       revoke_super_admin: { Args: { _user_id: string }; Returns: boolean }
       signup_employee_record: {
