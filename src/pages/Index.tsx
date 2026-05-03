@@ -304,6 +304,7 @@ const Index = () => {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setCurrentUser(null);
+    setAuthUserId(null);
     setCompanyProfile(null);
     setIsAdmin(false);
     setInvites([]);
