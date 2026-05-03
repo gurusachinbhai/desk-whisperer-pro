@@ -97,6 +97,30 @@ const fromDbLeave = (r: any): LeaveRequest => ({
  * - Performs a one-time migration of any existing localStorage records.
  * - Upserts on every state change so nothing is lost across publishes / reloads.
  */
+const fromDbBooking = (r: any): ConfirmedBooking => {
+  const meta = (() => {
+    try {
+      return r.notes ? JSON.parse(r.notes) : {};
+    } catch {
+      return {};
+    }
+  })();
+  return {
+    id: r.id,
+    kind: (meta.kind as "desk" | "room") || "desk",
+    floor: Number(meta.floor) || 1,
+    area: meta.area || "",
+    spot: r.desk_label,
+    time: meta.time || "",
+    shift: meta.shift || r.time_slot,
+    shiftKey: meta.shiftKey || "morning",
+    shiftRange: meta.shiftRange || "",
+    date: r.booking_date,
+    endsAt: meta.endsAt ? Number(meta.endsAt) : Date.now(),
+    released: r.status === "released" || r.status === "cancelled",
+  };
+};
+
 export function useRecordsPersistence({
   authUserId,
   companyId,
@@ -105,10 +129,14 @@ export function useRecordsPersistence({
   setAttendance,
   leaves,
   setLeaves,
+  bookings,
+  setBookings,
 }: Params) {
   const hydratedRef = useRef(false);
   const lastAttendanceJson = useRef<string>("");
   const lastLeavesJson = useRef<string>("");
+  const lastBookingsJson = useRef<string>("");
+  const bookingDbIdMap = useRef<Map<string, string>>(new Map()); // local id -> db uuid
 
   // ---------- LOAD + MIGRATE ----------
   useEffect(() => {
