@@ -60,6 +60,8 @@ type Params = {
   setAttendance: React.Dispatch<React.SetStateAction<AttendanceRecord[]>>;
   leaves: LeaveRequest[];
   setLeaves: React.Dispatch<React.SetStateAction<LeaveRequest[]>>;
+  bookings: ConfirmedBooking[];
+  setBookings: React.Dispatch<React.SetStateAction<ConfirmedBooking[]>>;
 };
 
 // Map DB row -> local AttendanceRecord
