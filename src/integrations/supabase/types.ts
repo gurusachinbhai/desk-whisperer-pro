@@ -333,6 +333,110 @@ export type Database = {
           },
         ]
       }
+      support_ticket_comments: {
+        Row: {
+          author_name: string
+          author_user_id: string
+          body: string
+          created_at: string
+          id: string
+          is_internal: boolean
+          ticket_id: string
+        }
+        Insert: {
+          author_name: string
+          author_user_id: string
+          body: string
+          created_at?: string
+          id?: string
+          is_internal?: boolean
+          ticket_id: string
+        }
+        Update: {
+          author_name?: string
+          author_user_id?: string
+          body?: string
+          created_at?: string
+          id?: string
+          is_internal?: boolean
+          ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_ticket_comments_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      support_tickets: {
+        Row: {
+          assigned_group: string | null
+          assignee_name: string | null
+          assignee_user_id: string | null
+          closed_at: string | null
+          company_id: string
+          created_at: string
+          created_by: string
+          description: string
+          id: string
+          priority: Database["public"]["Enums"]["support_ticket_priority"]
+          requester_email: string | null
+          requester_name: string
+          resolution: string | null
+          resolved_at: string | null
+          status: Database["public"]["Enums"]["support_ticket_status"]
+          subject: string
+          ticket_number: string
+          ticket_type: Database["public"]["Enums"]["support_ticket_type"]
+          updated_at: string
+        }
+        Insert: {
+          assigned_group?: string | null
+          assignee_name?: string | null
+          assignee_user_id?: string | null
+          closed_at?: string | null
+          company_id: string
+          created_at?: string
+          created_by: string
+          description: string
+          id?: string
+          priority?: Database["public"]["Enums"]["support_ticket_priority"]
+          requester_email?: string | null
+          requester_name: string
+          resolution?: string | null
+          resolved_at?: string | null
+          status?: Database["public"]["Enums"]["support_ticket_status"]
+          subject: string
+          ticket_number: string
+          ticket_type?: Database["public"]["Enums"]["support_ticket_type"]
+          updated_at?: string
+        }
+        Update: {
+          assigned_group?: string | null
+          assignee_name?: string | null
+          assignee_user_id?: string | null
+          closed_at?: string | null
+          company_id?: string
+          created_at?: string
+          created_by?: string
+          description?: string
+          id?: string
+          priority?: Database["public"]["Enums"]["support_ticket_priority"]
+          requester_email?: string | null
+          requester_name?: string
+          resolution?: string | null
+          resolved_at?: string | null
+          status?: Database["public"]["Enums"]["support_ticket_status"]
+          subject?: string
+          ticket_number?: string
+          ticket_type?: Database["public"]["Enums"]["support_ticket_type"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           company_id: string | null
@@ -516,6 +620,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      generate_support_ticket_number: { Args: never; Returns: string }
       get_platform_stats: { Args: never; Returns: Json }
       grant_super_admin: { Args: { _email: string }; Returns: boolean }
       has_role: {
@@ -704,6 +809,14 @@ export type Database = {
         | "released"
         | "cancelled"
       deskflow_desk_status: "available" | "occupied"
+      support_ticket_priority: "P1" | "P2" | "P3" | "P4"
+      support_ticket_status:
+        | "open"
+        | "in_progress"
+        | "on_hold"
+        | "resolved"
+        | "closed"
+      support_ticket_type: "incident" | "request"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -839,6 +952,15 @@ export const Constants = {
         "cancelled",
       ],
       deskflow_desk_status: ["available", "occupied"],
+      support_ticket_priority: ["P1", "P2", "P3", "P4"],
+      support_ticket_status: [
+        "open",
+        "in_progress",
+        "on_hold",
+        "resolved",
+        "closed",
+      ],
+      support_ticket_type: ["incident", "request"],
     },
   },
 } as const
