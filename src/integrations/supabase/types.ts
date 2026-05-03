@@ -14,6 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
+      attendance_records: {
+        Row: {
+          check_in_at: string | null
+          check_out_at: string | null
+          company_id: string
+          created_at: string
+          id: string
+          location: string | null
+          notes: string | null
+          status: string
+          updated_at: string
+          user_id: string
+          user_name: string
+          work_date: string
+        }
+        Insert: {
+          check_in_at?: string | null
+          check_out_at?: string | null
+          company_id: string
+          created_at?: string
+          id?: string
+          location?: string | null
+          notes?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+          user_name: string
+          work_date?: string
+        }
+        Update: {
+          check_in_at?: string | null
+          check_out_at?: string | null
+          company_id?: string
+          created_at?: string
+          id?: string
+          location?: string | null
+          notes?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+          user_name?: string
+          work_date?: string
+        }
+        Relationships: []
+      }
       company_profiles: {
         Row: {
           address_line1: string | null
@@ -77,6 +122,51 @@ export type Database = {
           state?: string | null
           status?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      desk_reservations: {
+        Row: {
+          booking_date: string
+          company_id: string
+          created_at: string
+          desk_label: string
+          floor: string | null
+          id: string
+          notes: string | null
+          status: string
+          time_slot: string
+          updated_at: string
+          user_id: string
+          user_name: string
+        }
+        Insert: {
+          booking_date: string
+          company_id: string
+          created_at?: string
+          desk_label: string
+          floor?: string | null
+          id?: string
+          notes?: string | null
+          status?: string
+          time_slot?: string
+          updated_at?: string
+          user_id: string
+          user_name: string
+        }
+        Update: {
+          booking_date?: string
+          company_id?: string
+          created_at?: string
+          desk_label?: string
+          floor?: string | null
+          id?: string
+          notes?: string | null
+          status?: string
+          time_slot?: string
+          updated_at?: string
+          user_id?: string
+          user_name?: string
         }
         Relationships: []
       }
@@ -332,6 +422,63 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      leave_requests: {
+        Row: {
+          company_id: string
+          created_at: string
+          days: number
+          end_date: string
+          id: string
+          leave_type: string
+          reason: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          reviewer_name: string | null
+          reviewer_note: string | null
+          start_date: string
+          status: string
+          updated_at: string
+          user_id: string
+          user_name: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          days?: number
+          end_date: string
+          id?: string
+          leave_type?: string
+          reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          reviewer_name?: string | null
+          reviewer_note?: string | null
+          start_date: string
+          status?: string
+          updated_at?: string
+          user_id: string
+          user_name: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          days?: number
+          end_date?: string
+          id?: string
+          leave_type?: string
+          reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          reviewer_name?: string | null
+          reviewer_note?: string | null
+          start_date?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+          user_name?: string
+        }
+        Relationships: []
       }
       support_ticket_comments: {
         Row: {
