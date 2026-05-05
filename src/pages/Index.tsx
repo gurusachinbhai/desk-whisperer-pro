@@ -2962,267 +2962,423 @@ const Index = () => {
     );
   };
 
-  const renderBookingPanel = () => (
-    <div id="booking" className="rounded-[1.5rem] bg-surface-raised p-4 shadow-card">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm font-bold text-primary">Book screen</p>
-          <h2 className="font-display text-2xl font-extrabold">Choose your spot</h2>
-        </div>
-        <div className="rounded-2xl bg-success px-3 py-2 text-center text-success-foreground">
-          <p className="text-2xl font-extrabold">{confirmedBookings.length}</p>
-          <p className="text-[10px] font-bold uppercase">booked</p>
-        </div>
-      </div>
+  const renderBookingPanel = () => {
+    const dateKey = format(bookingDate, "yyyy-MM-dd");
 
-      {/* Company header */}
-      {companyProfile && (
-        <div className="mt-4 flex items-center gap-3 rounded-2xl bg-primary/10 p-3">
-          <div className="grid h-10 w-10 place-items-center rounded-2xl bg-primary text-primary-foreground">
-            <Building2 className="h-5 w-5" />
+    // Build a per-seat status map for the current floor/area/shift/date
+    const seatStatusMap = new Map<
+      string,
+      { state: "mine" | "taken"; bookerName: string; shift: string; shiftRange: string }
+    >();
+    confirmedBookings.forEach((b) => {
+      if (b.kind !== "desk" || b.released) return;
+      if (b.date !== dateKey || b.floor !== selectedFloor) return;
+      if ((b.area || "").toUpperCase() !== selectedArea.toUpperCase()) return;
+      if (!shiftOverlaps(b.shiftKey as ShiftKey, selectedShift)) return;
+      seatStatusMap.set(b.spot, {
+        state: "mine",
+        bookerName: currentUser?.displayName ?? "You",
+        shift: b.shift,
+        shiftRange: b.shiftRange,
+      });
+    });
+    companyBookings.forEach((cb) => {
+      if (cb.user_id === authUserId) return;
+      if (cb.booking_date !== dateKey) return;
+      let meta: any = {};
+      try { meta = cb.notes ? JSON.parse(cb.notes) : {}; } catch { /* ignore */ }
+      const cbFloor = Number(meta.floor ?? cb.floor) || 0;
+      const cbArea = (cb.area || meta.area || "").toUpperCase();
+      const cbShiftKey = (meta.shiftKey || cb.time_slot?.toLowerCase() || "") as ShiftKey | "";
+      if (cbFloor !== selectedFloor) return;
+      if (cbArea !== selectedArea.toUpperCase()) return;
+      if (!shiftOverlaps(cbShiftKey, selectedShift)) return;
+      if (seatStatusMap.has(cb.desk_label)) return;
+      seatStatusMap.set(cb.desk_label, {
+        state: "taken",
+        bookerName: cb.user_name || "Colleague",
+        shift: meta.shift || cb.time_slot || "",
+        shiftRange: meta.shiftRange || "",
+      });
+    });
+
+    const totalSeats = seatRows.length * seatColumns.length;
+    const takenCount = Array.from(seatStatusMap.values()).filter((s) => s.state !== "mine" || true).length;
+    const availSeats = totalSeats - takenCount;
+
+    // Quick date helpers
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1);
+    const isSameDay = (a: Date, b: Date) =>
+      a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+
+    const lastBooking = confirmedBookings[0];
+
+    const selectedStatus = bookingKind === "desk" ? seatStatusMap.get(selectedSeat) : undefined;
+    const canConfirm = bookingKind === "desk" ? !selectedStatus : Boolean(selectedRoom);
+
+    return (
+      <div id="booking" className="space-y-4">
+        {/* Hero */}
+        <div className="overflow-hidden rounded-[1.75rem] bg-gradient-to-br from-primary/15 via-surface-raised to-surface-raised p-5 shadow-card">
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary">Reserve a spot</p>
+              <h2 className="mt-1 font-display text-2xl font-extrabold leading-tight">
+                {bookingKind === "desk" ? "Find your seat" : "Book a meeting room"}
+              </h2>
+              <p className="mt-1 text-xs font-semibold text-muted-foreground">
+                {availSeats} of {totalSeats} seats free · {currentShift.label}
+              </p>
+            </div>
+            <div className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-glow">
+              <p className="font-display text-2xl font-extrabold leading-none">{confirmedBookings.length}</p>
+            </div>
           </div>
-          <div className="min-w-0 flex-1">
-            <p className="truncate font-display text-base font-extrabold">{companyProfile.name}</p>
-            <p className="truncate text-xs font-semibold text-muted-foreground">
-              Code · {companyProfile.organization_code}
-            </p>
+
+          {/* Desk vs Room */}
+          <div className="mt-4 grid grid-cols-2 rounded-2xl bg-background/70 p-1 backdrop-blur">
+            {(["desk", "room"] as BookingKind[]).map((kind) => (
+              <button
+                key={kind}
+                type="button"
+                onClick={() => setBookingKind(kind)}
+                className={`focus-premium flex items-center justify-center gap-2 rounded-xl py-2 text-xs font-extrabold transition-all ${
+                  bookingKind === kind ? "bg-primary text-primary-foreground shadow-glow" : "text-muted-foreground"
+                }`}
+              >
+                {kind === "desk" ? <Sofa className="h-4 w-4" /> : <DoorOpen className="h-4 w-4" />}
+                {kind === "desk" ? "Desk seat" : "Meeting room"}
+              </button>
+            ))}
           </div>
         </div>
-      )}
 
-      {/* Booking date */}
-      <div className="mt-4">
-        <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Booking date</p>
-        <Popover>
-          <PopoverTrigger asChild>
-            <button
-              type="button"
-              className={cn(
-                "focus-premium mt-2 flex w-full items-center justify-between rounded-2xl border border-border bg-background px-4 py-3 text-left font-semibold",
-                !bookingDate && "text-muted-foreground",
-              )}
-            >
-              <span className="flex items-center gap-2">
-                <CalendarIcon className="h-4 w-4 text-primary" />
-                {bookingDate ? format(bookingDate, "EEE, MMM d, yyyy") : "Pick a date"}
-              </span>
-              <ChevronRight className="h-4 w-4 text-muted-foreground" />
-            </button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="start">
-            <Calendar
-              mode="single"
-              selected={bookingDate}
-              onSelect={(d) => d && setBookingDate(d)}
-              disabled={(date) => {
-                const today = new Date();
-                today.setHours(0, 0, 0, 0);
-                return date < today;
-              }}
-              initialFocus
-              className={cn("p-3 pointer-events-auto")}
-            />
-          </PopoverContent>
-        </Popover>
-      </div>
+        {/* Date + Shift — primary controls */}
+        <div className="grid gap-3 sm:grid-cols-2">
+          {/* Date */}
+          <div className="rounded-2xl bg-surface-raised p-4 shadow-card">
+            <div className="flex items-center justify-between">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Date</p>
+              <div className="flex gap-1">
+                <button
+                  type="button"
+                  onClick={() => setBookingDate(today)}
+                  className={`rounded-full px-2 py-0.5 text-[10px] font-extrabold uppercase transition ${
+                    isSameDay(bookingDate, today) ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-primary/10"
+                  }`}
+                >
+                  Today
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBookingDate(tomorrow)}
+                  className={`rounded-full px-2 py-0.5 text-[10px] font-extrabold uppercase transition ${
+                    isSameDay(bookingDate, tomorrow) ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-primary/10"
+                  }`}
+                >
+                  Tomorrow
+                </button>
+              </div>
+            </div>
+            <Popover>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  className="focus-premium mt-2 flex w-full items-center justify-between rounded-xl border border-border bg-background px-3 py-2.5 text-left"
+                >
+                  <span className="flex items-center gap-2">
+                    <CalendarIcon className="h-4 w-4 text-primary" />
+                    <span className="font-extrabold">{format(bookingDate, "EEE, MMM d")}</span>
+                    <span className="text-xs font-semibold text-muted-foreground">{format(bookingDate, "yyyy")}</span>
+                  </span>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={bookingDate}
+                  onSelect={(d) => d && setBookingDate(d)}
+                  disabled={(date) => {
+                    const t = new Date(); t.setHours(0, 0, 0, 0);
+                    return date < t;
+                  }}
+                  initialFocus
+                  className={cn("p-3 pointer-events-auto")}
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
 
-      {/* Desk vs Meeting room toggle */}
-      <div className="mt-4 grid grid-cols-2 rounded-2xl bg-muted p-1">
-        {(["desk", "room"] as BookingKind[]).map((kind) => (
-          <button
-            key={kind}
-            type="button"
-            onClick={() => setBookingKind(kind)}
-            className={`focus-premium flex items-center justify-center gap-2 rounded-xl py-2 text-sm font-extrabold transition-all ${
-              bookingKind === kind ? "bg-primary text-primary-foreground shadow-glow" : "text-muted-foreground"
-            }`}
-          >
-            {kind === "desk" ? <Sofa className="h-4 w-4" /> : <DoorOpen className="h-4 w-4" />}
-            {kind === "desk" ? "Desk seat" : "Meeting room"}
-          </button>
-        ))}
-      </div>
-
-      {/* Floor selection (admin-managed) */}
-      <div className="mt-4">
-        <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Floor</p>
-        <div className="mt-2 grid grid-cols-6 gap-2">
-          {companyFloors.map((floor) => (
-            <button
-              key={floor}
-              type="button"
-              onClick={() => setSelectedFloor(floor)}
-              className={`focus-premium rounded-2xl py-2 text-sm font-extrabold transition-all ${
-                selectedFloor === floor ? "bg-primary text-primary-foreground shadow-glow" : "bg-muted text-muted-foreground"
-              }`}
-            >
-              {floor}
-            </button>
-          ))}
+          {/* Shift */}
+          <div className="rounded-2xl bg-surface-raised p-4 shadow-card">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Shift</p>
+            <div className="mt-2 grid grid-cols-2 gap-1.5">
+              {shiftDefinitions.map((shift) => (
+                <button
+                  key={shift.id}
+                  type="button"
+                  onClick={() => {
+                    setSelectedShift(shift.id);
+                    setSelectedHourlySlot(shift.times[0]);
+                  }}
+                  className={`focus-premium rounded-xl px-2 py-1.5 text-left transition-all ${
+                    selectedShift === shift.id
+                      ? "bg-primary text-primary-foreground shadow-glow"
+                      : "bg-muted text-muted-foreground hover:bg-primary/10"
+                  }`}
+                >
+                  <span className="block text-xs font-extrabold leading-tight">{shift.label}</span>
+                  <span className="block text-[10px] font-semibold opacity-80">{shift.range}</span>
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
-      </div>
 
-      {/* Area selection (admin-managed) */}
-      <div className="mt-4">
-        <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Area</p>
-        <div className="mt-2 grid grid-cols-3 gap-2">
-          {companyAreas.map((area) => (
-            <button
-              key={area}
-              type="button"
-              onClick={() => setSelectedArea(area)}
-              className={`focus-premium rounded-2xl py-2 text-xs font-extrabold transition-all ${
-                selectedArea === area
-                  ? "bg-primary text-primary-foreground shadow-glow"
-                  : "bg-muted text-muted-foreground"
-              }`}
-            >
-              {area}
-            </button>
-          ))}
+        {/* Floor + Area chips */}
+        <div className="rounded-2xl bg-surface-raised p-4 shadow-card">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="min-w-0 flex-1">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Floor</p>
+              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                {companyFloors.map((floor) => (
+                  <button
+                    key={floor}
+                    type="button"
+                    onClick={() => setSelectedFloor(floor)}
+                    className={`focus-premium rounded-full px-3 py-1 text-xs font-extrabold transition-all ${
+                      selectedFloor === floor
+                        ? "bg-primary text-primary-foreground shadow-glow"
+                        : "bg-muted text-muted-foreground hover:bg-primary/10"
+                    }`}
+                  >
+                    Floor {floor}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Area</p>
+              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                {companyAreas.map((area) => (
+                  <button
+                    key={area}
+                    type="button"
+                    onClick={() => setSelectedArea(area)}
+                    className={`focus-premium rounded-full px-3 py-1 text-xs font-extrabold transition-all ${
+                      selectedArea === area
+                        ? "bg-primary text-primary-foreground shadow-glow"
+                        : "bg-muted text-muted-foreground hover:bg-primary/10"
+                    }`}
+                  >
+                    {area}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
 
-      {/* Seat or Room selection */}
-      {bookingKind === "desk" ? (
-        <div className="mt-4">
-          <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Seat</p>
-          <div className="mt-2 space-y-2">
-            {seatRows.map((row) => (
-              <div key={row} className="grid grid-cols-4 gap-2">
-                {seatColumns.map((col) => {
+        {/* Seats / Rooms */}
+        {bookingKind === "desk" ? (
+          <div className="rounded-2xl bg-surface-raised p-4 shadow-card">
+            <div className="flex items-center justify-between">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                Seats · Floor {selectedFloor} · {selectedArea}
+              </p>
+              <div className="flex items-center gap-3 text-[10px] font-bold uppercase">
+                <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-emerald-500" /> Available</span>
+                <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-red-400" /> Booked</span>
+              </div>
+            </div>
+
+            <div className="mt-3 grid grid-cols-4 gap-2 sm:grid-cols-5">
+              {seatRows.map((row) =>
+                seatColumns.map((col) => {
                   const seatId = `${row}${col}`;
+                  const status = seatStatusMap.get(seatId);
                   const isSelected = selectedSeat === seatId;
+                  const isMine = status?.state === "mine";
+                  const isTaken = status?.state === "taken";
+                  const initials = (status?.bookerName || "")
+                    .split(" ")
+                    .map((p) => p[0])
+                    .filter(Boolean)
+                    .slice(0, 2)
+                    .join("")
+                    .toUpperCase();
+
                   return (
                     <button
                       key={seatId}
                       type="button"
                       onClick={() => setSelectedSeat(seatId)}
-                      className={`focus-premium rounded-2xl border py-3 text-sm font-extrabold transition-all ${
-                        isSelected
-                          ? "border-primary bg-primary text-primary-foreground shadow-glow"
-                          : "border-border bg-background text-foreground hover:bg-muted"
-                      }`}
+                      title={status ? `Booked by ${status.bookerName}` : "Available"}
+                      className={cn(
+                        "focus-premium group relative flex flex-col items-center justify-center gap-1 rounded-2xl border-2 p-2.5 text-xs font-extrabold transition-all",
+                        isTaken
+                          ? "border-red-300/70 bg-red-100/70 text-red-700 dark:border-red-500/40 dark:bg-red-950/40 dark:text-red-200"
+                          : isMine
+                            ? "border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-500/50 dark:bg-amber-950/40 dark:text-amber-100"
+                            : isSelected
+                              ? "border-primary bg-primary text-primary-foreground shadow-glow scale-[1.03]"
+                              : "border-emerald-200 bg-emerald-50 text-emerald-800 hover:scale-[1.03] hover:border-emerald-400 dark:border-emerald-700/40 dark:bg-emerald-950/30 dark:text-emerald-200",
+                      )}
                     >
-                      {seatId}
+                      <div className="flex items-center gap-1">
+                        {isTaken ? (
+                          <Lock className="h-3 w-3" />
+                        ) : isMine ? (
+                          <CheckCircle2 className="h-3 w-3" />
+                        ) : isSelected ? (
+                          <Sparkles className="h-3 w-3" />
+                        ) : (
+                          <Sofa className="h-3 w-3" />
+                        )}
+                        <span className="text-sm">{seatId}</span>
+                      </div>
+                      {status && (
+                        <span className="line-clamp-1 max-w-full text-[9px] font-semibold opacity-80">
+                          {isMine ? "You" : status.bookerName}
+                        </span>
+                      )}
+                      {isTaken && initials && (
+                        <span className="absolute -right-1 -top-1 grid h-5 w-5 place-items-center rounded-full bg-red-500 text-[9px] font-extrabold text-white shadow-sm ring-2 ring-background">
+                          {initials}
+                        </span>
+                      )}
                     </button>
                   );
-                })}
-              </div>
-            ))}
+                }),
+              )}
+            </div>
           </div>
-        </div>
-      ) : (
-        <div className="mt-4">
-          <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Meeting room</p>
-          <div className="mt-2 grid grid-cols-5 gap-2">
-            {meetingRooms.map((room) => (
-              <button
-                key={room}
-                type="button"
-                onClick={() => setSelectedRoom(room)}
-                className={`focus-premium rounded-2xl border py-3 text-xs font-extrabold transition-all ${
-                  selectedRoom === room
-                    ? "border-primary bg-primary text-primary-foreground shadow-glow"
-                    : "border-border bg-background text-foreground hover:bg-muted"
-                }`}
-              >
-                {room}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Shift selection */}
-      <div className="mt-4">
-        <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Shift</p>
-        <div className="mt-2 grid grid-cols-2 gap-2">
-          {shiftDefinitions.map((shift) => (
-            <button
-              key={shift.id}
-              type="button"
-              onClick={() => {
-                setSelectedShift(shift.id);
-                setSelectedHourlySlot(shift.times[0]);
-              }}
-              className={`focus-premium rounded-2xl py-2 text-xs font-extrabold transition-all ${
-                selectedShift === shift.id
-                  ? "bg-primary text-primary-foreground shadow-glow"
-                  : "bg-muted text-muted-foreground"
-              }`}
-            >
-              <span className="block">{shift.label}</span>
-              <span className="block text-[10px] font-semibold opacity-80">{shift.range}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Time is determined by shift — no per-hour picker */}
-
-      {/* Summary + confirm */}
-      <div className="mt-4 rounded-2xl bg-background p-4">
-        <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Ready to book</p>
-        <p className="font-display text-xl font-extrabold">
-          {bookingKind === "desk" ? "Seat" : "Room"} {bookingKind === "desk" ? selectedSeat : selectedRoom} · Floor {selectedFloor} · {selectedArea}
-        </p>
-        <p className="mt-1 text-sm font-semibold text-muted-foreground">
-          {format(bookingDate, "EEE, MMM d")} · {currentShift.label} ({currentShift.range})
-        </p>
-        <p className="mt-2 text-sm font-semibold text-primary">{bookingText}</p>
-        <button
-          type="button"
-          onClick={() => handleConfirmBooking()}
-          className="focus-premium mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 font-extrabold text-primary-foreground shadow-glow transition-transform hover:-translate-y-0.5"
-        >
-          <CalendarCheck className="h-5 w-5" /> Confirm booking
-        </button>
-      </div>
-
-      {confirmedBookings.length > 0 && (
-        <div className="mt-4 space-y-2">
-          <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Recent bookings</p>
-          {confirmedBookings.map((booking) => {
-            const isActive = !booking.released && booking.endsAt > nowTs;
-            return (
-              <div key={booking.id} className="flex items-center justify-between gap-3 rounded-2xl bg-background p-3">
-                <div className="flex min-w-0 items-center gap-2">
-                  {booking.kind === "desk" ? (
-                    <Sofa className="h-4 w-4 shrink-0 text-primary" />
-                  ) : (
-                    <DoorOpen className="h-4 w-4 shrink-0 text-primary" />
+        ) : (
+          <div className="rounded-2xl bg-surface-raised p-4 shadow-card">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Meeting room</p>
+            <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-5">
+              {meetingRooms.map((room) => (
+                <button
+                  key={room}
+                  type="button"
+                  onClick={() => setSelectedRoom(room)}
+                  className={cn(
+                    "focus-premium flex flex-col items-center gap-1 rounded-2xl border-2 p-3 text-xs font-extrabold transition-all",
+                    selectedRoom === room
+                      ? "border-primary bg-primary text-primary-foreground shadow-glow"
+                      : "border-border bg-background hover:border-primary/40",
                   )}
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-extrabold">
-                      {booking.kind === "desk" ? "Seat" : "Room"} {booking.spot} · Floor {booking.floor} · {booking.area}
-                    </p>
-                    <p className="truncate text-xs font-semibold text-muted-foreground">
-                      {booking.date} · {booking.shift} ({booking.shiftRange})
-                    </p>
-                  </div>
-                </div>
-                {isActive ? (
-                  <button
-                    type="button"
-                    onClick={() => handleReleaseBooking(booking.id)}
-                    className="focus-premium flex shrink-0 items-center gap-1 rounded-2xl bg-destructive px-3 py-2 text-xs font-extrabold text-destructive-foreground shadow-md ring-2 ring-destructive/40 transition-transform hover:-translate-y-0.5"
-                    aria-label="Release desk"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" /> Release
-                  </button>
-                ) : (
-                  <span className="shrink-0 rounded-full bg-muted px-2 py-1 text-[10px] font-extrabold uppercase text-muted-foreground">
-                    {booking.released ? "Released" : "Ended"}
-                  </span>
-                )}
-              </div>
-            );
-          })}
+                >
+                  <DoorOpen className="h-4 w-4" />
+                  {room}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Summary + confirm (sticky-ish) */}
+        <div className="sticky bottom-4 z-10 overflow-hidden rounded-2xl border border-primary/20 bg-surface-raised/95 p-4 shadow-card backdrop-blur">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Ready to book</p>
+              <p className="truncate font-display text-base font-extrabold">
+                {bookingKind === "desk" ? "Seat" : "Room"} {bookingKind === "desk" ? selectedSeat : selectedRoom} · F{selectedFloor} · {selectedArea}
+              </p>
+              <p className="truncate text-[11px] font-semibold text-muted-foreground">
+                {format(bookingDate, "EEE, MMM d")} · {currentShift.label} · {currentShift.range}
+              </p>
+              {selectedStatus && (
+                <p className="mt-0.5 truncate text-[11px] font-bold text-red-600 dark:text-red-400">
+                  Already booked by {selectedStatus.bookerName}
+                </p>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => handleConfirmBooking()}
+              disabled={!canConfirm}
+              className="focus-premium flex shrink-0 items-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-extrabold text-primary-foreground shadow-glow transition-transform hover:-translate-y-0.5 disabled:translate-y-0 disabled:bg-muted disabled:text-muted-foreground disabled:shadow-none"
+            >
+              <CalendarCheck className="h-4 w-4" /> Confirm
+            </button>
+          </div>
         </div>
-      )}
-    </div>
-  );
+
+        {/* Quick rebook */}
+        {lastBooking && (
+          <button
+            type="button"
+            onClick={() => {
+              setBookingKind(lastBooking.kind);
+              setSelectedFloor(lastBooking.floor);
+              setSelectedArea(lastBooking.area);
+              if (lastBooking.kind === "desk") setSelectedSeat(lastBooking.spot);
+              else setSelectedRoom(lastBooking.spot);
+              setSelectedShift(lastBooking.shiftKey as ShiftKey);
+              toast.success("Loaded your last booking selection", { description: "Review the date and tap Confirm." });
+            }}
+            className="focus-premium flex w-full items-center justify-between rounded-2xl border border-dashed border-primary/40 bg-primary/5 p-3 text-left transition hover:bg-primary/10"
+          >
+            <span className="flex items-center gap-2">
+              <History className="h-4 w-4 text-primary" />
+              <span className="text-xs font-extrabold">
+                Rebook last: {lastBooking.kind === "desk" ? "Seat" : "Room"} {lastBooking.spot} · {lastBooking.shift}
+              </span>
+            </span>
+            <ChevronRight className="h-4 w-4 text-primary" />
+          </button>
+        )}
+
+        {/* Recent bookings */}
+        {confirmedBookings.length > 0 && (
+          <div className="rounded-2xl bg-surface-raised p-4 shadow-card">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Your recent bookings</p>
+            <div className="mt-3 space-y-2">
+              {confirmedBookings.map((booking) => {
+                const isActive = !booking.released && booking.endsAt > nowTs;
+                return (
+                  <div key={booking.id} className="flex items-center justify-between gap-3 rounded-xl border border-border/60 bg-background p-3">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <div className={cn(
+                        "grid h-9 w-9 shrink-0 place-items-center rounded-xl",
+                        isActive ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground",
+                      )}>
+                        {booking.kind === "desk" ? <Sofa className="h-4 w-4" /> : <DoorOpen className="h-4 w-4" />}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-extrabold">
+                          {booking.kind === "desk" ? "Seat" : "Room"} {booking.spot} · F{booking.floor} · {booking.area}
+                        </p>
+                        <p className="truncate text-[11px] font-semibold text-muted-foreground">
+                          {booking.date} · {booking.shift} ({booking.shiftRange})
+                        </p>
+                      </div>
+                    </div>
+                    {isActive ? (
+                      <button
+                        type="button"
+                        onClick={() => handleReleaseBooking(booking.id)}
+                        className="focus-premium flex shrink-0 items-center gap-1 rounded-xl bg-destructive px-3 py-2 text-[11px] font-extrabold text-destructive-foreground shadow-md transition-transform hover:-translate-y-0.5"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" /> Release
+                      </button>
+                    ) : (
+                      <span className="shrink-0 rounded-full bg-muted px-2 py-1 text-[10px] font-extrabold uppercase text-muted-foreground">
+                        {booking.released ? "Released" : "Ended"}
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   // ============== ATTENDANCE HELPERS & RENDER ==============
   const todayKey = format(new Date(nowTs), "yyyy-MM-dd");
