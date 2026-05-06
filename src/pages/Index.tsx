@@ -3024,19 +3024,19 @@ const Index = () => {
     return (
       <div id="booking" className="space-y-4">
         {/* Hero */}
-        <div className="overflow-hidden rounded-[1.75rem] bg-gradient-to-br from-primary/15 via-surface-raised to-surface-raised p-5 shadow-card">
-          <div className="flex items-start justify-between gap-4">
-            <div className="min-w-0">
-              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary">Reserve a spot</p>
-              <h2 className="mt-1 font-display text-2xl font-extrabold leading-tight">
+        <div className="overflow-hidden rounded-[1.5rem] bg-gradient-to-br from-primary/15 via-surface-raised to-surface-raised p-4 shadow-card sm:rounded-[1.75rem] sm:p-5">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary sm:text-[11px] sm:tracking-[0.2em]">Reserve a spot</p>
+              <h2 className="mt-1 font-display text-xl font-extrabold leading-tight sm:text-2xl">
                 {bookingKind === "desk" ? "Find your seat" : "Book a meeting room"}
               </h2>
-              <p className="mt-1 text-xs font-semibold text-muted-foreground">
+              <p className="mt-1 text-[11px] font-semibold text-muted-foreground sm:text-xs">
                 {availSeats} of {totalSeats} seats free · {currentShift.label}
               </p>
             </div>
-            <div className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-glow">
-              <p className="font-display text-2xl font-extrabold leading-none">{confirmedBookings.length}</p>
+            <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-glow sm:h-14 sm:w-14">
+              <p className="font-display text-xl font-extrabold leading-none sm:text-2xl">{confirmedBookings.length}</p>
             </div>
           </div>
 
