@@ -2328,11 +2328,13 @@ const Index = () => {
         released: false,
       };
       setConfirmedBookings((current) => [newBooking, ...current].slice(0, 12));
+      const bookerName = currentUser?.displayName ?? "You";
+      const bookerEmail = currentUser?.email ?? "";
       setBookingText(
-        `Seat ${spot} · Floor ${selectedFloor} · ${selectedArea} · ${currentShift.label} (${currentShift.range})`,
+        `Seat ${spot} booked by ${bookerName}${bookerEmail ? ` (${bookerEmail})` : ""}`,
       );
-      toast.success(`Seat ${spot} booked`, {
-        description: `Floor ${selectedFloor} · ${selectedArea} · ${currentShift.label} · ${currentShift.range}`,
+      toast.success(`Seat ${spot} booked by ${bookerName}.`, {
+        description: `${bookerEmail ? bookerEmail + " · " : ""}Floor ${selectedFloor} · ${selectedArea} · ${currentShift.label} · ${currentShift.range}`,
       });
       return;
     }
