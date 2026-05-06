@@ -3218,7 +3218,21 @@ const Index = () => {
                     <button
                       key={seatId}
                       type="button"
-                      onClick={() => setSelectedSeat(seatId)}
+                      onClick={() => {
+                        if (isTaken) {
+                          toast.error("This seat is already booked.", {
+                            description: `Booked by ${status?.bookerName || "another employee"}.`,
+                          });
+                          return;
+                        }
+                        if (isMine) {
+                          toast.info("You already booked this seat.", {
+                            description: "Release it from Recent bookings to free it up.",
+                          });
+                          return;
+                        }
+                        setSelectedSeat(seatId);
+                      }}
                       title={status ? `Booked by ${status.bookerName}` : "Available"}
                       className={cn(
                         "focus-premium group relative flex flex-col items-center justify-center gap-1 rounded-2xl border-2 p-2.5 text-xs font-extrabold transition-all",
