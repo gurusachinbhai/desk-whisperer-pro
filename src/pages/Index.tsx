@@ -3024,19 +3024,19 @@ const Index = () => {
     return (
       <div id="booking" className="space-y-4">
         {/* Hero */}
-        <div className="overflow-hidden rounded-[1.75rem] bg-gradient-to-br from-primary/15 via-surface-raised to-surface-raised p-5 shadow-card">
-          <div className="flex items-start justify-between gap-4">
-            <div className="min-w-0">
-              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary">Reserve a spot</p>
-              <h2 className="mt-1 font-display text-2xl font-extrabold leading-tight">
+        <div className="overflow-hidden rounded-[1.5rem] bg-gradient-to-br from-primary/15 via-surface-raised to-surface-raised p-4 shadow-card sm:rounded-[1.75rem] sm:p-5">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary sm:text-[11px] sm:tracking-[0.2em]">Reserve a spot</p>
+              <h2 className="mt-1 font-display text-xl font-extrabold leading-tight sm:text-2xl">
                 {bookingKind === "desk" ? "Find your seat" : "Book a meeting room"}
               </h2>
-              <p className="mt-1 text-xs font-semibold text-muted-foreground">
+              <p className="mt-1 text-[11px] font-semibold text-muted-foreground sm:text-xs">
                 {availSeats} of {totalSeats} seats free · {currentShift.label}
               </p>
             </div>
-            <div className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-glow">
-              <p className="font-display text-2xl font-extrabold leading-none">{confirmedBookings.length}</p>
+            <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-glow sm:h-14 sm:w-14">
+              <p className="font-display text-xl font-extrabold leading-none sm:text-2xl">{confirmedBookings.length}</p>
             </div>
           </div>
 
@@ -3143,8 +3143,8 @@ const Index = () => {
 
         {/* Floor + Area chips */}
         <div className="rounded-2xl bg-surface-raised p-4 shadow-card">
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="min-w-0 flex-1">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="min-w-0">
               <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Floor</p>
               <div className="mt-1.5 flex flex-wrap gap-1.5">
                 {companyFloors.map((floor) => (
@@ -3163,7 +3163,7 @@ const Index = () => {
                 ))}
               </div>
             </div>
-            <div className="min-w-0 flex-1">
+            <div className="min-w-0">
               <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Area</p>
               <div className="mt-1.5 flex flex-wrap gap-1.5">
                 {companyAreas.map((area) => (
@@ -3188,17 +3188,17 @@ const Index = () => {
         {/* Seats / Rooms */}
         {bookingKind === "desk" ? (
           <div className="rounded-2xl bg-surface-raised p-4 shadow-card">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
                 Seats · Floor {selectedFloor} · {selectedArea}
               </p>
-              <div className="flex items-center gap-3 text-[10px] font-bold uppercase">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] font-bold uppercase">
                 <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-emerald-500" /> Available</span>
                 <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-red-400" /> Booked</span>
               </div>
             </div>
 
-            <div className="mt-3 grid grid-cols-4 gap-2 sm:grid-cols-5">
+            <div className="mt-3 grid grid-cols-3 gap-2 xs:grid-cols-4 sm:grid-cols-5">
               {seatRows.map((row) =>
                 seatColumns.map((col) => {
                   const seatId = `${row}${col}`;
@@ -3296,8 +3296,8 @@ const Index = () => {
         )}
 
         {/* Summary + confirm (sticky-ish) */}
-        <div className="sticky bottom-4 z-10 overflow-hidden rounded-2xl border border-primary/20 bg-surface-raised/95 p-4 shadow-card backdrop-blur">
-          <div className="flex items-center justify-between gap-3">
+        <div className="sticky bottom-4 z-10 overflow-hidden rounded-2xl border border-primary/20 bg-surface-raised/95 p-3 shadow-card backdrop-blur sm:p-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
               <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Ready to book</p>
               <p className="truncate font-display text-base font-extrabold">
@@ -3316,7 +3316,7 @@ const Index = () => {
               type="button"
               onClick={() => handleConfirmBooking()}
               disabled={!canConfirm}
-              className="focus-premium flex shrink-0 items-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-extrabold text-primary-foreground shadow-glow transition-transform hover:-translate-y-0.5 disabled:translate-y-0 disabled:bg-muted disabled:text-muted-foreground disabled:shadow-none"
+              className="focus-premium flex w-full shrink-0 items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-extrabold text-primary-foreground shadow-glow transition-transform hover:-translate-y-0.5 disabled:translate-y-0 disabled:bg-muted disabled:text-muted-foreground disabled:shadow-none sm:w-auto"
             >
               <CalendarCheck className="h-4 w-4" /> Confirm
             </button>
@@ -5043,14 +5043,11 @@ const Index = () => {
                   }}
                 />
               </label>
-              <div className="min-w-0">
-                <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Welcome back</p>
-                <div className="flex items-center gap-1.5">
-                  <h2 className="truncate font-display text-xl font-extrabold">
+              <div className="min-w-0 flex-1">
+                <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Welcome back</p>
+                <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
+                  <h2 className="min-w-0 max-w-full truncate font-display text-lg font-extrabold sm:text-xl">
                     {currentUser?.displayName}
-                    {companyProfile && (
-                      <span className="ml-1 text-sm font-bold text-muted-foreground">· {companyProfile.name}</span>
-                    )}
                   </h2>
                   <button
                     type="button"
@@ -5064,7 +5061,10 @@ const Index = () => {
                     <Pencil className="h-3 w-3" />
                   </button>
                 </div>
-                <p className="truncate text-xs font-semibold text-muted-foreground">{currentUser?.email}</p>
+                {companyProfile && (
+                  <p className="truncate text-xs font-bold text-muted-foreground">{companyProfile.name}</p>
+                )}
+                <p className="truncate text-[11px] font-semibold text-muted-foreground sm:text-xs">{currentUser?.email}</p>
                 <div className="mt-1 flex flex-wrap items-center gap-1.5">
                   <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-primary">
                     Employee

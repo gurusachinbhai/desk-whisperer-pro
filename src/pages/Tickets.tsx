@@ -523,6 +523,12 @@ const Tickets = () => {
           </Button>
         </div>
         <nav className="mx-auto flex max-w-7xl gap-1 overflow-x-auto px-4 pb-3 text-xs font-bold sm:px-6 sm:text-sm">
+          <Link
+            to="/login"
+            className="flex min-h-[44px] items-center gap-1.5 whitespace-nowrap rounded-xl px-4 py-2 text-muted-foreground hover:bg-muted"
+          >
+            <ArrowLeft className="h-4 w-4" /> Home
+          </Link>
           {[
             { id: "list", label: canManage ? "All tickets" : "My tickets" },
             { id: "new", label: "Raise a ticket" },
