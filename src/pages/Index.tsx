@@ -2355,12 +2355,14 @@ const Index = () => {
       released: false,
     };
     setConfirmedBookings((current) => [newBooking, ...current].slice(0, 12));
+    const bookerName = currentUser?.displayName ?? "You";
+    const bookerEmail = currentUser?.email ?? "";
     setBookingText(
-      `${effectiveKind === "desk" ? "Seat" : "Meeting room"} ${spot} · Floor ${selectedFloor} · ${selectedArea} · ${currentShift.label} (${currentShift.range})`,
+      `${effectiveKind === "desk" ? "Seat" : "Meeting room"} ${spot} booked by ${bookerName}${bookerEmail ? ` (${bookerEmail})` : ""}`,
     );
     toast.success(
-      `${effectiveKind === "desk" ? "Seat" : "Meeting room"} ${spot} booked`,
-      { description: `Floor ${selectedFloor} · ${selectedArea} · ${currentShift.label} · ${currentShift.range}` },
+      `${effectiveKind === "desk" ? "Seat" : "Meeting room"} ${spot} booked by ${bookerName}.`,
+      { description: `${bookerEmail ? bookerEmail + " · " : ""}Floor ${selectedFloor} · ${selectedArea} · ${currentShift.label} · ${currentShift.range}` },
     );
   };
 
