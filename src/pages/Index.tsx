@@ -3188,17 +3188,17 @@ const Index = () => {
         {/* Seats / Rooms */}
         {bookingKind === "desk" ? (
           <div className="rounded-2xl bg-surface-raised p-4 shadow-card">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
                 Seats · Floor {selectedFloor} · {selectedArea}
               </p>
-              <div className="flex items-center gap-3 text-[10px] font-bold uppercase">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] font-bold uppercase">
                 <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-emerald-500" /> Available</span>
                 <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-red-400" /> Booked</span>
               </div>
             </div>
 
-            <div className="mt-3 grid grid-cols-4 gap-2 sm:grid-cols-5">
+            <div className="mt-3 grid grid-cols-3 gap-2 xs:grid-cols-4 sm:grid-cols-5">
               {seatRows.map((row) =>
                 seatColumns.map((col) => {
                   const seatId = `${row}${col}`;
