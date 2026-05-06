@@ -3222,13 +3222,11 @@ const Index = () => {
                       title={status ? `Booked by ${status.bookerName}` : "Available"}
                       className={cn(
                         "focus-premium group relative flex flex-col items-center justify-center gap-1 rounded-2xl border-2 p-2.5 text-xs font-extrabold transition-all",
-                        isTaken
+                        isTaken || isMine
                           ? "border-red-300/70 bg-red-100/70 text-red-700 dark:border-red-500/40 dark:bg-red-950/40 dark:text-red-200"
-                          : isMine
-                            ? "border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-500/50 dark:bg-amber-950/40 dark:text-amber-100"
-                            : isSelected
-                              ? "border-primary bg-primary text-primary-foreground shadow-glow scale-[1.03]"
-                              : "border-emerald-200 bg-emerald-50 text-emerald-800 hover:scale-[1.03] hover:border-emerald-400 dark:border-emerald-700/40 dark:bg-emerald-950/30 dark:text-emerald-200",
+                          : isSelected
+                            ? "border-primary bg-primary text-primary-foreground shadow-glow scale-[1.03]"
+                            : "border-emerald-200 bg-emerald-50 text-emerald-800 hover:scale-[1.03] hover:border-emerald-400 dark:border-emerald-700/40 dark:bg-emerald-950/30 dark:text-emerald-200",
                       )}
                     >
                       <div className="flex items-center gap-1">
