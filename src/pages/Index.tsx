@@ -3143,8 +3143,8 @@ const Index = () => {
 
         {/* Floor + Area chips */}
         <div className="rounded-2xl bg-surface-raised p-4 shadow-card">
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="min-w-0 flex-1">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="min-w-0">
               <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Floor</p>
               <div className="mt-1.5 flex flex-wrap gap-1.5">
                 {companyFloors.map((floor) => (
@@ -3163,7 +3163,7 @@ const Index = () => {
                 ))}
               </div>
             </div>
-            <div className="min-w-0 flex-1">
+            <div className="min-w-0">
               <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Area</p>
               <div className="mt-1.5 flex flex-wrap gap-1.5">
                 {companyAreas.map((area) => (
