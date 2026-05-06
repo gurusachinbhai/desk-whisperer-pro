@@ -5043,14 +5043,11 @@ const Index = () => {
                   }}
                 />
               </label>
-              <div className="min-w-0">
-                <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Welcome back</p>
-                <div className="flex items-center gap-1.5">
-                  <h2 className="truncate font-display text-xl font-extrabold">
+              <div className="min-w-0 flex-1">
+                <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Welcome back</p>
+                <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
+                  <h2 className="min-w-0 max-w-full truncate font-display text-lg font-extrabold sm:text-xl">
                     {currentUser?.displayName}
-                    {companyProfile && (
-                      <span className="ml-1 text-sm font-bold text-muted-foreground">· {companyProfile.name}</span>
-                    )}
                   </h2>
                   <button
                     type="button"
@@ -5064,7 +5061,10 @@ const Index = () => {
                     <Pencil className="h-3 w-3" />
                   </button>
                 </div>
-                <p className="truncate text-xs font-semibold text-muted-foreground">{currentUser?.email}</p>
+                {companyProfile && (
+                  <p className="truncate text-xs font-bold text-muted-foreground">{companyProfile.name}</p>
+                )}
+                <p className="truncate text-[11px] font-semibold text-muted-foreground sm:text-xs">{currentUser?.email}</p>
                 <div className="mt-1 flex flex-wrap items-center gap-1.5">
                   <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-primary">
                     Employee
