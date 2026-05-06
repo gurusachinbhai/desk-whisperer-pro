@@ -3296,8 +3296,8 @@ const Index = () => {
         )}
 
         {/* Summary + confirm (sticky-ish) */}
-        <div className="sticky bottom-4 z-10 overflow-hidden rounded-2xl border border-primary/20 bg-surface-raised/95 p-4 shadow-card backdrop-blur">
-          <div className="flex items-center justify-between gap-3">
+        <div className="sticky bottom-4 z-10 overflow-hidden rounded-2xl border border-primary/20 bg-surface-raised/95 p-3 shadow-card backdrop-blur sm:p-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
               <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Ready to book</p>
               <p className="truncate font-display text-base font-extrabold">
@@ -3316,7 +3316,7 @@ const Index = () => {
               type="button"
               onClick={() => handleConfirmBooking()}
               disabled={!canConfirm}
-              className="focus-premium flex shrink-0 items-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-extrabold text-primary-foreground shadow-glow transition-transform hover:-translate-y-0.5 disabled:translate-y-0 disabled:bg-muted disabled:text-muted-foreground disabled:shadow-none"
+              className="focus-premium flex w-full shrink-0 items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-extrabold text-primary-foreground shadow-glow transition-transform hover:-translate-y-0.5 disabled:translate-y-0 disabled:bg-muted disabled:text-muted-foreground disabled:shadow-none sm:w-auto"
             >
               <CalendarCheck className="h-4 w-4" /> Confirm
             </button>
