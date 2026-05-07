@@ -3141,50 +3141,6 @@ const Index = () => {
           </div>
         </div>
 
-        {/* Floor + Area chips */}
-        <div className="rounded-2xl bg-surface-raised p-4 shadow-card">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="min-w-0">
-              <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Floor</p>
-              <div className="mt-1.5 flex flex-wrap gap-1.5">
-                {companyFloors.map((floor) => (
-                  <button
-                    key={floor}
-                    type="button"
-                    onClick={() => setSelectedFloor(floor)}
-                    className={`focus-premium rounded-full px-3 py-1 text-xs font-extrabold transition-all ${
-                      selectedFloor === floor
-                        ? "bg-primary text-primary-foreground shadow-glow"
-                        : "bg-muted text-muted-foreground hover:bg-primary/10"
-                    }`}
-                  >
-                    Floor {floor}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="min-w-0">
-              <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Area</p>
-              <div className="mt-1.5 flex flex-wrap gap-1.5">
-                {companyAreas.map((area) => (
-                  <button
-                    key={area}
-                    type="button"
-                    onClick={() => setSelectedArea(area)}
-                    className={`focus-premium rounded-full px-3 py-1 text-xs font-extrabold transition-all ${
-                      selectedArea === area
-                        ? "bg-primary text-primary-foreground shadow-glow"
-                        : "bg-muted text-muted-foreground hover:bg-primary/10"
-                    }`}
-                  >
-                    {area}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-
         {/* Seats / Rooms */}
         {bookingKind === "desk" ? (
           <div className="rounded-2xl bg-surface-raised p-4 shadow-card">
