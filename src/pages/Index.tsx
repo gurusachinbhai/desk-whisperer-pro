@@ -3198,7 +3198,7 @@ const Index = () => {
               </div>
             </div>
 
-            <div className="mt-3 grid grid-cols-3 gap-2 xs:grid-cols-4 sm:grid-cols-5">
+            <div className="mt-3 grid grid-cols-4 gap-2.5 xs:grid-cols-5 sm:gap-3">
               {seatRows.map((row) =>
                 seatColumns.map((col) => {
                   const seatId = `${row}${col}`;
@@ -3235,34 +3235,39 @@ const Index = () => {
                       }}
                       title={status ? `Booked by ${status.bookerName}` : "Available"}
                       className={cn(
-                        "focus-premium group relative flex flex-col items-center justify-center gap-1 rounded-2xl border-2 p-2.5 text-xs font-extrabold transition-all",
+                        "focus-premium group relative flex flex-col items-center justify-center gap-1 rounded-2xl border-2 p-3.5 text-xs font-extrabold transition-all min-h-[64px] sm:min-h-0 sm:p-2.5",
                         isTaken || isMine
                           ? "border-red-300/70 bg-red-100/70 text-red-700 dark:border-red-500/40 dark:bg-red-950/40 dark:text-red-200"
                           : isSelected
-                            ? "border-primary bg-primary text-primary-foreground shadow-glow scale-[1.03]"
-                            : "border-emerald-200 bg-emerald-50 text-emerald-800 hover:scale-[1.03] hover:border-emerald-400 dark:border-emerald-700/40 dark:bg-emerald-950/30 dark:text-emerald-200",
+                            ? "border-[3px] border-primary bg-primary text-primary-foreground shadow-[0_8px_28px_-8px_hsl(var(--primary)/0.55)] scale-[1.06] ring-2 ring-primary/40 ring-offset-2 ring-offset-background"
+                            : "border-emerald-200 bg-emerald-50 text-emerald-800 hover:scale-[1.04] hover:border-emerald-400 dark:border-emerald-700/40 dark:bg-emerald-950/30 dark:text-emerald-200",
                       )}
                     >
                       <div className="flex items-center gap-1">
                         {isTaken ? (
-                          <Lock className="h-3 w-3" />
+                          <Lock className="h-4 w-4 sm:h-3 sm:w-3" />
                         ) : isMine ? (
-                          <CheckCircle2 className="h-3 w-3" />
+                          <CheckCircle2 className="h-4 w-4 sm:h-3 sm:w-3" />
                         ) : isSelected ? (
-                          <Sparkles className="h-3 w-3" />
+                          <Sparkles className="h-4 w-4 sm:h-3 sm:w-3" />
                         ) : (
-                          <Sofa className="h-3 w-3" />
+                          <Sofa className="h-4 w-4 sm:h-3 sm:w-3" />
                         )}
-                        <span className="text-sm">{seatId}</span>
+                        <span className="text-base sm:text-sm">{seatId}</span>
                       </div>
                       {status && (
-                        <span className="line-clamp-1 max-w-full text-[9px] font-semibold opacity-80">
+                        <span className="line-clamp-1 max-w-full text-[10px] font-semibold opacity-80 sm:text-[9px]">
                           {isMine ? "You" : status.bookerName}
                         </span>
                       )}
                       {isTaken && initials && (
-                        <span className="absolute -right-1 -top-1 grid h-5 w-5 place-items-center rounded-full bg-red-500 text-[9px] font-extrabold text-white shadow-sm ring-2 ring-background">
+                        <span className="absolute -right-1 -top-1 grid h-6 w-6 place-items-center rounded-full bg-red-500 text-[10px] font-extrabold text-white shadow-sm ring-2 ring-background sm:h-5 sm:w-5 sm:text-[9px]">
                           {initials}
+                        </span>
+                      )}
+                      {!isTaken && !isMine && isSelected && (
+                        <span className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 rounded-full bg-primary-foreground px-1.5 py-0.5 text-[9px] font-extrabold text-primary shadow-sm">
+                          Selected
                         </span>
                       )}
                     </button>
