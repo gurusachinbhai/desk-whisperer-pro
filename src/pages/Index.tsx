@@ -5222,20 +5222,6 @@ const Index = () => {
             <div className="flex items-center gap-3">
               <button
                 type="button"
-                onClick={() => setActiveTab("map")}
-                className="focus-premium text-xs font-extrabold text-primary"
-              >
-                Floor map
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab("rooms")}
-                className="focus-premium text-xs font-extrabold text-primary"
-              >
-                Rooms
-              </button>
-              <button
-                type="button"
                 onClick={() => setActiveTab("directory")}
                 className="focus-premium text-xs font-extrabold text-primary"
               >
@@ -5250,13 +5236,19 @@ const Index = () => {
               </button>
             </div>
           </div>
-          {confirmedBookings.length === 0 ? (
+          {(() => {
+            const oneWeekAgo = nowTs - 7 * 24 * 60 * 60 * 1000;
+            const recentBookings = confirmedBookings.filter((b) => {
+              const t = new Date(b.date).getTime();
+              return !isNaN(t) && t >= oneWeekAgo;
+            });
+            return recentBookings.length === 0 ? (
             <p className="rounded-2xl bg-background p-4 text-center text-xs font-semibold text-muted-foreground">
-              No bookings yet. Tap Book to reserve a desk or meeting room.
+              No bookings in the last 7 days. Tap Book to reserve a desk or meeting room.
             </p>
           ) : (
             <div className="space-y-2">
-              {confirmedBookings.map((booking) => {
+              {recentBookings.map((booking) => {
                 const isActive = !booking.released && booking.endsAt > nowTs;
                 return (
                   <div key={booking.id} className="flex items-center justify-between gap-3 rounded-2xl bg-background p-3">
@@ -5292,7 +5284,8 @@ const Index = () => {
                 );
               })}
             </div>
-          )}
+          );
+          })()}
         </div>
 
         {/* Settings */}
