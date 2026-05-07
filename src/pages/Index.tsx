@@ -3241,7 +3241,10 @@ const Index = () => {
                 <button
                   key={room}
                   type="button"
-                  onClick={() => setSelectedRoom(room)}
+                  onClick={() => {
+                    setSelectedRoom(room);
+                    setTimeout(() => handleConfirmBooking(room, "room"), 0);
+                  }}
                   className={cn(
                     "focus-premium flex flex-col items-center gap-1 rounded-2xl border-2 p-3 text-xs font-extrabold transition-all",
                     selectedRoom === room
