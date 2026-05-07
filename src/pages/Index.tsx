@@ -5222,20 +5222,6 @@ const Index = () => {
             <div className="flex items-center gap-3">
               <button
                 type="button"
-                onClick={() => setActiveTab("map")}
-                className="focus-premium text-xs font-extrabold text-primary"
-              >
-                Floor map
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab("rooms")}
-                className="focus-premium text-xs font-extrabold text-primary"
-              >
-                Rooms
-              </button>
-              <button
-                type="button"
                 onClick={() => setActiveTab("directory")}
                 className="focus-premium text-xs font-extrabold text-primary"
               >
