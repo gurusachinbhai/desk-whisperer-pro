@@ -3257,32 +3257,7 @@ const Index = () => {
         )}
 
         {/* Summary + confirm (sticky-ish) */}
-        <div className="sticky bottom-4 z-10 overflow-hidden rounded-2xl border border-primary/20 bg-surface-raised/95 p-3 shadow-card backdrop-blur sm:p-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="min-w-0">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Ready to book</p>
-              <p className="truncate font-display text-base font-extrabold">
-                {bookingKind === "desk" ? "Seat" : "Room"} {bookingKind === "desk" ? selectedSeat : selectedRoom} · F{selectedFloor} · {selectedArea}
-              </p>
-              <p className="truncate text-[11px] font-semibold text-muted-foreground">
-                {format(bookingDate, "EEE, MMM d")} · {currentShift.label} · {currentShift.range}
-              </p>
-              {selectedStatus && (
-                <p className="mt-0.5 truncate text-[11px] font-bold text-red-600 dark:text-red-400">
-                  Already booked by {selectedStatus.bookerName}
-                </p>
-              )}
-            </div>
-            <button
-              type="button"
-              onClick={() => handleConfirmBooking()}
-              disabled={!canConfirm}
-              className="focus-premium flex w-full shrink-0 items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-extrabold text-primary-foreground shadow-glow transition-transform hover:-translate-y-0.5 disabled:translate-y-0 disabled:bg-muted disabled:text-muted-foreground disabled:shadow-none sm:w-auto"
-            >
-              <CalendarCheck className="h-4 w-4" /> Confirm
-            </button>
-          </div>
-        </div>
+        {/* Confirm summary removed — seat/room selection auto-confirms */}
 
         {/* Quick rebook */}
         {lastBooking && (
