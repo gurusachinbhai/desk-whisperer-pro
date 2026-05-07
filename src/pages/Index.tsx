@@ -5284,7 +5284,8 @@ const Index = () => {
                 );
               })}
             </div>
-          )}
+          );
+          })()}
         </div>
 
         {/* Settings */}
