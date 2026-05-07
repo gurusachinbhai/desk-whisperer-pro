@@ -3141,50 +3141,6 @@ const Index = () => {
           </div>
         </div>
 
-        {/* Floor + Area chips */}
-        <div className="rounded-2xl bg-surface-raised p-4 shadow-card">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="min-w-0">
-              <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Floor</p>
-              <div className="mt-1.5 flex flex-wrap gap-1.5">
-                {companyFloors.map((floor) => (
-                  <button
-                    key={floor}
-                    type="button"
-                    onClick={() => setSelectedFloor(floor)}
-                    className={`focus-premium rounded-full px-3 py-1 text-xs font-extrabold transition-all ${
-                      selectedFloor === floor
-                        ? "bg-primary text-primary-foreground shadow-glow"
-                        : "bg-muted text-muted-foreground hover:bg-primary/10"
-                    }`}
-                  >
-                    Floor {floor}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="min-w-0">
-              <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Area</p>
-              <div className="mt-1.5 flex flex-wrap gap-1.5">
-                {companyAreas.map((area) => (
-                  <button
-                    key={area}
-                    type="button"
-                    onClick={() => setSelectedArea(area)}
-                    className={`focus-premium rounded-full px-3 py-1 text-xs font-extrabold transition-all ${
-                      selectedArea === area
-                        ? "bg-primary text-primary-foreground shadow-glow"
-                        : "bg-muted text-muted-foreground hover:bg-primary/10"
-                    }`}
-                  >
-                    {area}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-
         {/* Seats / Rooms */}
         {bookingKind === "desk" ? (
           <div className="rounded-2xl bg-surface-raised p-4 shadow-card">
@@ -3232,6 +3188,7 @@ const Index = () => {
                           return;
                         }
                         setSelectedSeat(seatId);
+                        setTimeout(() => handleConfirmBooking(seatId, "desk"), 0);
                       }}
                       title={status ? `Booked by ${status.bookerName}` : "Available"}
                       className={cn(
@@ -3284,7 +3241,10 @@ const Index = () => {
                 <button
                   key={room}
                   type="button"
-                  onClick={() => setSelectedRoom(room)}
+                  onClick={() => {
+                    setSelectedRoom(room);
+                    setTimeout(() => handleConfirmBooking(room, "room"), 0);
+                  }}
                   className={cn(
                     "focus-premium flex flex-col items-center gap-1 rounded-2xl border-2 p-3 text-xs font-extrabold transition-all",
                     selectedRoom === room
@@ -3301,32 +3261,7 @@ const Index = () => {
         )}
 
         {/* Summary + confirm (sticky-ish) */}
-        <div className="sticky bottom-4 z-10 overflow-hidden rounded-2xl border border-primary/20 bg-surface-raised/95 p-3 shadow-card backdrop-blur sm:p-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="min-w-0">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Ready to book</p>
-              <p className="truncate font-display text-base font-extrabold">
-                {bookingKind === "desk" ? "Seat" : "Room"} {bookingKind === "desk" ? selectedSeat : selectedRoom} · F{selectedFloor} · {selectedArea}
-              </p>
-              <p className="truncate text-[11px] font-semibold text-muted-foreground">
-                {format(bookingDate, "EEE, MMM d")} · {currentShift.label} · {currentShift.range}
-              </p>
-              {selectedStatus && (
-                <p className="mt-0.5 truncate text-[11px] font-bold text-red-600 dark:text-red-400">
-                  Already booked by {selectedStatus.bookerName}
-                </p>
-              )}
-            </div>
-            <button
-              type="button"
-              onClick={() => handleConfirmBooking()}
-              disabled={!canConfirm}
-              className="focus-premium flex w-full shrink-0 items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-extrabold text-primary-foreground shadow-glow transition-transform hover:-translate-y-0.5 disabled:translate-y-0 disabled:bg-muted disabled:text-muted-foreground disabled:shadow-none sm:w-auto"
-            >
-              <CalendarCheck className="h-4 w-4" /> Confirm
-            </button>
-          </div>
-        </div>
+        {/* Confirm summary removed — seat/room selection auto-confirms */}
 
         {/* Quick rebook */}
         {lastBooking && (
