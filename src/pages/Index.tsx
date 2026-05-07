@@ -3188,6 +3188,7 @@ const Index = () => {
                           return;
                         }
                         setSelectedSeat(seatId);
+                        setTimeout(() => handleConfirmBooking(seatId, "desk"), 0);
                       }}
                       title={status ? `Booked by ${status.bookerName}` : "Available"}
                       className={cn(
