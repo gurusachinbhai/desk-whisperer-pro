@@ -177,7 +177,7 @@ export default function AdminDocumentsPanel({ companyId, uploaderName }: Props) 
         .upload(path, uploadForm.file, { contentType: uploadForm.file.type, upsert: false });
       if (up.error) throw up.error;
 
-      const ins = await supabase.from("employee_documents" as never).insert({
+      const ins = await (supabase as any).from("employee_documents").insert({
         company_id: companyId,
         employee_id: emp.id,
         user_id: emp.user_id,
@@ -215,7 +215,7 @@ export default function AdminDocumentsPanel({ companyId, uploaderName }: Props) 
 
   const handleDelete = async (doc: DocRow) => {
     if (!confirm(`Delete "${doc.title}"? This cannot be undone.`)) return;
-    const { error: dErr } = await supabase.from("employee_documents" as never).delete().eq("id", doc.id);
+    const { error: dErr } = await (supabase as any).from("employee_documents").delete().eq("id", doc.id);
     if (dErr) {
       toast.error("Delete failed", { description: dErr.message });
       return;

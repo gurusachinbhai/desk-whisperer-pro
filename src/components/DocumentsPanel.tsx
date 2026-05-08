@@ -61,13 +61,13 @@ export default function DocumentsPanel({ meEmployeeId, meUserId, companyId }: Pr
       setLoading(true);
       const [docsRes, salaryRes] = await Promise.all([
         supabase
-          .from("employee_documents" as never)
+          .from("employee_documents")
           .select("*")
           .eq("user_id", meUserId)
           .order("doc_year", { ascending: false })
           .order("doc_month", { ascending: false })
           .order("created_at", { ascending: false }),
-        supabase.from("salary_profiles" as never).select("*").eq("user_id", meUserId).maybeSingle(),
+        (supabase as any).from("salary_profiles").select("*").eq("user_id", meUserId).maybeSingle(),
       ]);
       if (cancelled) return;
       if (!docsRes.error) setDocs((docsRes.data ?? []) as EmployeeDocument[]);
