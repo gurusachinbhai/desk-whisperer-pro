@@ -50,6 +50,9 @@ import { lovable } from "@/integrations/lovable";
 import { supabase } from "@/integrations/supabase/client";
 import { useRecordsPersistence } from "@/hooks/use-records-persistence";
 import hrgreatlyLogo from "@/assets/hrgreatly-logo.png";
+import DocumentsPanel from "@/components/DocumentsPanel";
+import AdminDocumentsPanel from "@/components/AdminDocumentsPanel";
+import ManagerHierarchy, { type HierarchyEmployee } from "@/components/ManagerHierarchy";
 import {
   Select,
   SelectContent,
@@ -107,7 +110,7 @@ type EmployeeInvite = {
 };
 
 type AppMode = "signup" | "login";
-type ActiveTab = "home" | "book" | "attendance" | "leave" | "payroll" | "billing" | "reports" | "map" | "rooms" | "directory" | "admin" | "team";
+type ActiveTab = "home" | "book" | "attendance" | "leave" | "payroll" | "documents" | "billing" | "reports" | "map" | "rooms" | "directory" | "admin" | "team";
 type LoginStep = "form" | "otp";
 type LoginIdentifier = "email" | "phone";
 
@@ -223,7 +226,7 @@ const bottomTabs: { id: ActiveTab; icon: typeof CalendarCheck; label: string }[]
   { id: "book", icon: CalendarCheck, label: "Book" },
   { id: "attendance", icon: Clock, label: "Attendance" },
   { id: "leave", icon: Plane, label: "Leave" },
-  { id: "payroll", icon: FileText, label: "Payroll" },
+  { id: "documents", icon: FileText, label: "Documents" },
   { id: "admin", icon: BarChart3, label: "Admin" },
 ];
 
@@ -284,7 +287,7 @@ const Index = () => {
   const [companyProfile, setCompanyProfile] = useState<CompanyProfile | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [invites, setInvites] = useState<EmployeeInvite[]>([]);
-  const [employees, setEmployees] = useState<Array<{ id: string; display_name: string; email: string | null; phone: string | null }>>([]);
+  const [employees, setEmployees] = useState<Array<{ id: string; display_name: string; email: string | null; phone: string | null; manager_id?: string | null; photo_url?: string | null }>>([]);
   const [floorDraft, setFloorDraft] = useState<string>("");
   const [areaDraft, setAreaDraft] = useState<string>("");
   const [latestInviteUrl, setLatestInviteUrl] = useState("");
@@ -1007,10 +1010,10 @@ const Index = () => {
     (async () => {
       const { data } = await supabase
         .from("employee_profiles")
-        .select("id, display_name, email, phone")
+        .select("id, display_name, email, phone, manager_id, photo_url")
         .eq("company_id", companyProfile.id)
         .order("display_name", { ascending: true });
-      setEmployees((data ?? []) as Array<{ id: string; display_name: string; email: string | null; phone: string | null }>);
+      setEmployees((data ?? []) as Array<{ id: string; display_name: string; email: string | null; phone: string | null; manager_id: string | null; photo_url: string | null }>);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [companyProfile?.id]);
@@ -4954,6 +4957,11 @@ const Index = () => {
 
     return (
       <>
+        <ManagerHierarchy
+          meId={myEmployeeId}
+          employees={employees as HierarchyEmployee[]}
+          maxLevels={5}
+        />
         {/* Profile header */}
         <div className="rounded-[1.5rem] bg-surface-raised p-4 shadow-card">
           <div className="flex items-center justify-between">
@@ -5491,11 +5499,28 @@ const Index = () => {
           <div className="grid gap-5 lg:grid-cols-12">
             <section className="space-y-5 lg:col-span-12">
               {activeTab === "home" && renderHomeScreen()}
-              {isAdmin && activeTab === "admin" && renderAdminPanel()}
+              {isAdmin && activeTab === "admin" && (
+                <>
+                  {renderAdminPanel()}
+                  {companyProfile && (
+                    <AdminDocumentsPanel
+                      companyId={companyProfile.id}
+                      uploaderName={currentUser?.displayName ?? "Admin"}
+                    />
+                  )}
+                </>
+              )}
               {activeTab === "team" && renderTeamPanel()}
               {activeTab === "attendance" && renderAttendancePanel()}
               {activeTab === "leave" && renderLeavePanel()}
               {activeTab === "payroll" && renderPayrollPanel()}
+              {activeTab === "documents" && (
+                <DocumentsPanel
+                  meEmployeeId={myEmployeeId}
+                  meUserId={authUserId}
+                  companyId={companyProfile?.id ?? null}
+                />
+              )}
               {activeTab === "billing" && renderBillingPanel()}
               {isAdmin && activeTab === "reports" && renderReportsPanel()}
               {activeTab === "book" && renderBookingPanel()}
