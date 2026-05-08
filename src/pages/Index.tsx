@@ -287,7 +287,7 @@ const Index = () => {
   const [companyProfile, setCompanyProfile] = useState<CompanyProfile | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [invites, setInvites] = useState<EmployeeInvite[]>([]);
-  const [employees, setEmployees] = useState<Array<{ id: string; display_name: string; email: string | null; phone: string | null }>>([]);
+  const [employees, setEmployees] = useState<Array<{ id: string; display_name: string; email: string | null; phone: string | null; manager_id?: string | null; photo_url?: string | null }>>([]);
   const [floorDraft, setFloorDraft] = useState<string>("");
   const [areaDraft, setAreaDraft] = useState<string>("");
   const [latestInviteUrl, setLatestInviteUrl] = useState("");
@@ -1010,10 +1010,10 @@ const Index = () => {
     (async () => {
       const { data } = await supabase
         .from("employee_profiles")
-        .select("id, display_name, email, phone")
+        .select("id, display_name, email, phone, manager_id, photo_url")
         .eq("company_id", companyProfile.id)
         .order("display_name", { ascending: true });
-      setEmployees((data ?? []) as Array<{ id: string; display_name: string; email: string | null; phone: string | null }>);
+      setEmployees((data ?? []) as Array<{ id: string; display_name: string; email: string | null; phone: string | null; manager_id: string | null; photo_url: string | null }>);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [companyProfile?.id]);
