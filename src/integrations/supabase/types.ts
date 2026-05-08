@@ -329,6 +329,63 @@ export type Database = {
           },
         ]
       }
+      employee_documents: {
+        Row: {
+          company_id: string
+          created_at: string
+          doc_month: number | null
+          doc_type: string
+          doc_year: number | null
+          employee_id: string
+          file_name: string
+          file_path: string
+          file_size: number | null
+          id: string
+          mime_type: string | null
+          title: string
+          updated_at: string
+          uploaded_by: string
+          uploaded_by_name: string | null
+          user_id: string | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          doc_month?: number | null
+          doc_type: string
+          doc_year?: number | null
+          employee_id: string
+          file_name: string
+          file_path: string
+          file_size?: number | null
+          id?: string
+          mime_type?: string | null
+          title: string
+          updated_at?: string
+          uploaded_by: string
+          uploaded_by_name?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          doc_month?: number | null
+          doc_type?: string
+          doc_year?: number | null
+          employee_id?: string
+          file_name?: string
+          file_path?: string
+          file_size?: number | null
+          id?: string
+          mime_type?: string | null
+          title?: string
+          updated_at?: string
+          uploaded_by?: string
+          uploaded_by_name?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       employee_invites: {
         Row: {
           accepted_at: string | null
@@ -391,7 +448,9 @@ export type Database = {
           display_name: string
           email: string | null
           id: string
+          manager_id: string | null
           phone: string | null
+          photo_url: string | null
           status: string
           updated_at: string
           user_id: string | null
@@ -404,7 +463,9 @@ export type Database = {
           display_name: string
           email?: string | null
           id?: string
+          manager_id?: string | null
           phone?: string | null
+          photo_url?: string | null
           status?: string
           updated_at?: string
           user_id?: string | null
@@ -417,7 +478,9 @@ export type Database = {
           display_name?: string
           email?: string | null
           id?: string
+          manager_id?: string | null
           phone?: string | null
+          photo_url?: string | null
           status?: string
           updated_at?: string
           user_id?: string | null
@@ -428,6 +491,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "company_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_profiles_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "employee_profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -486,6 +556,66 @@ export type Database = {
           updated_at?: string
           user_id?: string
           user_name?: string
+        }
+        Relationships: []
+      }
+      salary_profiles: {
+        Row: {
+          annual_ctc: number
+          basic: number
+          company_id: string
+          created_at: string
+          effective_from: string
+          employee_id: string
+          hra: number
+          id: string
+          notes: string | null
+          other_allowance: number
+          other_deduction: number
+          pf_deduction: number
+          professional_tax: number
+          special_allowance: number
+          tax_regime: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          annual_ctc?: number
+          basic?: number
+          company_id: string
+          created_at?: string
+          effective_from?: string
+          employee_id: string
+          hra?: number
+          id?: string
+          notes?: string | null
+          other_allowance?: number
+          other_deduction?: number
+          pf_deduction?: number
+          professional_tax?: number
+          special_allowance?: number
+          tax_regime?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          annual_ctc?: number
+          basic?: number
+          company_id?: string
+          created_at?: string
+          effective_from?: string
+          employee_id?: string
+          hra?: number
+          id?: string
+          notes?: string | null
+          other_allowance?: number
+          other_deduction?: number
+          pf_deduction?: number
+          professional_tax?: number
+          special_allowance?: number
+          tax_regime?: string
+          updated_at?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -661,7 +791,9 @@ export type Database = {
           display_name: string
           email: string | null
           id: string
+          manager_id: string | null
           phone: string | null
+          photo_url: string | null
           status: string
           updated_at: string
           user_id: string | null
@@ -713,7 +845,9 @@ export type Database = {
           display_name: string
           email: string | null
           id: string
+          manager_id: string | null
           phone: string | null
+          photo_url: string | null
           status: string
           updated_at: string
           user_id: string | null
@@ -735,7 +869,9 @@ export type Database = {
           display_name: string
           email: string | null
           id: string
+          manager_id: string | null
           phone: string | null
+          photo_url: string | null
           status: string
           updated_at: string
           user_id: string | null
@@ -964,7 +1100,9 @@ export type Database = {
           display_name: string
           email: string | null
           id: string
+          manager_id: string | null
           phone: string | null
+          photo_url: string | null
           status: string
           updated_at: string
           user_id: string | null
@@ -1016,7 +1154,9 @@ export type Database = {
           display_name: string
           email: string | null
           id: string
+          manager_id: string | null
           phone: string | null
+          photo_url: string | null
           status: string
           updated_at: string
           user_id: string | null
