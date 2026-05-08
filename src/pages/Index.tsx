@@ -5499,11 +5499,16 @@ const Index = () => {
           <div className="grid gap-5 lg:grid-cols-12">
             <section className="space-y-5 lg:col-span-12">
               {activeTab === "home" && renderHomeScreen()}
-              {isAdmin && activeTab === "admin" && companyProfile && (
-                <AdminDocumentsPanel
-                  companyId={companyProfile.id}
-                  uploaderName={currentUser?.displayName ?? "Admin"}
-                />
+              {isAdmin && activeTab === "admin" && (
+                <>
+                  {renderAdminPanel()}
+                  {companyProfile && (
+                    <AdminDocumentsPanel
+                      companyId={companyProfile.id}
+                      uploaderName={currentUser?.displayName ?? "Admin"}
+                    />
+                  )}
+                </>
               )}
               {activeTab === "team" && renderTeamPanel()}
               {activeTab === "attendance" && renderAttendancePanel()}
