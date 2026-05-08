@@ -60,7 +60,7 @@ export default function DocumentsPanel({ meEmployeeId, meUserId, companyId }: Pr
     (async () => {
       setLoading(true);
       const [docsRes, salaryRes] = await Promise.all([
-        supabase
+        (supabase as any)
           .from("employee_documents")
           .select("*")
           .eq("user_id", meUserId)

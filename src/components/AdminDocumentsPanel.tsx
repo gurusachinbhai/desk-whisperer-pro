@@ -99,13 +99,13 @@ export default function AdminDocumentsPanel({ companyId, uploaderName }: Props) 
         .select("id, user_id, display_name, email, manager_id, photo_url")
         .eq("company_id", companyId)
         .order("display_name"),
-      supabase
-        .from("employee_documents" as never)
+      (supabase as any)
+        .from("employee_documents")
         .select("*")
         .eq("company_id", companyId)
         .order("created_at", { ascending: false }),
-      supabase
-        .from("salary_profiles" as never)
+      (supabase as any)
+        .from("salary_profiles")
         .select("*")
         .eq("company_id", companyId),
     ]);
@@ -252,8 +252,8 @@ export default function AdminDocumentsPanel({ companyId, uploaderName }: Props) 
       tax_regime: salaryDraft.tax_regime,
       effective_from: salaryDraft.effective_from,
     };
-    const { error } = await supabase
-      .from("salary_profiles" as never)
+    const { error } = await (supabase as any)
+      .from("salary_profiles")
       .upsert(payload, { onConflict: "employee_id" });
     setSavingSalary(false);
     if (error) {
