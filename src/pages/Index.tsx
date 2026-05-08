@@ -4957,6 +4957,11 @@ const Index = () => {
 
     return (
       <>
+        <ManagerHierarchy
+          meId={myEmployeeId}
+          employees={employees as HierarchyEmployee[]}
+          maxLevels={5}
+        />
         {/* Profile header */}
         <div className="rounded-[1.5rem] bg-surface-raised p-4 shadow-card">
           <div className="flex items-center justify-between">
@@ -5494,7 +5499,12 @@ const Index = () => {
           <div className="grid gap-5 lg:grid-cols-12">
             <section className="space-y-5 lg:col-span-12">
               {activeTab === "home" && renderHomeScreen()}
-              {isAdmin && activeTab === "admin" && renderAdminPanel()}
+              {isAdmin && activeTab === "admin" && companyProfile && (
+                <AdminDocumentsPanel
+                  companyId={companyProfile.id}
+                  uploaderName={currentUser?.displayName ?? "Admin"}
+                />
+              )}
               {activeTab === "team" && renderTeamPanel()}
               {activeTab === "attendance" && renderAttendancePanel()}
               {activeTab === "leave" && renderLeavePanel()}
