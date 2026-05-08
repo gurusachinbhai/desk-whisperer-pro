@@ -50,6 +50,9 @@ import { lovable } from "@/integrations/lovable";
 import { supabase } from "@/integrations/supabase/client";
 import { useRecordsPersistence } from "@/hooks/use-records-persistence";
 import hrgreatlyLogo from "@/assets/hrgreatly-logo.png";
+import DocumentsPanel from "@/components/DocumentsPanel";
+import AdminDocumentsPanel from "@/components/AdminDocumentsPanel";
+import ManagerHierarchy, { type HierarchyEmployee } from "@/components/ManagerHierarchy";
 import {
   Select,
   SelectContent,
@@ -107,7 +110,7 @@ type EmployeeInvite = {
 };
 
 type AppMode = "signup" | "login";
-type ActiveTab = "home" | "book" | "attendance" | "leave" | "payroll" | "billing" | "reports" | "map" | "rooms" | "directory" | "admin" | "team";
+type ActiveTab = "home" | "book" | "attendance" | "leave" | "payroll" | "documents" | "billing" | "reports" | "map" | "rooms" | "directory" | "admin" | "team";
 type LoginStep = "form" | "otp";
 type LoginIdentifier = "email" | "phone";
 
@@ -223,7 +226,7 @@ const bottomTabs: { id: ActiveTab; icon: typeof CalendarCheck; label: string }[]
   { id: "book", icon: CalendarCheck, label: "Book" },
   { id: "attendance", icon: Clock, label: "Attendance" },
   { id: "leave", icon: Plane, label: "Leave" },
-  { id: "payroll", icon: FileText, label: "Payroll" },
+  { id: "documents", icon: FileText, label: "Documents" },
   { id: "admin", icon: BarChart3, label: "Admin" },
 ];
 
@@ -5496,6 +5499,13 @@ const Index = () => {
               {activeTab === "attendance" && renderAttendancePanel()}
               {activeTab === "leave" && renderLeavePanel()}
               {activeTab === "payroll" && renderPayrollPanel()}
+              {activeTab === "documents" && (
+                <DocumentsPanel
+                  meEmployeeId={myEmployeeId}
+                  meUserId={authUserId}
+                  companyId={companyProfile?.id ?? null}
+                />
+              )}
               {activeTab === "billing" && renderBillingPanel()}
               {isAdmin && activeTab === "reports" && renderReportsPanel()}
               {activeTab === "book" && renderBookingPanel()}
