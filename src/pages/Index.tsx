@@ -5351,6 +5351,35 @@ const Index = () => {
             <SettingsIcon className="h-4 w-4 text-primary" />
             <h3 className="font-display text-base font-extrabold">Settings</h3>
           </div>
+          <div className="mb-3 rounded-2xl bg-background p-3">
+            <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Profile photo</p>
+            <div className="mt-2 flex items-center gap-3">
+              <div className="h-14 w-14 shrink-0 overflow-hidden rounded-full bg-muted ring-2 ring-primary/30">
+                {profilePhotoUrl ? (
+                  <img src={profilePhotoUrl} alt="Profile" className="h-full w-full object-cover" />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center text-base font-extrabold text-muted-foreground">
+                    {(currentUser?.displayName || "U").slice(0, 1).toUpperCase()}
+                  </div>
+                )}
+              </div>
+              <label className="focus-premium inline-flex cursor-pointer items-center gap-2 rounded-2xl bg-primary px-3 py-2 text-xs font-extrabold text-primary-foreground shadow-glow">
+                {uploadingPhoto ? "Uploading..." : profilePhotoUrl ? "Change photo" : "Upload photo"}
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  disabled={uploadingPhoto}
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) handleProfilePhotoUpload(f);
+                    e.target.value = "";
+                  }}
+                />
+              </label>
+            </div>
+            <p className="mt-2 text-[10px] font-semibold text-muted-foreground">JPG/PNG up to 5 MB.</p>
+          </div>
           <div className="rounded-2xl bg-background p-3">
             <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Theme</p>
             <div className="mt-2 grid grid-cols-2 gap-2">
