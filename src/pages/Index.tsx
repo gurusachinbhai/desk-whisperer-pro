@@ -5588,6 +5588,9 @@ const Index = () => {
                 <>
                   {renderAdminPanel()}
                   {companyProfile && (
+                    <AdminDepartmentsPanel companyId={companyProfile.id} />
+                  )}
+                  {companyProfile && (
                     <AdminDocumentsPanel
                       companyId={companyProfile.id}
                       uploaderName={currentUser?.displayName ?? "Admin"}
