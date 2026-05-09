@@ -5015,6 +5015,11 @@ const Index = () => {
           employees={employees as HierarchyEmployee[]}
           maxLevels={5}
         />
+        <EmployeeWorkInfoCard
+          meEmployeeId={myEmployeeId}
+          meUserId={authUserId}
+          companyId={companyProfile?.id ?? null}
+        />
         {/* Profile header */}
         <div className="rounded-[1.5rem] bg-surface-raised p-4 shadow-card">
           <div className="flex items-center justify-between">
