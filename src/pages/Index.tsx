@@ -1079,6 +1079,57 @@ const Index = () => {
     return () => listener.subscription.unsubscribe();
   }, []);
 
+  // Auto sign-out after 10 minutes of no user activity
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    let timer: number;
+    const reset = () => {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        toast.message("Signed out due to inactivity", { description: "No activity detected for 10 minutes." });
+        handleLogout();
+      }, 10 * 60 * 1000);
+    };
+    const events: (keyof WindowEventMap)[] = ["mousemove", "mousedown", "keydown", "touchstart", "scroll", "click"];
+    events.forEach((e) => window.addEventListener(e, reset, { passive: true }));
+    reset();
+    return () => {
+      window.clearTimeout(timer);
+      events.forEach((e) => window.removeEventListener(e, reset));
+    };
+  }, [isAuthenticated]);
+
+  // Load current user's profile photo
+  const [profilePhotoUrl, setProfilePhotoUrl] = useState<string | null>(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  useEffect(() => {
+    if (!authUserId) { setProfilePhotoUrl(null); return; }
+    supabase.from("employee_profiles").select("photo_url").eq("user_id", authUserId).maybeSingle()
+      .then(({ data }) => setProfilePhotoUrl((data?.photo_url as string | null) ?? null));
+  }, [authUserId]);
+
+  const handleProfilePhotoUpload = async (file: File) => {
+    if (!authUserId || !file) return;
+    if (file.size > 5 * 1024 * 1024) { toast.error("Photo must be under 5 MB"); return; }
+    try {
+      setUploadingPhoto(true);
+      const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+      const path = `${authUserId}/avatar-${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage.from("profile-photos").upload(path, file, { upsert: true, contentType: file.type });
+      if (upErr) throw upErr;
+      const { data: pub } = supabase.storage.from("profile-photos").getPublicUrl(path);
+      const url = pub.publicUrl;
+      const { error: updErr } = await supabase.from("employee_profiles").update({ photo_url: url }).eq("user_id", authUserId);
+      if (updErr) throw updErr;
+      setProfilePhotoUrl(url);
+      toast.success("Profile photo updated");
+    } catch (e) {
+      toast.error("Could not upload photo", { description: e instanceof Error ? e.message : String(e) });
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
   // Persist attendance, leave & desk bookings to the database (per-user)
   useRecordsPersistence({
     authUserId,
