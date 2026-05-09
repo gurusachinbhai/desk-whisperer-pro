@@ -1079,6 +1079,57 @@ const Index = () => {
     return () => listener.subscription.unsubscribe();
   }, []);
 
+  // Auto sign-out after 10 minutes of no user activity
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    let timer: number;
+    const reset = () => {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        toast.message("Signed out due to inactivity", { description: "No activity detected for 10 minutes." });
+        handleLogout();
+      }, 10 * 60 * 1000);
+    };
+    const events: (keyof WindowEventMap)[] = ["mousemove", "mousedown", "keydown", "touchstart", "scroll", "click"];
+    events.forEach((e) => window.addEventListener(e, reset, { passive: true }));
+    reset();
+    return () => {
+      window.clearTimeout(timer);
+      events.forEach((e) => window.removeEventListener(e, reset));
+    };
+  }, [isAuthenticated]);
+
+  // Load current user's profile photo
+  const [profilePhotoUrl, setProfilePhotoUrl] = useState<string | null>(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  useEffect(() => {
+    if (!authUserId) { setProfilePhotoUrl(null); return; }
+    supabase.from("employee_profiles").select("photo_url").eq("user_id", authUserId).maybeSingle()
+      .then(({ data }) => setProfilePhotoUrl((data?.photo_url as string | null) ?? null));
+  }, [authUserId]);
+
+  const handleProfilePhotoUpload = async (file: File) => {
+    if (!authUserId || !file) return;
+    if (file.size > 5 * 1024 * 1024) { toast.error("Photo must be under 5 MB"); return; }
+    try {
+      setUploadingPhoto(true);
+      const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+      const path = `${authUserId}/avatar-${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage.from("profile-photos").upload(path, file, { upsert: true, contentType: file.type });
+      if (upErr) throw upErr;
+      const { data: pub } = supabase.storage.from("profile-photos").getPublicUrl(path);
+      const url = pub.publicUrl;
+      const { error: updErr } = await supabase.from("employee_profiles").update({ photo_url: url }).eq("user_id", authUserId);
+      if (updErr) throw updErr;
+      setProfilePhotoUrl(url);
+      toast.success("Profile photo updated");
+    } catch (e) {
+      toast.error("Could not upload photo", { description: e instanceof Error ? e.message : String(e) });
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
   // Persist attendance, leave & desk bookings to the database (per-user)
   useRecordsPersistence({
     authUserId,
@@ -5245,14 +5296,12 @@ const Index = () => {
             </div>
           </div>
           {(() => {
-            const oneWeekAgo = nowTs - 7 * 24 * 60 * 60 * 1000;
-            const recentBookings = confirmedBookings.filter((b) => {
-              const t = new Date(b.date).getTime();
-              return !isNaN(t) && t >= oneWeekAgo;
-            });
+            const recentBookings = [...confirmedBookings]
+              .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+              .slice(0, 5);
             return recentBookings.length === 0 ? (
             <p className="rounded-2xl bg-background p-4 text-center text-xs font-semibold text-muted-foreground">
-              No bookings in the last 7 days. Tap Book to reserve a desk or meeting room.
+              No bookings yet. Tap Book to reserve a desk or meeting room.
             </p>
           ) : (
             <div className="space-y-2">
@@ -5301,6 +5350,35 @@ const Index = () => {
           <div className="mb-3 flex items-center gap-2">
             <SettingsIcon className="h-4 w-4 text-primary" />
             <h3 className="font-display text-base font-extrabold">Settings</h3>
+          </div>
+          <div className="mb-3 rounded-2xl bg-background p-3">
+            <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Profile photo</p>
+            <div className="mt-2 flex items-center gap-3">
+              <div className="h-14 w-14 shrink-0 overflow-hidden rounded-full bg-muted ring-2 ring-primary/30">
+                {profilePhotoUrl ? (
+                  <img src={profilePhotoUrl} alt="Profile" className="h-full w-full object-cover" />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center text-base font-extrabold text-muted-foreground">
+                    {(currentUser?.displayName || "U").slice(0, 1).toUpperCase()}
+                  </div>
+                )}
+              </div>
+              <label className="focus-premium inline-flex cursor-pointer items-center gap-2 rounded-2xl bg-primary px-3 py-2 text-xs font-extrabold text-primary-foreground shadow-glow">
+                {uploadingPhoto ? "Uploading..." : profilePhotoUrl ? "Change photo" : "Upload photo"}
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  disabled={uploadingPhoto}
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) handleProfilePhotoUpload(f);
+                    e.target.value = "";
+                  }}
+                />
+              </label>
+            </div>
+            <p className="mt-2 text-[10px] font-semibold text-muted-foreground">JPG/PNG up to 5 MB.</p>
           </div>
           <div className="rounded-2xl bg-background p-3">
             <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Theme</p>
