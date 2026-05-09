@@ -52,6 +52,8 @@ import { useRecordsPersistence } from "@/hooks/use-records-persistence";
 import hrgreatlyLogo from "@/assets/hrgreatly-logo.png";
 import DocumentsPanel from "@/components/DocumentsPanel";
 import AdminDocumentsPanel from "@/components/AdminDocumentsPanel";
+import AdminDepartmentsPanel from "@/components/AdminDepartmentsPanel";
+import EmployeeWorkInfoCard from "@/components/EmployeeWorkInfoCard";
 import ManagerHierarchy, { type HierarchyEmployee } from "@/components/ManagerHierarchy";
 import {
   Select,
@@ -5013,6 +5015,11 @@ const Index = () => {
           employees={employees as HierarchyEmployee[]}
           maxLevels={5}
         />
+        <EmployeeWorkInfoCard
+          meEmployeeId={myEmployeeId}
+          meUserId={authUserId}
+          companyId={companyProfile?.id ?? null}
+        />
         {/* Profile header */}
         <div className="rounded-[1.5rem] bg-surface-raised p-4 shadow-card">
           <div className="flex items-center justify-between">
@@ -5580,6 +5587,9 @@ const Index = () => {
               {isAdmin && activeTab === "admin" && (
                 <>
                   {renderAdminPanel()}
+                  {companyProfile && (
+                    <AdminDepartmentsPanel companyId={companyProfile.id} />
+                  )}
                   {companyProfile && (
                     <AdminDocumentsPanel
                       companyId={companyProfile.id}

@@ -125,6 +125,36 @@ export type Database = {
         }
         Relationships: []
       }
+      departments: {
+        Row: {
+          company_id: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       desk_reservations: {
         Row: {
           area: string
@@ -439,18 +469,71 @@ export type Database = {
           },
         ]
       }
+      employee_kyc: {
+        Row: {
+          aadhar_number: string | null
+          bank_account_holder: string | null
+          bank_account_number: string | null
+          bank_branch: string | null
+          bank_ifsc: string | null
+          bank_name: string | null
+          company_id: string
+          created_at: string
+          employee_id: string
+          id: string
+          pan_number: string | null
+          updated_at: string
+          updated_by: string | null
+          user_id: string | null
+        }
+        Insert: {
+          aadhar_number?: string | null
+          bank_account_holder?: string | null
+          bank_account_number?: string | null
+          bank_branch?: string | null
+          bank_ifsc?: string | null
+          bank_name?: string | null
+          company_id: string
+          created_at?: string
+          employee_id: string
+          id?: string
+          pan_number?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          aadhar_number?: string | null
+          bank_account_holder?: string | null
+          bank_account_number?: string | null
+          bank_branch?: string | null
+          bank_ifsc?: string | null
+          bank_name?: string | null
+          company_id?: string
+          created_at?: string
+          employee_id?: string
+          id?: string
+          pan_number?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       employee_profiles: {
         Row: {
           approved_at: string | null
           approved_by: string | null
           company_id: string
           created_at: string
+          department_id: string | null
           display_name: string
           email: string | null
           id: string
           manager_id: string | null
           phone: string | null
           photo_url: string | null
+          project_id: string | null
           status: string
           updated_at: string
           user_id: string | null
@@ -460,12 +543,14 @@ export type Database = {
           approved_by?: string | null
           company_id: string
           created_at?: string
+          department_id?: string | null
           display_name: string
           email?: string | null
           id?: string
           manager_id?: string | null
           phone?: string | null
           photo_url?: string | null
+          project_id?: string | null
           status?: string
           updated_at?: string
           user_id?: string | null
@@ -475,12 +560,14 @@ export type Database = {
           approved_by?: string | null
           company_id?: string
           created_at?: string
+          department_id?: string | null
           display_name?: string
           email?: string | null
           id?: string
           manager_id?: string | null
           phone?: string | null
           photo_url?: string | null
+          project_id?: string | null
           status?: string
           updated_at?: string
           user_id?: string | null
@@ -494,10 +581,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "employee_profiles_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "employee_profiles_manager_id_fkey"
             columns: ["manager_id"]
             isOneToOne: false
             referencedRelation: "employee_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_profiles_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
         ]
@@ -558,6 +659,47 @@ export type Database = {
           user_name?: string
         }
         Relationships: []
+      }
+      projects: {
+        Row: {
+          company_id: string
+          created_at: string
+          created_by: string | null
+          department_id: string | null
+          description: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          department_id?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          department_id?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "projects_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       salary_profiles: {
         Row: {
@@ -788,12 +930,14 @@ export type Database = {
           approved_by: string | null
           company_id: string
           created_at: string
+          department_id: string | null
           display_name: string
           email: string | null
           id: string
           manager_id: string | null
           phone: string | null
           photo_url: string | null
+          project_id: string | null
           status: string
           updated_at: string
           user_id: string | null
@@ -842,12 +986,14 @@ export type Database = {
           approved_by: string | null
           company_id: string
           created_at: string
+          department_id: string | null
           display_name: string
           email: string | null
           id: string
           manager_id: string | null
           phone: string | null
           photo_url: string | null
+          project_id: string | null
           status: string
           updated_at: string
           user_id: string | null
@@ -866,12 +1012,14 @@ export type Database = {
           approved_by: string | null
           company_id: string
           created_at: string
+          department_id: string | null
           display_name: string
           email: string | null
           id: string
           manager_id: string | null
           phone: string | null
           photo_url: string | null
+          project_id: string | null
           status: string
           updated_at: string
           user_id: string | null
@@ -1097,12 +1245,14 @@ export type Database = {
           approved_by: string | null
           company_id: string
           created_at: string
+          department_id: string | null
           display_name: string
           email: string | null
           id: string
           manager_id: string | null
           phone: string | null
           photo_url: string | null
+          project_id: string | null
           status: string
           updated_at: string
           user_id: string | null
@@ -1151,12 +1301,14 @@ export type Database = {
           approved_by: string | null
           company_id: string
           created_at: string
+          department_id: string | null
           display_name: string
           email: string | null
           id: string
           manager_id: string | null
           phone: string | null
           photo_url: string | null
+          project_id: string | null
           status: string
           updated_at: string
           user_id: string | null
