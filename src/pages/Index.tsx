@@ -5245,14 +5245,12 @@ const Index = () => {
             </div>
           </div>
           {(() => {
-            const oneWeekAgo = nowTs - 7 * 24 * 60 * 60 * 1000;
-            const recentBookings = confirmedBookings.filter((b) => {
-              const t = new Date(b.date).getTime();
-              return !isNaN(t) && t >= oneWeekAgo;
-            });
+            const recentBookings = [...confirmedBookings]
+              .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+              .slice(0, 5);
             return recentBookings.length === 0 ? (
             <p className="rounded-2xl bg-background p-4 text-center text-xs font-semibold text-muted-foreground">
-              No bookings in the last 7 days. Tap Book to reserve a desk or meeting room.
+              No bookings yet. Tap Book to reserve a desk or meeting room.
             </p>
           ) : (
             <div className="space-y-2">
