@@ -5585,19 +5585,14 @@ const Index = () => {
           <div className="grid gap-5 lg:grid-cols-12">
             <section className="space-y-5 lg:col-span-12">
               {activeTab === "home" && renderHomeScreen()}
-              {isAdmin && activeTab === "admin" && (
-                <>
-                  {renderAdminPanel()}
-                  {companyProfile && (
-                    <AdminDepartmentsPanel companyId={companyProfile.id} />
-                  )}
-                  {companyProfile && (
-                    <AdminDocumentsPanel
-                      companyId={companyProfile.id}
-                      uploaderName={currentUser?.displayName ?? "Admin"}
-                    />
-                  )}
-                </>
+              {isAdmin && activeTab === "admin" && companyProfile && (
+                <AdminConsole
+                  companyId={companyProfile.id}
+                  uploaderName={currentUser?.displayName ?? "Admin"}
+                  renderDashboard={renderAdminPanel}
+                  renderReports={renderReportsPanel}
+                  renderBilling={renderBillingPanel}
+                />
               )}
               {activeTab === "team" && renderTeamPanel()}
               {activeTab === "attendance" && renderAttendancePanel()}
