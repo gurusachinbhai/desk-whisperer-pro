@@ -53,6 +53,7 @@ import hrgreatlyLogo from "@/assets/hrgreatly-logo.png";
 import DocumentsPanel from "@/components/DocumentsPanel";
 import AdminDocumentsPanel from "@/components/AdminDocumentsPanel";
 import AdminDepartmentsPanel from "@/components/AdminDepartmentsPanel";
+import AdminConsole from "@/components/admin/AdminConsole";
 import EmployeeWorkInfoCard from "@/components/EmployeeWorkInfoCard";
 import ManagerHierarchy, { type HierarchyEmployee } from "@/components/ManagerHierarchy";
 import {
