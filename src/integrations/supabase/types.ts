@@ -209,6 +209,45 @@ export type Database = {
         }
         Relationships: []
       }
+      desk_seats: {
+        Row: {
+          area: string | null
+          company_id: string
+          created_at: string
+          created_by: string | null
+          floor: string | null
+          id: string
+          is_active: boolean
+          notes: string | null
+          seat_label: string
+          updated_at: string
+        }
+        Insert: {
+          area?: string | null
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          floor?: string | null
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          seat_label: string
+          updated_at?: string
+        }
+        Update: {
+          area?: string | null
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          floor?: string | null
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          seat_label?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       deskflow_bookings: {
         Row: {
           booked_at: string
@@ -529,12 +568,18 @@ export type Database = {
           department_id: string | null
           display_name: string
           email: string | null
+          employee_code: string | null
+          exit_checklist: Json | null
+          exit_status: string | null
           id: string
+          last_working_day: string | null
           manager_id: string | null
           phone: string | null
           photo_url: string | null
           project_id: string | null
+          resignation_date: string | null
           status: string
+          uan_number: string | null
           updated_at: string
           user_id: string | null
         }
@@ -546,12 +591,18 @@ export type Database = {
           department_id?: string | null
           display_name: string
           email?: string | null
+          employee_code?: string | null
+          exit_checklist?: Json | null
+          exit_status?: string | null
           id?: string
+          last_working_day?: string | null
           manager_id?: string | null
           phone?: string | null
           photo_url?: string | null
           project_id?: string | null
+          resignation_date?: string | null
           status?: string
+          uan_number?: string | null
           updated_at?: string
           user_id?: string | null
         }
@@ -563,12 +614,18 @@ export type Database = {
           department_id?: string | null
           display_name?: string
           email?: string | null
+          employee_code?: string | null
+          exit_checklist?: Json | null
+          exit_status?: string | null
           id?: string
+          last_working_day?: string | null
           manager_id?: string | null
           phone?: string | null
           photo_url?: string | null
           project_id?: string | null
+          resignation_date?: string | null
           status?: string
+          uan_number?: string | null
           updated_at?: string
           user_id?: string | null
         }
@@ -933,12 +990,18 @@ export type Database = {
           department_id: string | null
           display_name: string
           email: string | null
+          employee_code: string | null
+          exit_checklist: Json | null
+          exit_status: string | null
           id: string
+          last_working_day: string | null
           manager_id: string | null
           phone: string | null
           photo_url: string | null
           project_id: string | null
+          resignation_date: string | null
           status: string
+          uan_number: string | null
           updated_at: string
           user_id: string | null
         }
@@ -989,12 +1052,18 @@ export type Database = {
           department_id: string | null
           display_name: string
           email: string | null
+          employee_code: string | null
+          exit_checklist: Json | null
+          exit_status: string | null
           id: string
+          last_working_day: string | null
           manager_id: string | null
           phone: string | null
           photo_url: string | null
           project_id: string | null
+          resignation_date: string | null
           status: string
+          uan_number: string | null
           updated_at: string
           user_id: string | null
         }
@@ -1015,12 +1084,18 @@ export type Database = {
           department_id: string | null
           display_name: string
           email: string | null
+          employee_code: string | null
+          exit_checklist: Json | null
+          exit_status: string | null
           id: string
+          last_working_day: string | null
           manager_id: string | null
           phone: string | null
           photo_url: string | null
           project_id: string | null
+          resignation_date: string | null
           status: string
+          uan_number: string | null
           updated_at: string
           user_id: string | null
         }
@@ -1128,6 +1203,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      generate_employee_code: { Args: { _company_id: string }; Returns: string }
       generate_support_ticket_number: { Args: never; Returns: string }
       get_platform_stats: { Args: never; Returns: Json }
       grant_super_admin: { Args: { _email: string }; Returns: boolean }
@@ -1248,12 +1324,18 @@ export type Database = {
           department_id: string | null
           display_name: string
           email: string | null
+          employee_code: string | null
+          exit_checklist: Json | null
+          exit_status: string | null
           id: string
+          last_working_day: string | null
           manager_id: string | null
           phone: string | null
           photo_url: string | null
           project_id: string | null
+          resignation_date: string | null
           status: string
+          uan_number: string | null
           updated_at: string
           user_id: string | null
         }
@@ -1304,12 +1386,18 @@ export type Database = {
           department_id: string | null
           display_name: string
           email: string | null
+          employee_code: string | null
+          exit_checklist: Json | null
+          exit_status: string | null
           id: string
+          last_working_day: string | null
           manager_id: string | null
           phone: string | null
           photo_url: string | null
           project_id: string | null
+          resignation_date: string | null
           status: string
+          uan_number: string | null
           updated_at: string
           user_id: string | null
         }
