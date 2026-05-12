@@ -79,6 +79,14 @@ export type Database = {
           postal_code: string | null
           state: string | null
           status: string
+          subscribed_by: string | null
+          subscription_amount: number | null
+          subscription_currency: string | null
+          subscription_plan: string | null
+          subscription_renews_at: string | null
+          subscription_seats: number | null
+          subscription_started_at: string | null
+          subscription_status: string
           updated_at: string
         }
         Insert: {
@@ -100,6 +108,14 @@ export type Database = {
           postal_code?: string | null
           state?: string | null
           status?: string
+          subscribed_by?: string | null
+          subscription_amount?: number | null
+          subscription_currency?: string | null
+          subscription_plan?: string | null
+          subscription_renews_at?: string | null
+          subscription_seats?: number | null
+          subscription_started_at?: string | null
+          subscription_status?: string
           updated_at?: string
         }
         Update: {
@@ -121,6 +137,14 @@ export type Database = {
           postal_code?: string | null
           state?: string | null
           status?: string
+          subscribed_by?: string | null
+          subscription_amount?: number | null
+          subscription_currency?: string | null
+          subscription_plan?: string | null
+          subscription_renews_at?: string | null
+          subscription_seats?: number | null
+          subscription_started_at?: string | null
+          subscription_status?: string
           updated_at?: string
         }
         Relationships: []
@@ -1033,6 +1057,14 @@ export type Database = {
           postal_code: string | null
           state: string | null
           status: string
+          subscribed_by: string | null
+          subscription_amount: number | null
+          subscription_currency: string | null
+          subscription_plan: string | null
+          subscription_renews_at: string | null
+          subscription_seats: number | null
+          subscription_started_at: string | null
+          subscription_status: string
           updated_at: string
         }
         SetofOptions: {
@@ -1241,6 +1273,14 @@ export type Database = {
           postal_code: string | null
           state: string | null
           status: string
+          subscribed_by: string | null
+          subscription_amount: number | null
+          subscription_currency: string | null
+          subscription_plan: string | null
+          subscription_renews_at: string | null
+          subscription_seats: number | null
+          subscription_started_at: string | null
+          subscription_status: string
           updated_at: string
         }
         SetofOptions: {
@@ -1265,6 +1305,14 @@ export type Database = {
           company_name: string
           display_name: string
           employee_email: string
+        }[]
+      }
+      lookup_user_names: {
+        Args: { _user_ids: string[] }
+        Returns: {
+          display_name: string
+          email: string
+          user_id: string
         }[]
       }
       register_company_profile: {
@@ -1294,6 +1342,14 @@ export type Database = {
           postal_code: string | null
           state: string | null
           status: string
+          subscribed_by: string | null
+          subscription_amount: number | null
+          subscription_currency: string | null
+          subscription_plan: string | null
+          subscription_renews_at: string | null
+          subscription_seats: number | null
+          subscription_started_at: string | null
+          subscription_status: string
           updated_at: string
         }
         SetofOptions: {
@@ -1367,6 +1423,14 @@ export type Database = {
           postal_code: string | null
           state: string | null
           status: string
+          subscribed_by: string | null
+          subscription_amount: number | null
+          subscription_currency: string | null
+          subscription_plan: string | null
+          subscription_renews_at: string | null
+          subscription_seats: number | null
+          subscription_started_at: string | null
+          subscription_status: string
           updated_at: string
         }
         SetofOptions: {
@@ -1404,6 +1468,64 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "employee_profiles"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      update_company_profile: {
+        Args: {
+          _address_line1: string
+          _address_line2: string
+          _city: string
+          _company_id: string
+          _contact_email: string
+          _contact_name: string
+          _contact_phone: string
+          _country: string
+          _domain: string
+          _name: string
+          _postal_code: string
+          _state: string
+          _subscription_amount: number
+          _subscription_currency: string
+          _subscription_plan: string
+          _subscription_renews_at: string
+          _subscription_seats: number
+          _subscription_started_at: string
+          _subscription_status: string
+        }
+        Returns: {
+          address_line1: string | null
+          address_line2: string | null
+          approved_at: string | null
+          approved_by: string | null
+          city: string | null
+          contact_email: string | null
+          contact_name: string | null
+          contact_phone: string | null
+          country: string | null
+          created_at: string
+          created_by: string | null
+          domain: string | null
+          id: string
+          name: string
+          organization_code: string
+          postal_code: string | null
+          state: string | null
+          status: string
+          subscribed_by: string | null
+          subscription_amount: number | null
+          subscription_currency: string | null
+          subscription_plan: string | null
+          subscription_renews_at: string | null
+          subscription_seats: number | null
+          subscription_started_at: string | null
+          subscription_status: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "company_profiles"
           isOneToOne: true
           isSetofReturn: false
         }

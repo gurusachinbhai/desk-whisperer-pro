@@ -16,6 +16,10 @@ import {
   Trash2,
   AlertTriangle,
   Ticket as TicketIcon,
+  Pencil,
+  Search,
+  CreditCard,
+  X,
 } from "lucide-react";
 import hrgreatlyLogo from "@/assets/hrgreatly-logo.png";
 
@@ -36,6 +40,15 @@ type CompanyRow = {
   contact_phone: string | null;
   created_at: string;
   approved_at: string | null;
+  approved_by: string | null;
+  subscription_plan: string | null;
+  subscription_status: string;
+  subscription_seats: number | null;
+  subscription_amount: number | null;
+  subscription_currency: string | null;
+  subscription_started_at: string | null;
+  subscription_renews_at: string | null;
+  subscribed_by: string | null;
 };
 
 type EmployeeRow = {
@@ -45,14 +58,12 @@ type EmployeeRow = {
   phone: string | null;
   status: string;
   company_id: string;
+  user_id: string | null;
   created_at: string;
 };
 
-type SuperAdminRow = {
-  id: string;
-  user_id: string;
-  email?: string | null;
-};
+type RoleRow = { id: string; user_id: string; role: string; company_id: string | null };
+type NameRow = { user_id: string; email: string | null; display_name: string | null };
 
 type Stats = {
   companies_total: number;
@@ -63,8 +74,8 @@ type Stats = {
   employees_pending: number;
 };
 
-const formatCurrency = (n: number) =>
-  new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
+const formatCurrency = (n: number, ccy = "USD") =>
+  new Intl.NumberFormat("en-US", { style: "currency", currency: ccy, maximumFractionDigits: 0 }).format(n);
 
 export default function Admin() {
   const navigate = useNavigate();
@@ -72,25 +83,49 @@ export default function Admin() {
   const [authorized, setAuthorized] = useState(false);
   const [companies, setCompanies] = useState<CompanyRow[]>([]);
   const [employees, setEmployees] = useState<EmployeeRow[]>([]);
+  const [roles, setRoles] = useState<RoleRow[]>([]);
+  const [namesByUserId, setNamesByUserId] = useState<Record<string, NameRow>>({});
   const [stats, setStats] = useState<Stats | null>(null);
   const [tab, setTab] = useState<"overview" | "companies" | "employees" | "admins">("overview");
   const [filter, setFilter] = useState<"all" | "pending" | "approved" | "suspended">("all");
   const [grantEmail, setGrantEmail] = useState("");
-  const [admins, setAdmins] = useState<SuperAdminRow[]>([]);
+  const [companySearch, setCompanySearch] = useState("");
+  const [userSearch, setUserSearch] = useState("");
+  const [editingCompany, setEditingCompany] = useState<CompanyRow | null>(null);
 
   const loadAll = async () => {
-    const [{ data: cData, error: cErr }, { data: eData, error: eErr }, statsRes, adminRes] = await Promise.all([
+    const [{ data: cData, error: cErr }, { data: eData, error: eErr }, statsRes, rolesRes] = await Promise.all([
       supabase.from("company_profiles").select("*").order("created_at", { ascending: false }),
       supabase.from("employee_profiles").select("*").order("created_at", { ascending: false }),
       supabase.rpc("get_platform_stats"),
-      supabase.from("user_roles").select("id, user_id, role").eq("role", "super_admin"),
+      supabase.from("user_roles").select("id, user_id, role, company_id"),
     ]);
     if (cErr) toast.error("Failed to load companies", { description: cErr.message });
     if (eErr) toast.error("Failed to load employees", { description: eErr.message });
-    setCompanies((cData ?? []) as CompanyRow[]);
-    setEmployees((eData ?? []) as EmployeeRow[]);
+    const cList = (cData ?? []) as CompanyRow[];
+    const eList = (eData ?? []) as EmployeeRow[];
+    const rList = (rolesRes.data ?? []) as RoleRow[];
+    setCompanies(cList);
+    setEmployees(eList);
+    setRoles(rList);
     if (statsRes.data) setStats(statsRes.data as unknown as Stats);
-    setAdmins(((adminRes.data ?? []) as Array<{ id: string; user_id: string }>).map((r) => ({ id: r.id, user_id: r.user_id })));
+
+    // Resolve names for super admins, approvers, subscribers
+    const ids = new Set<string>();
+    rList.filter((r) => r.role === "super_admin").forEach((r) => ids.add(r.user_id));
+    cList.forEach((c) => {
+      if (c.approved_by) ids.add(c.approved_by);
+      if (c.subscribed_by) ids.add(c.subscribed_by);
+    });
+    eList.forEach((e) => {
+      // approver fields aren't selected by default; skip
+    });
+    if (ids.size > 0) {
+      const { data: names } = await supabase.rpc("lookup_user_names", { _user_ids: Array.from(ids) });
+      const map: Record<string, NameRow> = {};
+      ((names ?? []) as NameRow[]).forEach((n) => (map[n.user_id] = n));
+      setNamesByUserId(map);
+    }
   };
 
   useEffect(() => {
@@ -105,12 +140,12 @@ export default function Admin() {
         }
         return;
       }
-      const { data: roles } = await supabase
+      const { data: rolesData } = await supabase
         .from("user_roles")
         .select("role")
         .eq("user_id", uid)
         .eq("role", "super_admin");
-      const isSuper = (roles ?? []).length > 0;
+      const isSuper = (rolesData ?? []).length > 0;
       if (cancelled) return;
       setAuthorized(isSuper);
       if (isSuper) await loadAll();
@@ -121,10 +156,75 @@ export default function Admin() {
     };
   }, []);
 
+  const superAdminRoles = useMemo(() => roles.filter((r) => r.role === "super_admin"), [roles]);
+
+  const adminUserIdsByCompany = useMemo(() => {
+    const map = new Map<string, string[]>();
+    roles
+      .filter((r) => r.role === "admin" && r.company_id)
+      .forEach((r) => {
+        const arr = map.get(r.company_id!) ?? [];
+        arr.push(r.user_id);
+        map.set(r.company_id!, arr);
+      });
+    return map;
+  }, [roles]);
+
+  const employeesByUserId = useMemo(() => {
+    const map = new Map<string, EmployeeRow>();
+    employees.forEach((e) => {
+      if (e.user_id) map.set(e.user_id, e);
+    });
+    return map;
+  }, [employees]);
+
+  const userRolesByUserId = useMemo(() => {
+    const map = new Map<string, Set<string>>();
+    roles.forEach((r) => {
+      const s = map.get(r.user_id) ?? new Set<string>();
+      s.add(r.role);
+      map.set(r.user_id, s);
+    });
+    return map;
+  }, [roles]);
+
+  const resolveName = (uid: string | null | undefined): string => {
+    if (!uid) return "—";
+    const n = namesByUserId[uid];
+    if (n?.display_name) return n.display_name;
+    const ep = employeesByUserId.get(uid);
+    if (ep?.display_name) return ep.display_name;
+    return n?.email ?? uid.slice(0, 8);
+  };
+
   const filteredCompanies = useMemo(() => {
-    if (filter === "all") return companies;
-    return companies.filter((c) => c.status === filter);
-  }, [companies, filter]);
+    let list = companies;
+    if (filter !== "all") list = list.filter((c) => c.status === filter);
+    const q = companySearch.trim().toLowerCase();
+    if (q) {
+      list = list.filter(
+        (c) =>
+          c.name.toLowerCase().includes(q) ||
+          c.organization_code.toLowerCase().includes(q) ||
+          (c.domain ?? "").toLowerCase().includes(q) ||
+          (c.contact_email ?? "").toLowerCase().includes(q),
+      );
+    }
+    return list;
+  }, [companies, filter, companySearch]);
+
+  const filteredEmployees = useMemo(() => {
+    const q = userSearch.trim().toLowerCase();
+    if (!q) return employees;
+    return employees.filter((e) => {
+      const company = companies.find((c) => c.id === e.company_id);
+      return (
+        e.display_name.toLowerCase().includes(q) ||
+        (e.email ?? "").toLowerCase().includes(q) ||
+        (company?.name ?? "").toLowerCase().includes(q)
+      );
+    });
+  }, [employees, userSearch, companies]);
 
   const employeeCountByCompany = useMemo(() => {
     const map = new Map<string, number>();
@@ -132,14 +232,13 @@ export default function Admin() {
     return map;
   }, [employees]);
 
-  // Mock revenue: $9 per active employee per month per approved company
   const revenuePerEmployee = 9;
   const activeEmployees = employees.filter(
     (e) => e.status === "approved" && companies.find((c) => c.id === e.company_id)?.status === "approved",
   ).length;
   const mrr = activeEmployees * revenuePerEmployee;
   const arr = mrr * 12;
-  const forecast6mo = Math.round(mrr * 6 * 1.18); // assume 18% growth aggregate
+  const forecast6mo = Math.round(mrr * 6 * 1.18);
 
   const handleApproveCompany = async (id: string) => {
     const { error } = await supabase.rpc("approve_company", { _company_id: id });
@@ -268,7 +367,7 @@ export default function Admin() {
               <StatCard icon={Building2} label="Companies" value={stats?.companies_total ?? companies.length} hint={`${stats?.companies_approved ?? 0} approved`} />
               <StatCard icon={Clock3} label="Pending companies" value={stats?.companies_pending ?? 0} hint="Awaiting approval" tone="warn" />
               <StatCard icon={Users} label="Total users" value={stats?.employees_total ?? employees.length} hint={`${stats?.employees_pending ?? 0} pending`} />
-              <StatCard icon={ShieldCheck} label="Super admins" value={admins.length} hint="Platform managers" />
+              <StatCard icon={ShieldCheck} label="Super admins" value={superAdminRoles.length} hint="Platform managers" />
             </div>
 
             <div className="grid gap-3 sm:grid-cols-3">
@@ -296,30 +395,42 @@ export default function Admin() {
 
         {tab === "companies" && (
           <div className="space-y-4">
-            <div className="flex flex-wrap gap-2">
-              {(["all", "pending", "approved", "suspended"] as const).map((f) => (
-                <button
-                  key={f}
-                  onClick={() => setFilter(f)}
-                  className={`rounded-full px-3 py-1.5 text-xs font-extrabold capitalize ${
-                    filter === f ? "bg-primary text-primary-foreground" : "border border-border bg-card text-muted-foreground"
-                  }`}
-                >
-                  {f}
-                </button>
-              ))}
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-wrap gap-2">
+                {(["all", "pending", "approved", "suspended"] as const).map((f) => (
+                  <button
+                    key={f}
+                    onClick={() => setFilter(f)}
+                    className={`rounded-full px-3 py-1.5 text-xs font-extrabold capitalize ${
+                      filter === f ? "bg-primary text-primary-foreground" : "border border-border bg-card text-muted-foreground"
+                    }`}
+                  >
+                    {f}
+                  </button>
+                ))}
+              </div>
+              <div className="relative w-full sm:w-72">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  value={companySearch}
+                  onChange={(e) => setCompanySearch(e.target.value)}
+                  placeholder="Search company, code, domain…"
+                  className="w-full rounded-xl border border-border bg-background py-2 pl-9 pr-3 text-sm"
+                />
+              </div>
             </div>
+
             <div className="space-y-3">
               {filteredCompanies.length === 0 && (
                 <p className="rounded-2xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-                  No companies in this view.
+                  No companies match this view.
                 </p>
               )}
               {filteredCompanies.map((c) => {
                 const empCount = employeeCountByCompany.get(c.id) ?? 0;
-                const addr = [c.address_line1, c.address_line2, c.city, c.state, c.postal_code, c.country]
-                  .filter(Boolean)
-                  .join(", ");
+                const adminIds = adminUserIdsByCompany.get(c.id) ?? [];
+                const adminNames = adminIds.map(resolveName);
+                const addr = [c.address_line1, c.address_line2, c.city, c.state, c.postal_code, c.country].filter(Boolean).join(", ");
                 return (
                   <div key={c.id} className="rounded-2xl border border-border bg-card p-4">
                     <div className="flex flex-wrap items-start justify-between gap-3">
@@ -327,6 +438,11 @@ export default function Admin() {
                         <div className="flex items-center gap-2">
                           <h4 className="font-display text-base font-extrabold">{c.name}</h4>
                           <StatusBadge status={c.status} />
+                          {c.subscription_plan && (
+                            <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-extrabold uppercase text-primary">
+                              {c.subscription_plan} · {c.subscription_status}
+                            </span>
+                          )}
                         </div>
                         <p className="text-xs font-semibold text-muted-foreground">
                           Code: {c.organization_code} · {empCount} user{empCount === 1 ? "" : "s"}
@@ -334,6 +450,12 @@ export default function Admin() {
                         </p>
                       </div>
                       <div className="flex flex-wrap gap-2">
+                        <button
+                          onClick={() => setEditingCompany(c)}
+                          className="inline-flex items-center gap-1 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-extrabold"
+                        >
+                          <Pencil className="h-3.5 w-3.5" /> Edit
+                        </button>
                         {c.status !== "approved" && (
                           <button onClick={() => handleApproveCompany(c.id)} className="inline-flex items-center gap-1 rounded-lg bg-primary px-3 py-1.5 text-xs font-extrabold text-primary-foreground">
                             <CheckCircle2 className="h-3.5 w-3.5" /> Approve
@@ -347,12 +469,25 @@ export default function Admin() {
                       </div>
                     </div>
                     <div className="mt-3 grid gap-2 text-xs sm:grid-cols-2">
+                      <InfoRow label="Approved by (Super Admin)" value={resolveName(c.approved_by)} />
+                      <InfoRow label={`Admins (${adminNames.length}/3)`} value={adminNames.length ? adminNames.join(", ") : "—"} />
+                      <InfoRow
+                        label="Subscription"
+                        value={
+                          c.subscription_plan
+                            ? `${c.subscription_plan} · ${c.subscription_status}${
+                                c.subscription_amount ? ` · ${formatCurrency(Number(c.subscription_amount), c.subscription_currency ?? "USD")}` : ""
+                              }${c.subscription_seats ? ` · ${c.subscription_seats} seats` : ""}`
+                            : "—"
+                        }
+                      />
+                      <InfoRow label="Subscribed by" value={resolveName(c.subscribed_by)} />
+                      <InfoRow label="Renews" value={c.subscription_renews_at ? new Date(c.subscription_renews_at).toLocaleDateString() : "—"} />
                       <InfoRow label="Address" value={addr || "—"} />
                       <InfoRow label="Contact" value={c.contact_name || "—"} />
                       <InfoRow label="Email" value={c.contact_email || "—"} />
                       <InfoRow label="Phone" value={c.contact_phone || "—"} />
                       <InfoRow label="Registered" value={new Date(c.created_at).toLocaleDateString()} />
-                      <InfoRow label="Approved" value={c.approved_at ? new Date(c.approved_at).toLocaleDateString() : "—"} />
                     </div>
                   </div>
                 );
@@ -363,19 +498,36 @@ export default function Admin() {
 
         {tab === "employees" && (
           <div className="space-y-3">
-            {employees.length === 0 && (
+            <div className="relative w-full sm:max-w-md">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <input
+                value={userSearch}
+                onChange={(e) => setUserSearch(e.target.value)}
+                placeholder="Search user name, email, or company…"
+                className="w-full rounded-xl border border-border bg-background py-2 pl-9 pr-3 text-sm"
+              />
+            </div>
+
+            {filteredEmployees.length === 0 && (
               <p className="rounded-2xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-                No users yet.
+                No users match this view.
               </p>
             )}
-            {employees.map((e) => {
+            {filteredEmployees.map((e) => {
               const company = companies.find((c) => c.id === e.company_id);
+              const userRoles = e.user_id ? userRolesByUserId.get(e.user_id) ?? new Set<string>() : new Set<string>();
+              const isAdmin = userRoles.has("admin");
+              const isUser = userRoles.has("user");
+              const roleLabel = isAdmin && isUser ? "Admin + Employee" : isAdmin ? "Admin" : isUser ? "Employee" : "Pending";
               return (
                 <div key={e.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-card p-4">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
                       <h4 className="font-display text-sm font-extrabold">{e.display_name}</h4>
                       <StatusBadge status={e.status} />
+                      <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-extrabold uppercase text-muted-foreground">
+                        {roleLabel}
+                      </span>
                     </div>
                     <p className="text-xs font-semibold text-muted-foreground">
                       {e.email ?? "—"} · {company?.name ?? "Unknown company"}
@@ -424,22 +576,200 @@ export default function Admin() {
             </form>
 
             <div className="space-y-2">
-              {admins.map((a) => (
-                <div key={a.id} className="flex items-center justify-between rounded-xl border border-border bg-card p-3">
-                  <div className="flex items-center gap-2">
-                    <ShieldCheck className="h-4 w-4 text-primary" />
-                    <code className="text-xs">{a.user_id}</code>
+              {superAdminRoles.map((a) => {
+                const n = namesByUserId[a.user_id];
+                const name = resolveName(a.user_id);
+                return (
+                  <div key={a.id} className="flex items-center justify-between rounded-xl border border-border bg-card p-3">
+                    <div className="flex items-center gap-3">
+                      <ShieldCheck className="h-4 w-4 text-primary" />
+                      <div>
+                        <p className="text-sm font-extrabold">{name}</p>
+                        <p className="text-[11px] text-muted-foreground">{n?.email ?? a.user_id}</p>
+                      </div>
+                    </div>
+                    <button onClick={() => handleRevokeSuperAdmin(a.user_id)} className="inline-flex items-center gap-1 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-extrabold text-destructive">
+                      <Trash2 className="h-3.5 w-3.5" /> Revoke
+                    </button>
                   </div>
-                  <button onClick={() => handleRevokeSuperAdmin(a.user_id)} className="inline-flex items-center gap-1 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-extrabold text-destructive">
-                    <Trash2 className="h-3.5 w-3.5" /> Revoke
-                  </button>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
       </section>
+
+      {editingCompany && (
+        <EditCompanyDialog
+          company={editingCompany}
+          onClose={() => setEditingCompany(null)}
+          onSaved={() => {
+            setEditingCompany(null);
+            loadAll();
+          }}
+        />
+      )}
     </main>
+  );
+}
+
+function EditCompanyDialog({
+  company,
+  onClose,
+  onSaved,
+}: {
+  company: CompanyRow;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [form, setForm] = useState({
+    name: company.name ?? "",
+    domain: company.domain ?? "",
+    address_line1: company.address_line1 ?? "",
+    address_line2: company.address_line2 ?? "",
+    city: company.city ?? "",
+    state: company.state ?? "",
+    postal_code: company.postal_code ?? "",
+    country: company.country ?? "",
+    contact_name: company.contact_name ?? "",
+    contact_email: company.contact_email ?? "",
+    contact_phone: company.contact_phone ?? "",
+    subscription_plan: company.subscription_plan ?? "",
+    subscription_status: company.subscription_status ?? "inactive",
+    subscription_seats: company.subscription_seats?.toString() ?? "",
+    subscription_amount: company.subscription_amount?.toString() ?? "",
+    subscription_currency: company.subscription_currency ?? "USD",
+    subscription_started_at: company.subscription_started_at?.slice(0, 10) ?? "",
+    subscription_renews_at: company.subscription_renews_at?.slice(0, 10) ?? "",
+  });
+  const [saving, setSaving] = useState(false);
+
+  const set = (k: keyof typeof form, v: string) => setForm((f) => ({ ...f, [k]: v }));
+
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    const { error } = await supabase.rpc("update_company_profile", {
+      _company_id: company.id,
+      _name: form.name,
+      _domain: form.domain,
+      _address_line1: form.address_line1,
+      _address_line2: form.address_line2,
+      _city: form.city,
+      _state: form.state,
+      _postal_code: form.postal_code,
+      _country: form.country,
+      _contact_name: form.contact_name,
+      _contact_email: form.contact_email,
+      _contact_phone: form.contact_phone,
+      _subscription_plan: form.subscription_plan,
+      _subscription_status: form.subscription_status,
+      _subscription_seats: form.subscription_seats ? Number(form.subscription_seats) : null,
+      _subscription_amount: form.subscription_amount ? Number(form.subscription_amount) : null,
+      _subscription_currency: form.subscription_currency,
+      _subscription_started_at: form.subscription_started_at || null,
+      _subscription_renews_at: form.subscription_renews_at || null,
+    });
+    setSaving(false);
+    if (error) return toast.error("Save failed", { description: error.message });
+    toast.success("Company updated");
+    onSaved();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-background/80 p-4 backdrop-blur-sm">
+      <div className="w-full max-w-2xl overflow-hidden rounded-2xl border border-border bg-card shadow-card">
+        <div className="flex items-center justify-between border-b border-border px-4 py-3">
+          <div className="flex items-center gap-2">
+            <Building2 className="h-4 w-4 text-primary" />
+            <h3 className="font-display text-sm font-extrabold">Edit company · {company.organization_code}</h3>
+          </div>
+          <button onClick={onClose} className="rounded-lg p-1.5 hover:bg-muted">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <form onSubmit={submit} className="max-h-[70vh] space-y-4 overflow-y-auto p-4">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field label="Company name" value={form.name} onChange={(v) => set("name", v)} required />
+            <Field label="Domain" value={form.domain} onChange={(v) => set("domain", v)} placeholder="example.com" />
+            <Field label="Contact name" value={form.contact_name} onChange={(v) => set("contact_name", v)} />
+            <Field label="Contact email" type="email" value={form.contact_email} onChange={(v) => set("contact_email", v)} />
+            <Field label="Contact phone" value={form.contact_phone} onChange={(v) => set("contact_phone", v)} />
+            <Field label="Address line 1" value={form.address_line1} onChange={(v) => set("address_line1", v)} />
+            <Field label="Address line 2" value={form.address_line2} onChange={(v) => set("address_line2", v)} />
+            <Field label="City" value={form.city} onChange={(v) => set("city", v)} />
+            <Field label="State" value={form.state} onChange={(v) => set("state", v)} />
+            <Field label="Postal code" value={form.postal_code} onChange={(v) => set("postal_code", v)} />
+            <Field label="Country" value={form.country} onChange={(v) => set("country", v)} />
+          </div>
+
+          <div className="rounded-xl border border-border bg-muted/30 p-3">
+            <div className="mb-2 flex items-center gap-2 text-xs font-extrabold uppercase tracking-wide text-muted-foreground">
+              <CreditCard className="h-3.5 w-3.5" /> Subscription
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="Plan" value={form.subscription_plan} onChange={(v) => set("subscription_plan", v)} placeholder="Starter / Pro / Enterprise" />
+              <div>
+                <label className="text-[11px] font-extrabold uppercase tracking-wide text-muted-foreground">Status</label>
+                <select
+                  value={form.subscription_status}
+                  onChange={(e) => set("subscription_status", e.target.value)}
+                  className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm"
+                >
+                  {["inactive", "trial", "active", "past_due", "cancelled"].map((s) => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+              </div>
+              <Field label="Seats" type="number" value={form.subscription_seats} onChange={(v) => set("subscription_seats", v)} />
+              <Field label="Amount" type="number" value={form.subscription_amount} onChange={(v) => set("subscription_amount", v)} />
+              <Field label="Currency" value={form.subscription_currency} onChange={(v) => set("subscription_currency", v)} />
+              <Field label="Started" type="date" value={form.subscription_started_at} onChange={(v) => set("subscription_started_at", v)} />
+              <Field label="Renews" type="date" value={form.subscription_renews_at} onChange={(v) => set("subscription_renews_at", v)} />
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 border-t border-border pt-3">
+            <button type="button" onClick={onClose} className="rounded-xl border border-border bg-background px-4 py-2 text-sm font-extrabold">
+              Cancel
+            </button>
+            <button type="submit" disabled={saving} className="rounded-xl bg-primary px-4 py-2 text-sm font-extrabold text-primary-foreground disabled:opacity-50">
+              {saving ? "Saving…" : "Save changes"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function Field({
+  label,
+  value,
+  onChange,
+  type = "text",
+  required,
+  placeholder,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  type?: string;
+  required?: boolean;
+  placeholder?: string;
+}) {
+  return (
+    <div>
+      <label className="text-[11px] font-extrabold uppercase tracking-wide text-muted-foreground">{label}</label>
+      <input
+        type={type}
+        required={required}
+        placeholder={placeholder}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm"
+      />
+    </div>
   );
 }
 
