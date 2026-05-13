@@ -134,17 +134,20 @@ export default function Admin() {
     setDepartments((deptRes.data ?? []) as DeptRow[]);
     setProjects((projRes.data ?? []) as ProjRow[]);
     setTickets((tickRes.data ?? []) as TicketRow[]);
+    const aList = (auditRes.data ?? []) as AuditRow[];
+    setAuditLog(aList);
     if (statsRes.data) setStats(statsRes.data as unknown as Stats);
 
-    // Resolve names for super admins, approvers, subscribers
+    // Resolve names for super admins, approvers, subscribers, audit actors/targets
     const ids = new Set<string>();
     rList.filter((r) => r.role === "super_admin").forEach((r) => ids.add(r.user_id));
     cList.forEach((c) => {
       if (c.approved_by) ids.add(c.approved_by);
       if (c.subscribed_by) ids.add(c.subscribed_by);
     });
-    eList.forEach((e) => {
-      // approver fields aren't selected by default; skip
+    aList.forEach((a) => {
+      if (a.performed_by) ids.add(a.performed_by);
+      if (a.target_user_id) ids.add(a.target_user_id);
     });
     if (ids.size > 0) {
       const { data: names } = await supabase.rpc("lookup_user_names", { _user_ids: Array.from(ids) });
