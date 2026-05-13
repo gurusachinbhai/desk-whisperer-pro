@@ -295,6 +295,27 @@ export default function Admin() {
     toast.success("Super Admin revoked");
     loadAll();
   };
+  const handleAddAdmin = async (employee: EmployeeRow) => {
+    if (!employee.user_id) return toast.error("This user hasn't signed in yet, so they can't be made an admin.");
+    const currentAdmins = (adminUserIdsByCompany.get(employee.company_id) ?? []).length;
+    if (currentAdmins >= 3) return toast.error("Limit reached", { description: "A company can have at most 3 admins." });
+    const { error } = await supabase.from("user_roles").insert({ user_id: employee.user_id, role: "admin", company_id: employee.company_id });
+    if (error) return toast.error("Couldn't add admin", { description: error.message });
+    toast.success(`${employee.display_name} is now an admin`);
+    loadAll();
+  };
+  const handleRemoveAdmin = async (employee: EmployeeRow) => {
+    if (!employee.user_id) return;
+    const { error } = await supabase
+      .from("user_roles")
+      .delete()
+      .eq("user_id", employee.user_id)
+      .eq("role", "admin")
+      .eq("company_id", employee.company_id);
+    if (error) return toast.error("Couldn't remove admin", { description: error.message });
+    toast.success(`${employee.display_name} is no longer an admin`);
+    loadAll();
+  };
 
   if (loading) {
     return (
