@@ -71,6 +71,14 @@ type NameRow = { user_id: string; email: string | null; display_name: string | n
 type DeptRow = { id: string; name: string };
 type ProjRow = { id: string; name: string };
 type TicketRow = { id: string; status: string; priority: string };
+type AuditRow = {
+  id: string;
+  company_id: string | null;
+  target_user_id: string;
+  action: "granted" | "revoked";
+  performed_by: string | null;
+  performed_at: string;
+};
 
 type Stats = {
   companies_total: number;
