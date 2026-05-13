@@ -733,6 +733,62 @@ export default function Admin() {
             </div>
           </div>
         )}
+
+        {tab === "audit" && (
+          <div className="space-y-3">
+            <div className="rounded-2xl border border-border bg-card p-4">
+              <h3 className="font-display text-sm font-extrabold">Admin role changes</h3>
+              <p className="text-[11px] text-muted-foreground">
+                Records every time admin access is granted or removed, including who performed the action.
+              </p>
+            </div>
+            {auditLog.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-border bg-card/50 p-6 text-center text-xs text-muted-foreground">
+                No admin role changes logged yet.
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {auditLog.map((a) => {
+                  const company = companies.find((c) => c.id === a.company_id);
+                  const target = namesByUserId[a.target_user_id];
+                  const actor = a.performed_by ? namesByUserId[a.performed_by] : null;
+                  const targetLabel = target?.display_name || target?.email || a.target_user_id;
+                  const actorLabel = a.performed_by
+                    ? actor?.display_name || actor?.email || a.performed_by
+                    : "System";
+                  return (
+                    <div key={a.id} className="rounded-xl border border-border bg-card p-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-[10px] font-extrabold uppercase ${
+                              a.action === "granted"
+                                ? "bg-primary/10 text-primary"
+                                : "bg-destructive/10 text-destructive"
+                            }`}
+                          >
+                            {a.action}
+                          </span>
+                          <p className="text-sm font-extrabold">{targetLabel}</p>
+                          {company && (
+                            <span className="text-[11px] text-muted-foreground">· {company.name}</span>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-muted-foreground">
+                          {new Date(a.performed_at).toLocaleString()}
+                        </p>
+                      </div>
+                      <p className="mt-1 text-[11px] text-muted-foreground">
+                        By <span className="font-bold text-foreground">{actorLabel}</span>
+                        {actor?.email && actor.email !== actorLabel ? ` (${actor.email})` : ""}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
       </section>
 
       {editingCompany && (
