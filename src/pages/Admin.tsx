@@ -99,6 +99,9 @@ export default function Admin() {
   const [companySearch, setCompanySearch] = useState("");
   const [userSearch, setUserSearch] = useState("");
   const [editingCompany, setEditingCompany] = useState<CompanyRow | null>(null);
+  const [departments, setDepartments] = useState<DeptRow[]>([]);
+  const [projects, setProjects] = useState<ProjRow[]>([]);
+  const [tickets, setTickets] = useState<TicketRow[]>([]);
 
   const loadAll = async () => {
     const [{ data: cData, error: cErr }, { data: eData, error: eErr }, statsRes, rolesRes] = await Promise.all([
