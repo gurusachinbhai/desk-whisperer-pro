@@ -104,11 +104,14 @@ export default function Admin() {
   const [tickets, setTickets] = useState<TicketRow[]>([]);
 
   const loadAll = async () => {
-    const [{ data: cData, error: cErr }, { data: eData, error: eErr }, statsRes, rolesRes] = await Promise.all([
+    const [{ data: cData, error: cErr }, { data: eData, error: eErr }, statsRes, rolesRes, deptRes, projRes, tickRes] = await Promise.all([
       supabase.from("company_profiles").select("*").order("created_at", { ascending: false }),
       supabase.from("employee_profiles").select("*").order("created_at", { ascending: false }),
       supabase.rpc("get_platform_stats"),
       supabase.from("user_roles").select("id, user_id, role, company_id"),
+      supabase.from("departments").select("id,name"),
+      supabase.from("projects").select("id,name"),
+      supabase.from("support_tickets").select("id,status,priority"),
     ]);
     if (cErr) toast.error("Failed to load companies", { description: cErr.message });
     if (eErr) toast.error("Failed to load employees", { description: eErr.message });
@@ -118,6 +121,9 @@ export default function Admin() {
     setCompanies(cList);
     setEmployees(eList);
     setRoles(rList);
+    setDepartments((deptRes.data ?? []) as DeptRow[]);
+    setProjects((projRes.data ?? []) as ProjRow[]);
+    setTickets((tickRes.data ?? []) as TicketRow[]);
     if (statsRes.data) setStats(statsRes.data as unknown as Stats);
 
     // Resolve names for super admins, approvers, subscribers
