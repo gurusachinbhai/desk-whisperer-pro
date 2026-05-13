@@ -434,6 +434,39 @@ export default function Admin() {
             </div>
 
             <div className="rounded-2xl border border-border bg-card p-4">
+              <div className="mb-3 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <TicketIcon className="h-4 w-4 text-primary" />
+                  <h3 className="font-display text-sm font-extrabold">Support tickets</h3>
+                </div>
+                <Link to="/tickets" className="text-[11px] font-extrabold uppercase tracking-wide text-primary hover:underline">
+                  Open queue →
+                </Link>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <StatCard icon={TicketIcon} label="Total tickets" value={ticketStats.total} hint="All time" />
+                <StatCard icon={Clock3} label="Open" value={ticketStats.openCount} hint="New / in progress / on hold" tone="warn" />
+                <StatCard icon={CheckCircle2} label="Closed" value={ticketStats.closedCount} hint="Resolved or closed" />
+                <StatCard
+                  icon={AlertTriangle}
+                  label="Critical (P1)"
+                  value={ticketStats.byPriority["P1"] ?? 0}
+                  hint={`P2: ${ticketStats.byPriority["P2"] ?? 0} · P3: ${ticketStats.byPriority["P3"] ?? 0} · P4: ${ticketStats.byPriority["P4"] ?? 0}`}
+                  tone="warn"
+                />
+              </div>
+              {Object.keys(ticketStats.byStatus).length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {Object.entries(ticketStats.byStatus).map(([s, n]) => (
+                    <span key={s} className="rounded-full bg-muted px-2.5 py-1 text-[11px] font-extrabold uppercase text-muted-foreground">
+                      {s.replace(/_/g, " ")}: <span className="text-foreground">{n}</span>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="rounded-2xl border border-border bg-card p-4">
               <h3 className="font-display text-sm font-extrabold">Action required</h3>
               <p className="mt-1 text-xs text-muted-foreground">
                 {stats?.companies_pending ?? 0} companies and {stats?.employees_pending ?? 0} users waiting for approval.
