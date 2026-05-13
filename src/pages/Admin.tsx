@@ -101,7 +101,8 @@ export default function Admin() {
   const [roles, setRoles] = useState<RoleRow[]>([]);
   const [namesByUserId, setNamesByUserId] = useState<Record<string, NameRow>>({});
   const [stats, setStats] = useState<Stats | null>(null);
-  const [tab, setTab] = useState<"overview" | "companies" | "employees" | "admins">("overview");
+  const [tab, setTab] = useState<"overview" | "companies" | "employees" | "admins" | "audit">("overview");
+  const [auditLog, setAuditLog] = useState<AuditRow[]>([]);
   const [filter, setFilter] = useState<"all" | "pending" | "approved" | "suspended">("all");
   const [grantEmail, setGrantEmail] = useState("");
   const [companySearch, setCompanySearch] = useState("");
