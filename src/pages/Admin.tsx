@@ -71,6 +71,14 @@ type NameRow = { user_id: string; email: string | null; display_name: string | n
 type DeptRow = { id: string; name: string };
 type ProjRow = { id: string; name: string };
 type TicketRow = { id: string; status: string; priority: string };
+type AuditRow = {
+  id: string;
+  company_id: string | null;
+  target_user_id: string;
+  action: "granted" | "revoked";
+  performed_by: string | null;
+  performed_at: string;
+};
 
 type Stats = {
   companies_total: number;
@@ -93,7 +101,8 @@ export default function Admin() {
   const [roles, setRoles] = useState<RoleRow[]>([]);
   const [namesByUserId, setNamesByUserId] = useState<Record<string, NameRow>>({});
   const [stats, setStats] = useState<Stats | null>(null);
-  const [tab, setTab] = useState<"overview" | "companies" | "employees" | "admins">("overview");
+  const [tab, setTab] = useState<"overview" | "companies" | "employees" | "admins" | "audit">("overview");
+  const [auditLog, setAuditLog] = useState<AuditRow[]>([]);
   const [filter, setFilter] = useState<"all" | "pending" | "approved" | "suspended">("all");
   const [grantEmail, setGrantEmail] = useState("");
   const [companySearch, setCompanySearch] = useState("");
@@ -104,7 +113,7 @@ export default function Admin() {
   const [tickets, setTickets] = useState<TicketRow[]>([]);
 
   const loadAll = async () => {
-    const [{ data: cData, error: cErr }, { data: eData, error: eErr }, statsRes, rolesRes, deptRes, projRes, tickRes] = await Promise.all([
+    const [{ data: cData, error: cErr }, { data: eData, error: eErr }, statsRes, rolesRes, deptRes, projRes, tickRes, auditRes] = await Promise.all([
       supabase.from("company_profiles").select("*").order("created_at", { ascending: false }),
       supabase.from("employee_profiles").select("*").order("created_at", { ascending: false }),
       supabase.rpc("get_platform_stats"),
@@ -112,6 +121,7 @@ export default function Admin() {
       supabase.from("departments").select("id,name"),
       supabase.from("projects").select("id,name"),
       supabase.from("support_tickets").select("id,status,priority"),
+      supabase.from("admin_role_audit").select("*").order("performed_at", { ascending: false }).limit(200),
     ]);
     if (cErr) toast.error("Failed to load companies", { description: cErr.message });
     if (eErr) toast.error("Failed to load employees", { description: eErr.message });
@@ -124,17 +134,20 @@ export default function Admin() {
     setDepartments((deptRes.data ?? []) as DeptRow[]);
     setProjects((projRes.data ?? []) as ProjRow[]);
     setTickets((tickRes.data ?? []) as TicketRow[]);
+    const aList = (auditRes.data ?? []) as AuditRow[];
+    setAuditLog(aList);
     if (statsRes.data) setStats(statsRes.data as unknown as Stats);
 
-    // Resolve names for super admins, approvers, subscribers
+    // Resolve names for super admins, approvers, subscribers, audit actors/targets
     const ids = new Set<string>();
     rList.filter((r) => r.role === "super_admin").forEach((r) => ids.add(r.user_id));
     cList.forEach((c) => {
       if (c.approved_by) ids.add(c.approved_by);
       if (c.subscribed_by) ids.add(c.subscribed_by);
     });
-    eList.forEach((e) => {
-      // approver fields aren't selected by default; skip
+    aList.forEach((a) => {
+      if (a.performed_by) ids.add(a.performed_by);
+      if (a.target_user_id) ids.add(a.target_user_id);
     });
     if (ids.size > 0) {
       const { data: names } = await supabase.rpc("lookup_user_names", { _user_ids: Array.from(ids) });
@@ -399,6 +412,7 @@ export default function Admin() {
             { id: "companies", label: "Companies", icon: Building2 },
             { id: "employees", label: "Users", icon: Users },
             { id: "admins", label: "Super admins", icon: ShieldCheck },
+            { id: "audit", label: "Admin audit", icon: Clock3 },
           ].map((t) => {
             const Icon = t.icon;
             const active = tab === t.id;
@@ -717,6 +731,62 @@ export default function Admin() {
                 );
               })}
             </div>
+          </div>
+        )}
+
+        {tab === "audit" && (
+          <div className="space-y-3">
+            <div className="rounded-2xl border border-border bg-card p-4">
+              <h3 className="font-display text-sm font-extrabold">Admin role changes</h3>
+              <p className="text-[11px] text-muted-foreground">
+                Records every time admin access is granted or removed, including who performed the action.
+              </p>
+            </div>
+            {auditLog.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-border bg-card/50 p-6 text-center text-xs text-muted-foreground">
+                No admin role changes logged yet.
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {auditLog.map((a) => {
+                  const company = companies.find((c) => c.id === a.company_id);
+                  const target = namesByUserId[a.target_user_id];
+                  const actor = a.performed_by ? namesByUserId[a.performed_by] : null;
+                  const targetLabel = target?.display_name || target?.email || a.target_user_id;
+                  const actorLabel = a.performed_by
+                    ? actor?.display_name || actor?.email || a.performed_by
+                    : "System";
+                  return (
+                    <div key={a.id} className="rounded-xl border border-border bg-card p-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-[10px] font-extrabold uppercase ${
+                              a.action === "granted"
+                                ? "bg-primary/10 text-primary"
+                                : "bg-destructive/10 text-destructive"
+                            }`}
+                          >
+                            {a.action}
+                          </span>
+                          <p className="text-sm font-extrabold">{targetLabel}</p>
+                          {company && (
+                            <span className="text-[11px] text-muted-foreground">· {company.name}</span>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-muted-foreground">
+                          {new Date(a.performed_at).toLocaleString()}
+                        </p>
+                      </div>
+                      <p className="mt-1 text-[11px] text-muted-foreground">
+                        By <span className="font-bold text-foreground">{actorLabel}</span>
+                        {actor?.email && actor.email !== actorLabel ? ` (${actor.email})` : ""}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
       </section>

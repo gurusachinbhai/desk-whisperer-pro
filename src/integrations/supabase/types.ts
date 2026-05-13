@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_role_audit: {
+        Row: {
+          action: string
+          company_id: string | null
+          details: Json
+          id: string
+          performed_at: string
+          performed_by: string | null
+          target_user_id: string
+        }
+        Insert: {
+          action: string
+          company_id?: string | null
+          details?: Json
+          id?: string
+          performed_at?: string
+          performed_by?: string | null
+          target_user_id: string
+        }
+        Update: {
+          action?: string
+          company_id?: string | null
+          details?: Json
+          id?: string
+          performed_at?: string
+          performed_by?: string | null
+          target_user_id?: string
+        }
+        Relationships: []
+      }
       attendance_records: {
         Row: {
           check_in_at: string | null
