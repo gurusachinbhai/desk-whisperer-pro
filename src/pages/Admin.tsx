@@ -59,11 +59,18 @@ type EmployeeRow = {
   status: string;
   company_id: string;
   user_id: string | null;
+  employee_code: string | null;
+  department_id: string | null;
+  project_id: string | null;
+  manager_id: string | null;
   created_at: string;
 };
 
 type RoleRow = { id: string; user_id: string; role: string; company_id: string | null };
 type NameRow = { user_id: string; email: string | null; display_name: string | null };
+type DeptRow = { id: string; name: string };
+type ProjRow = { id: string; name: string };
+type TicketRow = { id: string; status: string; priority: string };
 
 type Stats = {
   companies_total: number;
