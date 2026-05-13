@@ -59,11 +59,18 @@ type EmployeeRow = {
   status: string;
   company_id: string;
   user_id: string | null;
+  employee_code: string | null;
+  department_id: string | null;
+  project_id: string | null;
+  manager_id: string | null;
   created_at: string;
 };
 
 type RoleRow = { id: string; user_id: string; role: string; company_id: string | null };
 type NameRow = { user_id: string; email: string | null; display_name: string | null };
+type DeptRow = { id: string; name: string };
+type ProjRow = { id: string; name: string };
+type TicketRow = { id: string; status: string; priority: string };
 
 type Stats = {
   companies_total: number;
@@ -92,13 +99,19 @@ export default function Admin() {
   const [companySearch, setCompanySearch] = useState("");
   const [userSearch, setUserSearch] = useState("");
   const [editingCompany, setEditingCompany] = useState<CompanyRow | null>(null);
+  const [departments, setDepartments] = useState<DeptRow[]>([]);
+  const [projects, setProjects] = useState<ProjRow[]>([]);
+  const [tickets, setTickets] = useState<TicketRow[]>([]);
 
   const loadAll = async () => {
-    const [{ data: cData, error: cErr }, { data: eData, error: eErr }, statsRes, rolesRes] = await Promise.all([
+    const [{ data: cData, error: cErr }, { data: eData, error: eErr }, statsRes, rolesRes, deptRes, projRes, tickRes] = await Promise.all([
       supabase.from("company_profiles").select("*").order("created_at", { ascending: false }),
       supabase.from("employee_profiles").select("*").order("created_at", { ascending: false }),
       supabase.rpc("get_platform_stats"),
       supabase.from("user_roles").select("id, user_id, role, company_id"),
+      supabase.from("departments").select("id,name"),
+      supabase.from("projects").select("id,name"),
+      supabase.from("support_tickets").select("id,status,priority"),
     ]);
     if (cErr) toast.error("Failed to load companies", { description: cErr.message });
     if (eErr) toast.error("Failed to load employees", { description: eErr.message });
@@ -108,6 +121,9 @@ export default function Admin() {
     setCompanies(cList);
     setEmployees(eList);
     setRoles(rList);
+    setDepartments((deptRes.data ?? []) as DeptRow[]);
+    setProjects((projRes.data ?? []) as ProjRow[]);
+    setTickets((tickRes.data ?? []) as TicketRow[]);
     if (statsRes.data) setStats(statsRes.data as unknown as Stats);
 
     // Resolve names for super admins, approvers, subscribers
@@ -232,6 +248,26 @@ export default function Admin() {
     return map;
   }, [employees]);
 
+  const deptById = useMemo(() => new Map(departments.map((d) => [d.id, d.name])), [departments]);
+  const projById = useMemo(() => new Map(projects.map((p) => [p.id, p.name])), [projects]);
+  const employeeById = useMemo(() => new Map(employees.map((e) => [e.id, e])), [employees]);
+
+  const ticketStats = useMemo(() => {
+    const byStatus: Record<string, number> = {};
+    const byPriority: Record<string, number> = {};
+    let openCount = 0;
+    let closedCount = 0;
+    const openSet = new Set(["new", "open", "in_progress", "on_hold", "pending"]);
+    const closedSet = new Set(["resolved", "closed", "cancelled"]);
+    tickets.forEach((t) => {
+      byStatus[t.status] = (byStatus[t.status] ?? 0) + 1;
+      byPriority[t.priority] = (byPriority[t.priority] ?? 0) + 1;
+      if (openSet.has(t.status)) openCount++;
+      else if (closedSet.has(t.status)) closedCount++;
+    });
+    return { byStatus, byPriority, openCount, closedCount, total: tickets.length };
+  }, [tickets]);
+
   const revenuePerEmployee = 9;
   const activeEmployees = employees.filter(
     (e) => e.status === "approved" && companies.find((c) => c.id === e.company_id)?.status === "approved",
@@ -277,6 +313,27 @@ export default function Admin() {
     const { error } = await supabase.rpc("revoke_super_admin", { _user_id: userId });
     if (error) return toast.error("Revoke failed", { description: error.message });
     toast.success("Super Admin revoked");
+    loadAll();
+  };
+  const handleAddAdmin = async (employee: EmployeeRow) => {
+    if (!employee.user_id) return toast.error("This user hasn't signed in yet, so they can't be made an admin.");
+    const currentAdmins = (adminUserIdsByCompany.get(employee.company_id) ?? []).length;
+    if (currentAdmins >= 3) return toast.error("Limit reached", { description: "A company can have at most 3 admins." });
+    const { error } = await supabase.from("user_roles").insert({ user_id: employee.user_id, role: "admin", company_id: employee.company_id });
+    if (error) return toast.error("Couldn't add admin", { description: error.message });
+    toast.success(`${employee.display_name} is now an admin`);
+    loadAll();
+  };
+  const handleRemoveAdmin = async (employee: EmployeeRow) => {
+    if (!employee.user_id) return;
+    const { error } = await supabase
+      .from("user_roles")
+      .delete()
+      .eq("user_id", employee.user_id)
+      .eq("role", "admin")
+      .eq("company_id", employee.company_id);
+    if (error) return toast.error("Couldn't remove admin", { description: error.message });
+    toast.success(`${employee.display_name} is no longer an admin`);
     loadAll();
   };
 
@@ -374,6 +431,39 @@ export default function Admin() {
               <RevCard label="MRR (mock)" value={formatCurrency(mrr)} hint={`@ ${formatCurrency(revenuePerEmployee)} / user / mo`} icon={DollarSign} />
               <RevCard label="ARR (mock)" value={formatCurrency(arr)} hint="Run-rate annual" icon={TrendingUp} />
               <RevCard label="6-mo forecast" value={formatCurrency(forecast6mo)} hint="+18% projected growth" icon={TrendingUp} />
+            </div>
+
+            <div className="rounded-2xl border border-border bg-card p-4">
+              <div className="mb-3 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <TicketIcon className="h-4 w-4 text-primary" />
+                  <h3 className="font-display text-sm font-extrabold">Support tickets</h3>
+                </div>
+                <Link to="/tickets" className="text-[11px] font-extrabold uppercase tracking-wide text-primary hover:underline">
+                  Open queue →
+                </Link>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <StatCard icon={TicketIcon} label="Total tickets" value={ticketStats.total} hint="All time" />
+                <StatCard icon={Clock3} label="Open" value={ticketStats.openCount} hint="New / in progress / on hold" tone="warn" />
+                <StatCard icon={CheckCircle2} label="Closed" value={ticketStats.closedCount} hint="Resolved or closed" />
+                <StatCard
+                  icon={AlertTriangle}
+                  label="Critical (P1)"
+                  value={ticketStats.byPriority["P1"] ?? 0}
+                  hint={`P2: ${ticketStats.byPriority["P2"] ?? 0} · P3: ${ticketStats.byPriority["P3"] ?? 0} · P4: ${ticketStats.byPriority["P4"] ?? 0}`}
+                  tone="warn"
+                />
+              </div>
+              {Object.keys(ticketStats.byStatus).length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {Object.entries(ticketStats.byStatus).map(([s, n]) => (
+                    <span key={s} className="rounded-full bg-muted px-2.5 py-1 text-[11px] font-extrabold uppercase text-muted-foreground">
+                      {s.replace(/_/g, " ")}: <span className="text-foreground">{n}</span>
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="rounded-2xl border border-border bg-card p-4">
@@ -519,31 +609,63 @@ export default function Admin() {
               const isAdmin = userRoles.has("admin");
               const isUser = userRoles.has("user");
               const roleLabel = isAdmin && isUser ? "Admin + Employee" : isAdmin ? "Admin" : isUser ? "Employee" : "Pending";
+              const deptName = e.department_id ? deptById.get(e.department_id) ?? "—" : "—";
+              const projName = e.project_id ? projById.get(e.project_id) ?? "—" : "—";
+              const manager = e.manager_id ? employeeById.get(e.manager_id) : null;
+              const adminCount = (adminUserIdsByCompany.get(e.company_id) ?? []).length;
+              const canAddAdmin = !!e.user_id && !isAdmin && adminCount < 3;
               return (
-                <div key={e.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-card p-4">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h4 className="font-display text-sm font-extrabold">{e.display_name}</h4>
-                      <StatusBadge status={e.status} />
-                      <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-extrabold uppercase text-muted-foreground">
-                        {roleLabel}
-                      </span>
+                <div key={e.id} className="rounded-2xl border border-border bg-card p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h4 className="font-display text-sm font-extrabold">{e.display_name}</h4>
+                        <StatusBadge status={e.status} />
+                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-extrabold uppercase ${
+                          isAdmin ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+                        }`}>
+                          {roleLabel}
+                        </span>
+                      </div>
+                      <p className="text-xs font-semibold text-muted-foreground">
+                        {e.email ?? "—"} · {company?.name ?? "Unknown company"}
+                      </p>
                     </div>
-                    <p className="text-xs font-semibold text-muted-foreground">
-                      {e.email ?? "—"} · {company?.name ?? "Unknown company"}
-                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {isAdmin ? (
+                        <button
+                          onClick={() => handleRemoveAdmin(e)}
+                          className="inline-flex items-center gap-1 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-extrabold text-destructive"
+                        >
+                          <ShieldCheck className="h-3.5 w-3.5" /> Remove admin
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleAddAdmin(e)}
+                          disabled={!canAddAdmin}
+                          title={!e.user_id ? "User hasn't signed in yet" : adminCount >= 3 ? "Max 3 admins per company" : ""}
+                          className="inline-flex items-center gap-1 rounded-lg bg-primary/10 px-3 py-1.5 text-xs font-extrabold text-primary disabled:opacity-50"
+                        >
+                          <ShieldCheck className="h-3.5 w-3.5" /> Add admin
+                        </button>
+                      )}
+                      {e.status !== "approved" && (
+                        <button onClick={() => handleApproveEmployee(e.id)} className="inline-flex items-center gap-1 rounded-lg bg-primary px-3 py-1.5 text-xs font-extrabold text-primary-foreground">
+                          <CheckCircle2 className="h-3.5 w-3.5" /> Approve
+                        </button>
+                      )}
+                      {e.status !== "suspended" && (
+                        <button onClick={() => handleSuspendEmployee(e.id)} className="inline-flex items-center gap-1 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-extrabold text-destructive">
+                          <XCircle className="h-3.5 w-3.5" /> Suspend
+                        </button>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    {e.status !== "approved" && (
-                      <button onClick={() => handleApproveEmployee(e.id)} className="inline-flex items-center gap-1 rounded-lg bg-primary px-3 py-1.5 text-xs font-extrabold text-primary-foreground">
-                        <CheckCircle2 className="h-3.5 w-3.5" /> Approve
-                      </button>
-                    )}
-                    {e.status !== "suspended" && (
-                      <button onClick={() => handleSuspendEmployee(e.id)} className="inline-flex items-center gap-1 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-extrabold text-destructive">
-                        <XCircle className="h-3.5 w-3.5" /> Suspend
-                      </button>
-                    )}
+                  <div className="mt-3 grid gap-2 text-xs sm:grid-cols-2 lg:grid-cols-4">
+                    <InfoRow label="Employee ID" value={e.employee_code ?? "—"} />
+                    <InfoRow label="Department" value={deptName} />
+                    <InfoRow label="Current project" value={projName} />
+                    <InfoRow label="Lead / Manager" value={manager?.display_name ?? "—"} />
                   </div>
                 </div>
               );
