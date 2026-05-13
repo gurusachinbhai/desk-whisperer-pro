@@ -412,6 +412,7 @@ export default function Admin() {
             { id: "companies", label: "Companies", icon: Building2 },
             { id: "employees", label: "Users", icon: Users },
             { id: "admins", label: "Super admins", icon: ShieldCheck },
+            { id: "audit", label: "Admin audit", icon: Clock3 },
           ].map((t) => {
             const Icon = t.icon;
             const active = tab === t.id;
