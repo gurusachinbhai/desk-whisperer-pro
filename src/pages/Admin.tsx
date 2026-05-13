@@ -609,31 +609,63 @@ export default function Admin() {
               const isAdmin = userRoles.has("admin");
               const isUser = userRoles.has("user");
               const roleLabel = isAdmin && isUser ? "Admin + Employee" : isAdmin ? "Admin" : isUser ? "Employee" : "Pending";
+              const deptName = e.department_id ? deptById.get(e.department_id) ?? "—" : "—";
+              const projName = e.project_id ? projById.get(e.project_id) ?? "—" : "—";
+              const manager = e.manager_id ? employeeById.get(e.manager_id) : null;
+              const adminCount = (adminUserIdsByCompany.get(e.company_id) ?? []).length;
+              const canAddAdmin = !!e.user_id && !isAdmin && adminCount < 3;
               return (
-                <div key={e.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-card p-4">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h4 className="font-display text-sm font-extrabold">{e.display_name}</h4>
-                      <StatusBadge status={e.status} />
-                      <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-extrabold uppercase text-muted-foreground">
-                        {roleLabel}
-                      </span>
+                <div key={e.id} className="rounded-2xl border border-border bg-card p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h4 className="font-display text-sm font-extrabold">{e.display_name}</h4>
+                        <StatusBadge status={e.status} />
+                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-extrabold uppercase ${
+                          isAdmin ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+                        }`}>
+                          {roleLabel}
+                        </span>
+                      </div>
+                      <p className="text-xs font-semibold text-muted-foreground">
+                        {e.email ?? "—"} · {company?.name ?? "Unknown company"}
+                      </p>
                     </div>
-                    <p className="text-xs font-semibold text-muted-foreground">
-                      {e.email ?? "—"} · {company?.name ?? "Unknown company"}
-                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {isAdmin ? (
+                        <button
+                          onClick={() => handleRemoveAdmin(e)}
+                          className="inline-flex items-center gap-1 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-extrabold text-destructive"
+                        >
+                          <ShieldCheck className="h-3.5 w-3.5" /> Remove admin
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleAddAdmin(e)}
+                          disabled={!canAddAdmin}
+                          title={!e.user_id ? "User hasn't signed in yet" : adminCount >= 3 ? "Max 3 admins per company" : ""}
+                          className="inline-flex items-center gap-1 rounded-lg bg-primary/10 px-3 py-1.5 text-xs font-extrabold text-primary disabled:opacity-50"
+                        >
+                          <ShieldCheck className="h-3.5 w-3.5" /> Add admin
+                        </button>
+                      )}
+                      {e.status !== "approved" && (
+                        <button onClick={() => handleApproveEmployee(e.id)} className="inline-flex items-center gap-1 rounded-lg bg-primary px-3 py-1.5 text-xs font-extrabold text-primary-foreground">
+                          <CheckCircle2 className="h-3.5 w-3.5" /> Approve
+                        </button>
+                      )}
+                      {e.status !== "suspended" && (
+                        <button onClick={() => handleSuspendEmployee(e.id)} className="inline-flex items-center gap-1 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-extrabold text-destructive">
+                          <XCircle className="h-3.5 w-3.5" /> Suspend
+                        </button>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    {e.status !== "approved" && (
-                      <button onClick={() => handleApproveEmployee(e.id)} className="inline-flex items-center gap-1 rounded-lg bg-primary px-3 py-1.5 text-xs font-extrabold text-primary-foreground">
-                        <CheckCircle2 className="h-3.5 w-3.5" /> Approve
-                      </button>
-                    )}
-                    {e.status !== "suspended" && (
-                      <button onClick={() => handleSuspendEmployee(e.id)} className="inline-flex items-center gap-1 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-extrabold text-destructive">
-                        <XCircle className="h-3.5 w-3.5" /> Suspend
-                      </button>
-                    )}
+                  <div className="mt-3 grid gap-2 text-xs sm:grid-cols-2 lg:grid-cols-4">
+                    <InfoRow label="Employee ID" value={e.employee_code ?? "—"} />
+                    <InfoRow label="Department" value={deptName} />
+                    <InfoRow label="Current project" value={projName} />
+                    <InfoRow label="Lead / Manager" value={manager?.display_name ?? "—"} />
                   </div>
                 </div>
               );
