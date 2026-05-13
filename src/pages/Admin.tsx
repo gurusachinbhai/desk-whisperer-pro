@@ -248,6 +248,26 @@ export default function Admin() {
     return map;
   }, [employees]);
 
+  const deptById = useMemo(() => new Map(departments.map((d) => [d.id, d.name])), [departments]);
+  const projById = useMemo(() => new Map(projects.map((p) => [p.id, p.name])), [projects]);
+  const employeeById = useMemo(() => new Map(employees.map((e) => [e.id, e])), [employees]);
+
+  const ticketStats = useMemo(() => {
+    const byStatus: Record<string, number> = {};
+    const byPriority: Record<string, number> = {};
+    let openCount = 0;
+    let closedCount = 0;
+    const openSet = new Set(["new", "open", "in_progress", "on_hold", "pending"]);
+    const closedSet = new Set(["resolved", "closed", "cancelled"]);
+    tickets.forEach((t) => {
+      byStatus[t.status] = (byStatus[t.status] ?? 0) + 1;
+      byPriority[t.priority] = (byPriority[t.priority] ?? 0) + 1;
+      if (openSet.has(t.status)) openCount++;
+      else if (closedSet.has(t.status)) closedCount++;
+    });
+    return { byStatus, byPriority, openCount, closedCount, total: tickets.length };
+  }, [tickets]);
+
   const revenuePerEmployee = 9;
   const activeEmployees = employees.filter(
     (e) => e.status === "approved" && companies.find((c) => c.id === e.company_id)?.status === "approved",
