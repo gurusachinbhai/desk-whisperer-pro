@@ -1,0 +1,31 @@
+# HR Greatly
+
+> HR Greatly is a workforce management platform for attendance, leave, payroll, desk booking and support — all in one workspace.
+
+HR Greatly helps modern teams run people operations from a single calm console: smart attendance with geo-fencing, one-tap leave approvals, tax-ready payroll, hybrid desk and meeting-room booking, and an end-to-end support ticketing system.
+
+## Pages
+
+- [Home](/): Product overview and free trial signup.
+- [About](/about): Our story and mission.
+- [Customers](/customers): Teams that run on HR Greatly.
+- [Careers](/careers): Open roles.
+- [Contact](/contact): Reach sales, support or partnerships.
+- [Pricing plans](/pricing/plans): Plans for every team size.
+- [Free trial](/pricing/free-trial): 15-day full-access trial.
+- [Enterprise](/pricing/enterprise): SSO, audit trails, dedicated support.
+- [Desk booking](/product/desk-booking): Live floor maps and bookings.
+- [Payroll](/product/payroll): Tax-ready payroll in minutes.
+- [Attendance & leave](/product/attendance-leave): Smart sign-in and time off.
+- [CRM](/product/crm): Customer relationships in one workspace.
+- [Help](/help): FAQs and support contact.
+- [Tickets](/tickets): Raise and track support tickets.
+- [Blog](/blogs): HR insights, product tips and customer stories.
+- [Guides](/guides): Step-by-step playbooks.
+- [Case studies](/case-studies): Real customer outcomes.
+
+## Optional
+
+- [Privacy](/privacy): Privacy policy.
+- [Terms](/terms): Terms of service.
+- [Security](/security): Security and compliance.
