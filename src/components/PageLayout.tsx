@@ -39,7 +39,7 @@ const PageLayout = ({ eyebrow, title, subtitle, heroImage, children, maxWidth = 
         </div>
       </section>
 
-      <main className={`mx-auto ${widthClass} px-4 py-12 sm:px-6 sm:py-16`}>{children}</main>
+      <div className={`mx-auto ${widthClass} px-4 py-12 sm:px-6 sm:py-16`}>{children}</div>
 
       <SiteFooter />
     </div>

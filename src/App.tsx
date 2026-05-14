@@ -28,6 +28,7 @@ import Help from "./pages/Help.tsx";
 import Tickets from "./pages/Tickets.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import DeviceShell from "./components/DeviceShell";
+import SeoHead from "./components/SeoHead";
 
 const queryClient = new QueryClient();
 
@@ -38,7 +39,8 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <DeviceShell>
-          <Routes>
+          <SeoHead />
+          <main><Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/login" element={<Index />} />
             <Route path="/admin" element={<Admin />} />
@@ -64,7 +66,7 @@ const App = () => (
             <Route path="/tickets" element={<Tickets />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
-          </Routes>
+          </Routes></main>
         </DeviceShell>
       </BrowserRouter>
     </TooltipProvider>
