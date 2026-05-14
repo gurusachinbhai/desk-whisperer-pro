@@ -5011,16 +5011,6 @@ const Index = () => {
 
     return (
       <>
-        <ManagerHierarchy
-          meId={myEmployeeId}
-          employees={employees as HierarchyEmployee[]}
-          maxLevels={5}
-        />
-        <EmployeeWorkInfoCard
-          meEmployeeId={myEmployeeId}
-          meUserId={authUserId}
-          companyId={companyProfile?.id ?? null}
-        />
         {/* Profile header */}
         <div className="rounded-[1.5rem] bg-surface-raised p-4 shadow-card">
           <div className="flex items-center justify-between">
@@ -5136,59 +5126,7 @@ const Index = () => {
           </div>
         </div>
 
-        {/* Help & Support quick access */}
-        <div className="rounded-[1.5rem] bg-surface-raised p-4 shadow-card">
-          <div className="mb-3 flex items-center gap-2">
-            <LifeBuoy className="h-4 w-4 text-primary" />
-            <h3 className="font-display text-base font-extrabold">Help & Support</h3>
-          </div>
-          <p className="text-xs font-semibold text-muted-foreground">
-            Need help? Raise a ticket and track its status anytime.
-          </p>
-          <div className="mt-3 grid grid-cols-2 gap-2">
-            <a
-              href="/tickets?tab=new"
-              className="focus-premium grid place-items-center rounded-2xl bg-primary px-3 py-3 text-xs font-extrabold text-primary-foreground"
-            >
-              Raise a ticket
-            </a>
-            <a
-              href="/tickets?tab=lookup"
-              className="focus-premium grid place-items-center rounded-2xl border border-border bg-background px-3 py-3 text-xs font-extrabold text-primary"
-            >
-              Track ticket
-            </a>
-          </div>
-          <a
-            href="/help"
-            className="mt-2 block rounded-2xl bg-background px-3 py-2 text-center text-[11px] font-bold text-muted-foreground hover:text-primary"
-          >
-            Browse FAQs & Help Center →
-          </a>
-        </div>
-
-
-        <div className="rounded-[1.5rem] bg-surface-raised p-4 shadow-card">
-          <div className="mb-3 flex items-center gap-2">
-            <History className="h-4 w-4 text-primary" />
-            <h3 className="font-display text-base font-extrabold">Recent activity</h3>
-          </div>
-          <div className="space-y-2">
-            {recentActivities.map((item) => (
-              <div key={item.id} className="flex items-center gap-3 rounded-2xl bg-background p-3">
-                <div className="grid h-9 w-9 place-items-center rounded-2xl bg-primary/10 text-primary">
-                  <item.icon className="h-4 w-4" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-extrabold">{item.title}</p>
-                  <p className="text-xs font-semibold text-muted-foreground">{item.meta}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Timezone — commit forever */}
+        {/* Timezone */}
         <div className="rounded-[1.5rem] bg-surface-raised p-4 shadow-card">
           <div className="mb-3 flex items-center gap-2">
             <Globe2 className="h-4 w-4 text-primary" />
@@ -5255,6 +5193,18 @@ const Index = () => {
             </div>
           )}
         </div>
+
+        <EmployeeWorkInfoCard
+          meEmployeeId={myEmployeeId}
+          meUserId={authUserId}
+          companyId={companyProfile?.id ?? null}
+        />
+
+        <ManagerHierarchy
+          meId={myEmployeeId}
+          employees={employees as HierarchyEmployee[]}
+          maxLevels={5}
+        />
 
         {/* Become an Admin (only show for non-admins) */}
         {!isAdmin && (
