@@ -206,30 +206,66 @@ export default function DocumentsPanel({ meEmployeeId, meUserId, companyId }: Pr
         </div>
       </div>
 
-      {/* Documents list */}
+      {/* Document categories */}
       <div className="rounded-[1.5rem] bg-surface-raised p-5 shadow-card">
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex items-center gap-3">
           <div className="grid h-10 w-10 place-items-center rounded-2xl bg-primary/10 text-primary">
             <FileText className="h-5 w-5" />
           </div>
           <div className="flex-1">
-            <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Files</p>
-            <h3 className="font-display text-lg font-extrabold">Download centre</h3>
+            <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Documents</p>
+            <h3 className="font-display text-lg font-extrabold">Browse by category</h3>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger className="h-9 w-[170px] rounded-xl text-xs font-bold">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="payslip">Payslips</SelectItem>
-                <SelectItem value="itr">ITR forms</SelectItem>
-                <SelectItem value="tax_forecast">Tax forecasts</SelectItem>
-                <SelectItem value="salary_breakdown">Salary breakdowns</SelectItem>
-                <SelectItem value="other">Other</SelectItem>
-                <SelectItem value="all">All types</SelectItem>
-              </SelectContent>
-            </Select>
+        </div>
+
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {CATEGORIES.map((c) => {
+            const count = docs.filter((d) => d.doc_type === c.key).length;
+            const Icon = c.icon;
+            const isActive = activeCategory === c.key;
+            return (
+              <div
+                key={c.key}
+                className={`flex items-center justify-between gap-3 rounded-2xl border bg-surface-muted p-4 transition ${
+                  isActive ? "border-primary ring-2 ring-primary/30" : "border-border"
+                }`}
+              >
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${c.tint}`}>
+                    <Icon className="h-5 w-5" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate font-display text-sm font-extrabold">{c.label}</p>
+                    <p className="text-[11px] font-semibold text-muted-foreground">
+                      {count} {count === 1 ? "file" : "files"}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setActiveCategory(isActive ? null : c.key);
+                    setTypeFilter(c.key);
+                  }}
+                  className="focus-premium shrink-0 text-xs font-extrabold text-primary hover:underline"
+                >
+                  {isActive ? "Hide" : "View All"}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Active category list */}
+      {activeCategory && (
+        <div className="rounded-[1.5rem] bg-surface-raised p-5 shadow-card">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex-1">
+              <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                {CATEGORIES.find((c) => c.key === activeCategory)?.label}
+              </p>
+              <h3 className="font-display text-lg font-extrabold">Download centre</h3>
+            </div>
             <Select value={yearFilter} onValueChange={setYearFilter}>
               <SelectTrigger className="h-9 w-[110px] rounded-xl text-xs font-bold">
                 <SelectValue />
@@ -244,37 +280,37 @@ export default function DocumentsPanel({ meEmployeeId, meUserId, companyId }: Pr
               </SelectContent>
             </Select>
           </div>
-        </div>
 
-        {loading ? (
-          <p className="mt-4 rounded-2xl bg-surface-muted p-3 text-xs font-semibold text-muted-foreground">Loading…</p>
-        ) : filtered.length === 0 ? (
-          <p className="mt-4 rounded-2xl bg-surface-muted p-3 text-xs font-semibold text-muted-foreground">
-            No documents in this view yet.
-          </p>
-        ) : groupedByMonth ? (
-          <div className="mt-4 space-y-4">
-            {groupedByMonth.map(([month, items]) => (
-              <div key={month}>
-                <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
-                  {month >= 1 && month <= 12 ? MONTHS[month - 1] : "Unspecified month"}
-                </p>
-                <ul className="mt-2 space-y-2">
-                  {items.map((d) => (
-                    <DocItem key={d.id} doc={d} onDownload={() => handleDownload(d)} />
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <ul className="mt-4 space-y-2">
-            {filtered.map((d) => (
-              <DocItem key={d.id} doc={d} onDownload={() => handleDownload(d)} />
-            ))}
-          </ul>
-        )}
-      </div>
+          {loading ? (
+            <p className="mt-4 rounded-2xl bg-surface-muted p-3 text-xs font-semibold text-muted-foreground">Loading…</p>
+          ) : filtered.length === 0 ? (
+            <p className="mt-4 rounded-2xl bg-surface-muted p-3 text-xs font-semibold text-muted-foreground">
+              No documents in this view yet.
+            </p>
+          ) : groupedByMonth ? (
+            <div className="mt-4 space-y-4">
+              {groupedByMonth.map(([month, items]) => (
+                <div key={month}>
+                  <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+                    {month >= 1 && month <= 12 ? MONTHS[month - 1] : "Unspecified month"}
+                  </p>
+                  <ul className="mt-2 space-y-2">
+                    {items.map((d) => (
+                      <DocItem key={d.id} doc={d} onDownload={() => handleDownload(d)} />
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <ul className="mt-4 space-y-2">
+              {filtered.map((d) => (
+                <DocItem key={d.id} doc={d} onDownload={() => handleDownload(d)} />
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
     </div>
   );
 }
