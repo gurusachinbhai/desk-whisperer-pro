@@ -47,7 +47,8 @@ export default function DocumentsPanel({ meEmployeeId, meUserId, companyId }: Pr
   const [loading, setLoading] = useState(true);
   const currentYear = new Date().getFullYear();
   const [yearFilter, setYearFilter] = useState<string>(String(currentYear));
-  const [typeFilter, setTypeFilter] = useState<string>("payslip");
+  const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [activeCategory, setActiveCategory] = useState<string | null>(null);
 
   useEffect(() => {
     if (!meUserId) {
