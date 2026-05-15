@@ -27,6 +27,14 @@ type Props = {
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
+const CATEGORIES: Array<{ key: EmployeeDocument["doc_type"]; label: string; icon: typeof Receipt; tint: string }> = [
+  { key: "payslip", label: "Payslips", icon: Receipt, tint: "bg-amber-500/15 text-amber-600 dark:text-amber-400" },
+  { key: "itr", label: "ITR Forms", icon: FileBadge, tint: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400" },
+  { key: "tax_forecast", label: "Tax Forecasts", icon: Calculator, tint: "bg-sky-500/15 text-sky-600 dark:text-sky-400" },
+  { key: "salary_breakdown", label: "Salary Breakdowns", icon: FileText, tint: "bg-violet-500/15 text-violet-600 dark:text-violet-400" },
+  { key: "other", label: "Others", icon: Folder, tint: "bg-rose-500/15 text-rose-600 dark:text-rose-400" },
+];
+
 const DocBadge = ({ children, tone = "default" }: { children: React.ReactNode; tone?: "default" | "primary" | "warn" }) => (
   <span
     className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-extrabold uppercase ${
