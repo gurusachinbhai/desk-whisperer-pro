@@ -1,6 +1,6 @@
 import { useState, ReactNode } from "react";
 import {
-  LayoutDashboard, UserPlus, LogOut, Search, Building2, FileText, Armchair, Bell, BarChart3, CreditCard, Menu, X,
+  LayoutDashboard, UserPlus, LogOut, Search, Building2, FileText, Armchair, Bell, BarChart3, CreditCard, Menu, X, GraduationCap,
 } from "lucide-react";
 import AdminOnboardingPanel from "./AdminOnboardingPanel";
 import AdminResignationsPanel from "./AdminResignationsPanel";
@@ -8,10 +8,11 @@ import AdminEmployeeSearchPanel from "./AdminEmployeeSearchPanel";
 import AdminSeatMasterPanel from "./AdminSeatMasterPanel";
 import AdminDepartmentsPanel from "@/components/AdminDepartmentsPanel";
 import AdminDocumentsPanel from "@/components/AdminDocumentsPanel";
+import TrainingPanel from "@/components/TrainingPanel";
 
 type Section =
   | "dashboard" | "onboarding" | "resignation" | "search"
-  | "departments" | "documents" | "seats" | "announcements" | "reports" | "billing";
+  | "departments" | "documents" | "training" | "seats" | "announcements" | "reports" | "billing";
 
 type Props = {
   companyId: string;
@@ -29,6 +30,7 @@ const NAV: { id: Section; label: string; icon: any; group: string }[] = [
   { id: "search", label: "Employee Search", icon: Search, group: "People" },
   { id: "departments", label: "Departments & KYC", icon: Building2, group: "Org" },
   { id: "documents", label: "Documents & Payroll", icon: FileText, group: "Org" },
+  { id: "training", label: "Training & Skills", icon: GraduationCap, group: "Org" },
   { id: "seats", label: "Open Desk · Seats", icon: Armchair, group: "Workspace" },
   { id: "announcements", label: "Announcements", icon: Bell, group: "Comms" },
   { id: "reports", label: "Reports", icon: BarChart3, group: "Comms" },
@@ -51,6 +53,7 @@ export default function AdminConsole({
       case "search": return <AdminEmployeeSearchPanel companyId={companyId} />;
       case "departments": return <AdminDepartmentsPanel companyId={companyId} />;
       case "documents": return <AdminDocumentsPanel companyId={companyId} uploaderName={uploaderName} />;
+      case "training": return <TrainingPanel companyId={companyId} meUserId={null} meName={uploaderName} canManage={true} />;
       case "seats": return <AdminSeatMasterPanel companyId={companyId} />;
       case "announcements": return renderAnnouncements?.() ?? <Empty label="Announcements" />;
       case "reports": return renderReports?.() ?? <Empty label="Reports" />;

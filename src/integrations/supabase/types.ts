@@ -997,6 +997,103 @@ export type Database = {
         }
         Relationships: []
       }
+      training_categories: {
+        Row: {
+          company_id: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          name: string
+          parent_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          parent_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          parent_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_categories_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "training_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      training_courses: {
+        Row: {
+          category_id: string
+          company_id: string
+          created_at: string
+          created_by: string | null
+          created_by_name: string | null
+          description: string | null
+          duration_minutes: number | null
+          id: string
+          title: string
+          updated_at: string
+          video_kind: string
+          video_path: string | null
+          video_url: string | null
+        }
+        Insert: {
+          category_id: string
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          created_by_name?: string | null
+          description?: string | null
+          duration_minutes?: number | null
+          id?: string
+          title: string
+          updated_at?: string
+          video_kind?: string
+          video_path?: string | null
+          video_url?: string | null
+        }
+        Update: {
+          category_id?: string
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          created_by_name?: string | null
+          description?: string | null
+          duration_minutes?: number | null
+          id?: string
+          title?: string
+          updated_at?: string
+          video_kind?: string
+          video_path?: string | null
+          video_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_courses_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "training_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           company_id: string | null
@@ -1276,6 +1373,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_company_manager: { Args: { _company_id: string }; Returns: boolean }
       is_company_member: { Args: { _company_id: string }; Returns: boolean }
       is_super_admin: { Args: never; Returns: boolean }
       join_company_profile: {
