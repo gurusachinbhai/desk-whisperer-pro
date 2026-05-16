@@ -30,6 +30,7 @@ const NAV: { id: Section; label: string; icon: any; group: string }[] = [
   { id: "search", label: "Employee Search", icon: Search, group: "People" },
   { id: "departments", label: "Departments & KYC", icon: Building2, group: "Org" },
   { id: "documents", label: "Documents & Payroll", icon: FileText, group: "Org" },
+  { id: "training", label: "Training & Skills", icon: GraduationCap, group: "Org" },
   { id: "seats", label: "Open Desk · Seats", icon: Armchair, group: "Workspace" },
   { id: "announcements", label: "Announcements", icon: Bell, group: "Comms" },
   { id: "reports", label: "Reports", icon: BarChart3, group: "Comms" },
