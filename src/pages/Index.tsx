@@ -5558,6 +5558,14 @@ const Index = () => {
                   companyId={companyProfile?.id ?? null}
                 />
               )}
+              {activeTab === "training" && (
+                <TrainingPanel
+                  companyId={companyProfile?.id ?? null}
+                  meUserId={authUserId}
+                  meName={currentUser?.displayName ?? null}
+                  canManage={!!isAdmin}
+                />
+              )}
               {activeTab === "billing" && renderBillingPanel()}
               {isAdmin && activeTab === "reports" && renderReportsPanel()}
               {activeTab === "book" && renderBookingPanel()}
