@@ -1,6 +1,6 @@
 import { useState, ReactNode } from "react";
 import {
-  LayoutDashboard, UserPlus, LogOut, Search, Building2, FileText, Armchair, Bell, BarChart3, CreditCard, Menu, X,
+  LayoutDashboard, UserPlus, LogOut, Search, Building2, FileText, Armchair, Bell, BarChart3, CreditCard, Menu, X, GraduationCap,
 } from "lucide-react";
 import AdminOnboardingPanel from "./AdminOnboardingPanel";
 import AdminResignationsPanel from "./AdminResignationsPanel";
@@ -8,10 +8,11 @@ import AdminEmployeeSearchPanel from "./AdminEmployeeSearchPanel";
 import AdminSeatMasterPanel from "./AdminSeatMasterPanel";
 import AdminDepartmentsPanel from "@/components/AdminDepartmentsPanel";
 import AdminDocumentsPanel from "@/components/AdminDocumentsPanel";
+import TrainingPanel from "@/components/TrainingPanel";
 
 type Section =
   | "dashboard" | "onboarding" | "resignation" | "search"
-  | "departments" | "documents" | "seats" | "announcements" | "reports" | "billing";
+  | "departments" | "documents" | "training" | "seats" | "announcements" | "reports" | "billing";
 
 type Props = {
   companyId: string;
