@@ -5544,6 +5544,8 @@ const Index = () => {
                 <AdminConsole
                   companyId={companyProfile.id}
                   uploaderName={currentUser?.displayName ?? "Admin"}
+                  meUserId={authUserId}
+                  meEmployeeId={myEmployeeId}
                   renderDashboard={renderAdminPanel}
                   renderReports={renderReportsPanel}
                   renderBilling={renderBillingPanel}
