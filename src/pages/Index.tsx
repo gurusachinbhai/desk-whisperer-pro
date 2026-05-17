@@ -52,7 +52,8 @@ import { useRecordsPersistence } from "@/hooks/use-records-persistence";
 import hrgreatlyLogo from "@/assets/hrgreatly-logo.png";
 import DocumentsPanel from "@/components/DocumentsPanel";
 import TrainingPanel from "@/components/TrainingPanel";
-import { GraduationCap } from "lucide-react";
+import AppraisalPanel from "@/components/AppraisalPanel";
+import { GraduationCap, ClipboardList } from "lucide-react";
 import AdminDocumentsPanel from "@/components/AdminDocumentsPanel";
 import AdminDepartmentsPanel from "@/components/AdminDepartmentsPanel";
 import AdminConsole from "@/components/admin/AdminConsole";
@@ -115,7 +116,7 @@ type EmployeeInvite = {
 };
 
 type AppMode = "signup" | "login";
-type ActiveTab = "home" | "book" | "attendance" | "leave" | "payroll" | "documents" | "training" | "billing" | "reports" | "map" | "rooms" | "directory" | "admin" | "team";
+type ActiveTab = "home" | "book" | "attendance" | "leave" | "payroll" | "documents" | "training" | "appraisal" | "billing" | "reports" | "map" | "rooms" | "directory" | "admin" | "team";
 type LoginStep = "form" | "otp";
 type LoginIdentifier = "email" | "phone";
 
@@ -233,6 +234,7 @@ const bottomTabs: { id: ActiveTab; icon: typeof CalendarCheck; label: string }[]
   { id: "leave", icon: Plane, label: "Leave" },
   { id: "documents", icon: FileText, label: "Documents" },
   { id: "training", icon: GraduationCap, label: "Training" },
+  { id: "appraisal", icon: ClipboardList, label: "Appraisal" },
   { id: "admin", icon: BarChart3, label: "Admin" },
 ];
 
@@ -5542,6 +5544,8 @@ const Index = () => {
                 <AdminConsole
                   companyId={companyProfile.id}
                   uploaderName={currentUser?.displayName ?? "Admin"}
+                  meUserId={authUserId}
+                  meEmployeeId={myEmployeeId}
                   renderDashboard={renderAdminPanel}
                   renderReports={renderReportsPanel}
                   renderBilling={renderBillingPanel}
@@ -5564,6 +5568,15 @@ const Index = () => {
                   meUserId={authUserId}
                   meName={currentUser?.displayName ?? null}
                   canManage={!!isAdmin}
+                />
+              )}
+              {activeTab === "appraisal" && (
+                <AppraisalPanel
+                  companyId={companyProfile?.id ?? null}
+                  meUserId={authUserId}
+                  meEmployeeId={myEmployeeId}
+                  meName={currentUser?.displayName ?? null}
+                  isAdmin={!!isAdmin}
                 />
               )}
               {activeTab === "billing" && renderBillingPanel()}
