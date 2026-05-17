@@ -234,6 +234,7 @@ const bottomTabs: { id: ActiveTab; icon: typeof CalendarCheck; label: string }[]
   { id: "leave", icon: Plane, label: "Leave" },
   { id: "documents", icon: FileText, label: "Documents" },
   { id: "training", icon: GraduationCap, label: "Training" },
+  { id: "appraisal", icon: ClipboardList, label: "Appraisal" },
   { id: "admin", icon: BarChart3, label: "Admin" },
 ];
 
