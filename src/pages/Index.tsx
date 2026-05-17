@@ -5570,6 +5570,15 @@ const Index = () => {
                   canManage={!!isAdmin}
                 />
               )}
+              {activeTab === "appraisal" && (
+                <AppraisalPanel
+                  companyId={companyProfile?.id ?? null}
+                  meUserId={authUserId}
+                  meEmployeeId={myEmployeeId}
+                  meName={currentUser?.displayName ?? null}
+                  isAdmin={!!isAdmin}
+                />
+              )}
               {activeTab === "billing" && renderBillingPanel()}
               {isAdmin && activeTab === "reports" && renderReportsPanel()}
               {activeTab === "book" && renderBookingPanel()}
