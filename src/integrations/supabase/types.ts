@@ -44,6 +44,171 @@ export type Database = {
         }
         Relationships: []
       }
+      appraisal_cycles: {
+        Row: {
+          company_id: string
+          created_at: string
+          created_by: string | null
+          cycle_type: string
+          id: string
+          name: string
+          period_end: string
+          period_start: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          cycle_type?: string
+          id?: string
+          name: string
+          period_end: string
+          period_start: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          cycle_type?: string
+          id?: string
+          name?: string
+          period_end?: string
+          period_start?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      appraisal_forms: {
+        Row: {
+          company_id: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          sections: Json
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          sections?: Json
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          sections?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      appraisal_reviews: {
+        Row: {
+          admin_comments: string | null
+          admin_signed_at: string | null
+          admin_signed_by: string | null
+          admin_signed_by_name: string | null
+          company_id: string
+          created_at: string
+          cycle_id: string
+          employee_comments: string | null
+          employee_id: string
+          employee_name: string | null
+          employee_submitted_at: string | null
+          employee_user_id: string | null
+          final_overall_rating: number | null
+          form_id: string | null
+          id: string
+          manager_comments: string | null
+          manager_id: string | null
+          manager_name: string | null
+          manager_overall_rating: number | null
+          manager_responses: Json
+          manager_signed_at: string | null
+          manager_signed_by: string | null
+          manager_user_id: string | null
+          self_overall_rating: number | null
+          self_responses: Json
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          admin_comments?: string | null
+          admin_signed_at?: string | null
+          admin_signed_by?: string | null
+          admin_signed_by_name?: string | null
+          company_id: string
+          created_at?: string
+          cycle_id: string
+          employee_comments?: string | null
+          employee_id: string
+          employee_name?: string | null
+          employee_submitted_at?: string | null
+          employee_user_id?: string | null
+          final_overall_rating?: number | null
+          form_id?: string | null
+          id?: string
+          manager_comments?: string | null
+          manager_id?: string | null
+          manager_name?: string | null
+          manager_overall_rating?: number | null
+          manager_responses?: Json
+          manager_signed_at?: string | null
+          manager_signed_by?: string | null
+          manager_user_id?: string | null
+          self_overall_rating?: number | null
+          self_responses?: Json
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          admin_comments?: string | null
+          admin_signed_at?: string | null
+          admin_signed_by?: string | null
+          admin_signed_by_name?: string | null
+          company_id?: string
+          created_at?: string
+          cycle_id?: string
+          employee_comments?: string | null
+          employee_id?: string
+          employee_name?: string | null
+          employee_submitted_at?: string | null
+          employee_user_id?: string | null
+          final_overall_rating?: number | null
+          form_id?: string | null
+          id?: string
+          manager_comments?: string | null
+          manager_id?: string | null
+          manager_name?: string | null
+          manager_overall_rating?: number | null
+          manager_responses?: Json
+          manager_signed_at?: string | null
+          manager_signed_by?: string | null
+          manager_user_id?: string | null
+          self_overall_rating?: number | null
+          self_responses?: Json
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       attendance_records: {
         Row: {
           check_in_at: string | null
@@ -993,6 +1158,60 @@ export type Database = {
           subject?: string
           ticket_number?: string
           ticket_type?: Database["public"]["Enums"]["support_ticket_type"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      training_assignments: {
+        Row: {
+          assigned_by: string | null
+          assigned_by_name: string | null
+          assigned_to_employee_id: string
+          assigned_to_name: string | null
+          assigned_to_user_id: string | null
+          company_id: string
+          completed_at: string | null
+          course_id: string
+          created_at: string
+          due_date: string | null
+          id: string
+          notes: string | null
+          progress_pct: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_by?: string | null
+          assigned_by_name?: string | null
+          assigned_to_employee_id: string
+          assigned_to_name?: string | null
+          assigned_to_user_id?: string | null
+          company_id: string
+          completed_at?: string | null
+          course_id: string
+          created_at?: string
+          due_date?: string | null
+          id?: string
+          notes?: string | null
+          progress_pct?: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_by?: string | null
+          assigned_by_name?: string | null
+          assigned_to_employee_id?: string
+          assigned_to_name?: string | null
+          assigned_to_user_id?: string | null
+          company_id?: string
+          completed_at?: string | null
+          course_id?: string
+          created_at?: string
+          due_date?: string | null
+          id?: string
+          notes?: string | null
+          progress_pct?: number
+          status?: string
           updated_at?: string
         }
         Relationships: []
