@@ -977,6 +977,81 @@ export type Database = {
           },
         ]
       }
+      resumes: {
+        Row: {
+          candidate_name: string
+          certifications: Json
+          company_id: string
+          created_at: string
+          created_by: string | null
+          created_by_name: string | null
+          department_id: string | null
+          department_name: string | null
+          education: Json
+          email: string | null
+          file_name: string | null
+          file_path: string | null
+          id: string
+          linkedin: string | null
+          location: string | null
+          notes: string | null
+          phone: string | null
+          professional_summary: string | null
+          skills: Json
+          tags: Json
+          updated_at: string
+          work_experience: Json
+        }
+        Insert: {
+          candidate_name: string
+          certifications?: Json
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          created_by_name?: string | null
+          department_id?: string | null
+          department_name?: string | null
+          education?: Json
+          email?: string | null
+          file_name?: string | null
+          file_path?: string | null
+          id?: string
+          linkedin?: string | null
+          location?: string | null
+          notes?: string | null
+          phone?: string | null
+          professional_summary?: string | null
+          skills?: Json
+          tags?: Json
+          updated_at?: string
+          work_experience?: Json
+        }
+        Update: {
+          candidate_name?: string
+          certifications?: Json
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          created_by_name?: string | null
+          department_id?: string | null
+          department_name?: string | null
+          education?: Json
+          email?: string | null
+          file_name?: string | null
+          file_path?: string | null
+          id?: string
+          linkedin?: string | null
+          location?: string | null
+          notes?: string | null
+          phone?: string | null
+          professional_summary?: string | null
+          skills?: Json
+          tags?: Json
+          updated_at?: string
+          work_experience?: Json
+        }
+        Relationships: []
+      }
       salary_profiles: {
         Row: {
           annual_ctc: number
