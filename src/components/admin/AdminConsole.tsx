@@ -1,11 +1,12 @@
 import { useState, ReactNode } from "react";
 import {
-  LayoutDashboard, UserPlus, LogOut, Search, Building2, FileText, Armchair, Bell, BarChart3, CreditCard, Menu, X, GraduationCap, ClipboardList,
+  LayoutDashboard, UserPlus, LogOut, Search, Building2, FileText, Armchair, Bell, BarChart3, CreditCard, Menu, X, GraduationCap, ClipboardList, FolderArchive,
 } from "lucide-react";
 import AdminOnboardingPanel from "./AdminOnboardingPanel";
 import AdminResignationsPanel from "./AdminResignationsPanel";
 import AdminEmployeeSearchPanel from "./AdminEmployeeSearchPanel";
 import AdminSeatMasterPanel from "./AdminSeatMasterPanel";
+import AdminResumeBankPanel from "./AdminResumeBankPanel";
 import AdminDepartmentsPanel from "@/components/AdminDepartmentsPanel";
 import AdminDocumentsPanel from "@/components/AdminDocumentsPanel";
 import TrainingPanel from "@/components/TrainingPanel";
@@ -13,7 +14,7 @@ import AppraisalPanel from "@/components/AppraisalPanel";
 
 type Section =
   | "dashboard" | "onboarding" | "resignation" | "search"
-  | "departments" | "documents" | "training" | "appraisal" | "seats" | "announcements" | "reports" | "billing";
+  | "departments" | "documents" | "training" | "appraisal" | "resumes" | "seats" | "announcements" | "reports" | "billing";
 
 type Props = {
   companyId: string;
@@ -35,6 +36,7 @@ const NAV: { id: Section; label: string; icon: any; group: string }[] = [
   { id: "documents", label: "Documents & Payroll", icon: FileText, group: "Org" },
   { id: "training", label: "Training & Skills", icon: GraduationCap, group: "Org" },
   { id: "appraisal", label: "Appraisals", icon: ClipboardList, group: "Org" },
+  { id: "resumes", label: "Resume Bank", icon: FolderArchive, group: "Org" },
   { id: "seats", label: "Open Desk · Seats", icon: Armchair, group: "Workspace" },
   { id: "announcements", label: "Announcements", icon: Bell, group: "Comms" },
   { id: "reports", label: "Reports", icon: BarChart3, group: "Comms" },
@@ -59,6 +61,7 @@ export default function AdminConsole({
       case "documents": return <AdminDocumentsPanel companyId={companyId} uploaderName={uploaderName} />;
       case "training": return <TrainingPanel companyId={companyId} meUserId={meUserId ?? null} meName={uploaderName} canManage={true} />;
       case "appraisal": return <AppraisalPanel companyId={companyId} meUserId={meUserId ?? null} meEmployeeId={meEmployeeId ?? null} meName={uploaderName} isAdmin={true} />;
+      case "resumes": return <AdminResumeBankPanel companyId={companyId} uploaderName={uploaderName} />;
       case "seats": return <AdminSeatMasterPanel companyId={companyId} />;
       case "announcements": return renderAnnouncements?.() ?? <Empty label="Announcements" />;
       case "reports": return renderReports?.() ?? <Empty label="Reports" />;
