@@ -3627,6 +3627,23 @@ const Index = () => {
             {myTodayRecord?.signOutAt ? `Out · ${formatHm(myTodayRecord.signOutAt)}` : "Sign Out"}
           </button>
         </div>
+
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-background/50 px-3 py-2 text-xs">
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <MapPin className="h-3.5 w-3.5 text-primary" />
+            {officeLoc ? (
+              <span>Office set · {officeLoc.lat.toFixed(5)}, {officeLoc.lng.toFixed(5)}</span>
+            ) : (
+              <span>Office location not set — distances won't be calculated</span>
+            )}
+          </div>
+          <button
+            onClick={handleSetOffice}
+            className="rounded-full border border-border bg-background px-3 py-1 text-xs font-bold text-foreground hover:bg-accent"
+          >
+            {officeLoc ? "Update office" : "Set office to here"}
+          </button>
+        </div>
       </div>
 
       {/* Who's in today */}
