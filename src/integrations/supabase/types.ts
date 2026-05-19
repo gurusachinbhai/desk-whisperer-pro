@@ -211,8 +211,18 @@ export type Database = {
       }
       attendance_records: {
         Row: {
+          check_in_accuracy_m: number | null
+          check_in_address: string | null
           check_in_at: string | null
+          check_in_distance_m: number | null
+          check_in_lat: number | null
+          check_in_lng: number | null
+          check_out_accuracy_m: number | null
+          check_out_address: string | null
           check_out_at: string | null
+          check_out_distance_m: number | null
+          check_out_lat: number | null
+          check_out_lng: number | null
           company_id: string
           created_at: string
           id: string
@@ -225,8 +235,18 @@ export type Database = {
           work_date: string
         }
         Insert: {
+          check_in_accuracy_m?: number | null
+          check_in_address?: string | null
           check_in_at?: string | null
+          check_in_distance_m?: number | null
+          check_in_lat?: number | null
+          check_in_lng?: number | null
+          check_out_accuracy_m?: number | null
+          check_out_address?: string | null
           check_out_at?: string | null
+          check_out_distance_m?: number | null
+          check_out_lat?: number | null
+          check_out_lng?: number | null
           company_id: string
           created_at?: string
           id?: string
@@ -239,8 +259,18 @@ export type Database = {
           work_date?: string
         }
         Update: {
+          check_in_accuracy_m?: number | null
+          check_in_address?: string | null
           check_in_at?: string | null
+          check_in_distance_m?: number | null
+          check_in_lat?: number | null
+          check_in_lng?: number | null
+          check_out_accuracy_m?: number | null
+          check_out_address?: string | null
           check_out_at?: string | null
+          check_out_distance_m?: number | null
+          check_out_lat?: number | null
+          check_out_lng?: number | null
           company_id?: string
           created_at?: string
           id?: string
