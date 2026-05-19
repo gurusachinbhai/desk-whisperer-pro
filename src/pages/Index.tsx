@@ -3426,11 +3426,76 @@ const Index = () => {
     return `${h}h ${m.toString().padStart(2, "0")}m`;
   };
 
-  const handleSignIn = () => {
+  // ---- Office location (per company, stored locally) ----
+  const officeKey = companyProfile?.id ? `deskflow-office-loc-${companyProfile.id}` : null;
+  const [officeLoc, setOfficeLoc] = useState<{ lat: number; lng: number; label?: string } | null>(() => {
+    if (typeof window === "undefined" || !officeKey) return null;
+    try { const raw = window.localStorage.getItem(officeKey); return raw ? JSON.parse(raw) : null; } catch { return null; }
+  });
+  useEffect(() => {
+    if (!officeKey) return;
+    try {
+      const raw = window.localStorage.getItem(officeKey);
+      setOfficeLoc(raw ? JSON.parse(raw) : null);
+    } catch { setOfficeLoc(null); }
+  }, [officeKey]);
+
+  const haversineM = (a: { lat: number; lng: number }, b: { lat: number; lng: number }) => {
+    const R = 6371000;
+    const toRad = (d: number) => (d * Math.PI) / 180;
+    const dLat = toRad(b.lat - a.lat);
+    const dLng = toRad(b.lng - a.lng);
+    const s = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
+    return 2 * R * Math.asin(Math.sqrt(s));
+  };
+
+  const getCurrentGeo = (): Promise<GeoPoint | null> =>
+    new Promise((resolve) => {
+      if (typeof navigator === "undefined" || !navigator.geolocation) {
+        toast.error("Geolocation not supported on this device");
+        resolve(null);
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const point: GeoPoint = {
+            lat: pos.coords.latitude,
+            lng: pos.coords.longitude,
+            accuracyM: pos.coords.accuracy,
+          };
+          if (officeLoc) point.distanceM = haversineM(officeLoc, point);
+          resolve(point);
+        },
+        (err) => {
+          toast.error(`Location blocked: ${err.message}`);
+          resolve(null);
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
+      );
+    });
+
+  const handleSetOffice = () => {
+    if (!officeKey) { toast.error("Join a company first"); return; }
+    if (!navigator.geolocation) { toast.error("Geolocation not supported"); return; }
+    toast.info("Capturing office location…");
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        window.localStorage.setItem(officeKey, JSON.stringify(loc));
+        setOfficeLoc(loc);
+        toast.success("Office location saved");
+      },
+      (err) => toast.error(`Could not get location: ${err.message}`),
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
+    );
+  };
+
+  const handleSignIn = async () => {
     if (myTodayRecord?.signInAt) {
       toast.error("You've already signed in today");
       return;
     }
+    const geo = await getCurrentGeo();
     const id = window.crypto.randomUUID();
     const newRec: AttendanceRecord = {
       id,
@@ -3439,12 +3504,14 @@ const Index = () => {
       date: todayKey,
       signInAt: Date.now(),
       signOutAt: null,
+      signInGeo: geo ?? undefined,
     };
     setAttendance((prev) => [newRec, ...prev.filter((r) => !(r.userId === myUserId && r.date === todayKey))]);
-    toast.success(`Signed in at ${format(new Date(), "hh:mm a")}`);
+    const distMsg = geo?.distanceM != null ? ` · ${Math.round(geo.distanceM)}m from office` : geo ? " · location captured" : "";
+    toast.success(`Signed in at ${format(new Date(), "hh:mm a")}${distMsg}`);
   };
 
-  const handleSignOut = () => {
+  const handleSignOut = async () => {
     if (!myTodayRecord || !myTodayRecord.signInAt) {
       toast.error("Sign in first");
       return;
@@ -3453,10 +3520,12 @@ const Index = () => {
       toast.error("Already signed out today");
       return;
     }
+    const geo = await getCurrentGeo();
     setAttendance((prev) =>
-      prev.map((r) => (r.id === myTodayRecord.id ? { ...r, signOutAt: Date.now() } : r))
+      prev.map((r) => (r.id === myTodayRecord.id ? { ...r, signOutAt: Date.now(), signOutGeo: geo ?? undefined } : r))
     );
-    toast.success(`Signed out at ${format(new Date(), "hh:mm a")}`);
+    const distMsg = geo?.distanceM != null ? ` · ${Math.round(geo.distanceM)}m from office` : "";
+    toast.success(`Signed out at ${format(new Date(), "hh:mm a")}${distMsg}`);
   };
 
   const submitRegularization = () => {
