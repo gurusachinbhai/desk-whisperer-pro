@@ -2,6 +2,13 @@ import { useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 // ---------------- Types matching the local shapes used in Index.tsx ----------------
+export type GeoPoint = {
+  lat: number;
+  lng: number;
+  accuracyM?: number;
+  distanceM?: number;
+  address?: string;
+};
 export type AttendanceRecord = {
   id: string;
   userId: string;
@@ -9,6 +16,8 @@ export type AttendanceRecord = {
   date: string; // yyyy-MM-dd
   signInAt: number | null;
   signOutAt: number | null;
+  signInGeo?: GeoPoint;
+  signOutGeo?: GeoPoint;
   note?: string;
   regularization?: {
     requestedSignIn?: number;
@@ -72,6 +81,20 @@ const fromDbAttendance = (r: any): AttendanceRecord => ({
   date: r.work_date,
   signInAt: r.check_in_at ? new Date(r.check_in_at).getTime() : null,
   signOutAt: r.check_out_at ? new Date(r.check_out_at).getTime() : null,
+  signInGeo: r.check_in_lat != null && r.check_in_lng != null ? {
+    lat: Number(r.check_in_lat),
+    lng: Number(r.check_in_lng),
+    accuracyM: r.check_in_accuracy_m != null ? Number(r.check_in_accuracy_m) : undefined,
+    distanceM: r.check_in_distance_m != null ? Number(r.check_in_distance_m) : undefined,
+    address: r.check_in_address ?? undefined,
+  } : undefined,
+  signOutGeo: r.check_out_lat != null && r.check_out_lng != null ? {
+    lat: Number(r.check_out_lat),
+    lng: Number(r.check_out_lng),
+    accuracyM: r.check_out_accuracy_m != null ? Number(r.check_out_accuracy_m) : undefined,
+    distanceM: r.check_out_distance_m != null ? Number(r.check_out_distance_m) : undefined,
+    address: r.check_out_address ?? undefined,
+  } : undefined,
   note: r.notes ?? undefined,
 });
 
@@ -284,12 +307,22 @@ export function useRecordsPersistence({
         work_date: r.date,
         check_in_at: r.signInAt ? new Date(r.signInAt).toISOString() : null,
         check_out_at: r.signOutAt ? new Date(r.signOutAt).toISOString() : null,
+        check_in_lat: r.signInGeo?.lat ?? null,
+        check_in_lng: r.signInGeo?.lng ?? null,
+        check_in_accuracy_m: r.signInGeo?.accuracyM ?? null,
+        check_in_distance_m: r.signInGeo?.distanceM ?? null,
+        check_in_address: r.signInGeo?.address ?? null,
+        check_out_lat: r.signOutGeo?.lat ?? null,
+        check_out_lng: r.signOutGeo?.lng ?? null,
+        check_out_accuracy_m: r.signOutGeo?.accuracyM ?? null,
+        check_out_distance_m: r.signOutGeo?.distanceM ?? null,
+        check_out_address: r.signOutGeo?.address ?? null,
         status: "present",
         notes: r.note ?? null,
       }));
       await supabase
         .from("attendance_records")
-        .upsert(rows, { onConflict: "user_id,work_date" });
+        .upsert(rows as any, { onConflict: "user_id,work_date" });
     }, 400);
 
     return () => window.clearTimeout(t);
