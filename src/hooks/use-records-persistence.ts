@@ -2,6 +2,13 @@ import { useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 // ---------------- Types matching the local shapes used in Index.tsx ----------------
+export type GeoPoint = {
+  lat: number;
+  lng: number;
+  accuracyM?: number;
+  distanceM?: number;
+  address?: string;
+};
 export type AttendanceRecord = {
   id: string;
   userId: string;
@@ -9,6 +16,8 @@ export type AttendanceRecord = {
   date: string; // yyyy-MM-dd
   signInAt: number | null;
   signOutAt: number | null;
+  signInGeo?: GeoPoint;
+  signOutGeo?: GeoPoint;
   note?: string;
   regularization?: {
     requestedSignIn?: number;
