@@ -370,6 +370,13 @@ const Index = () => {
   }, []);
 
   // ============== ATTENDANCE STATE ==============
+  type GeoPoint = {
+    lat: number;
+    lng: number;
+    accuracyM?: number;
+    distanceM?: number;
+    address?: string;
+  };
   type AttendanceRecord = {
     id: string;
     userId: string;
@@ -377,6 +384,8 @@ const Index = () => {
     date: string; // yyyy-MM-dd
     signInAt: number | null;
     signOutAt: number | null;
+    signInGeo?: GeoPoint;
+    signOutGeo?: GeoPoint;
     note?: string;
     regularization?: {
       requestedSignIn?: number;
