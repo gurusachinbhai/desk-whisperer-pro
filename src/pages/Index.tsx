@@ -3715,6 +3715,44 @@ const Index = () => {
                       )}
                     </div>
                   </div>
+                  {(r.signInGeo || r.signOutGeo) && (
+                    <div className="mt-2 space-y-1 rounded-xl bg-background/80 px-2 py-1.5 text-[11px] text-muted-foreground">
+                      {r.signInGeo && (
+                        <div className="flex items-center gap-1">
+                          <MapPin className="h-3 w-3 text-primary" />
+                          <span className="font-semibold text-foreground">In:</span>
+                          <a
+                            href={`https://maps.google.com/?q=${r.signInGeo.lat},${r.signInGeo.lng}`}
+                            target="_blank" rel="noreferrer"
+                            className="underline decoration-dotted"
+                          >
+                            {r.signInGeo.lat.toFixed(5)}, {r.signInGeo.lng.toFixed(5)}
+                          </a>
+                          {r.signInGeo.accuracyM != null && <span>· ±{Math.round(r.signInGeo.accuracyM)}m</span>}
+                          {r.signInGeo.distanceM != null && (
+                            <span className="font-bold text-primary">· {Math.round(r.signInGeo.distanceM)}m from office</span>
+                          )}
+                        </div>
+                      )}
+                      {r.signOutGeo && (
+                        <div className="flex items-center gap-1">
+                          <MapPin className="h-3 w-3 text-destructive" />
+                          <span className="font-semibold text-foreground">Out:</span>
+                          <a
+                            href={`https://maps.google.com/?q=${r.signOutGeo.lat},${r.signOutGeo.lng}`}
+                            target="_blank" rel="noreferrer"
+                            className="underline decoration-dotted"
+                          >
+                            {r.signOutGeo.lat.toFixed(5)}, {r.signOutGeo.lng.toFixed(5)}
+                          </a>
+                          {r.signOutGeo.accuracyM != null && <span>· ±{Math.round(r.signOutGeo.accuracyM)}m</span>}
+                          {r.signOutGeo.distanceM != null && (
+                            <span className="font-bold text-primary">· {Math.round(r.signOutGeo.distanceM)}m from office</span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </li>
               );
             })}
