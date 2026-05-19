@@ -81,6 +81,20 @@ const fromDbAttendance = (r: any): AttendanceRecord => ({
   date: r.work_date,
   signInAt: r.check_in_at ? new Date(r.check_in_at).getTime() : null,
   signOutAt: r.check_out_at ? new Date(r.check_out_at).getTime() : null,
+  signInGeo: r.check_in_lat != null && r.check_in_lng != null ? {
+    lat: Number(r.check_in_lat),
+    lng: Number(r.check_in_lng),
+    accuracyM: r.check_in_accuracy_m != null ? Number(r.check_in_accuracy_m) : undefined,
+    distanceM: r.check_in_distance_m != null ? Number(r.check_in_distance_m) : undefined,
+    address: r.check_in_address ?? undefined,
+  } : undefined,
+  signOutGeo: r.check_out_lat != null && r.check_out_lng != null ? {
+    lat: Number(r.check_out_lat),
+    lng: Number(r.check_out_lng),
+    accuracyM: r.check_out_accuracy_m != null ? Number(r.check_out_accuracy_m) : undefined,
+    distanceM: r.check_out_distance_m != null ? Number(r.check_out_distance_m) : undefined,
+    address: r.check_out_address ?? undefined,
+  } : undefined,
   note: r.notes ?? undefined,
 });
 
