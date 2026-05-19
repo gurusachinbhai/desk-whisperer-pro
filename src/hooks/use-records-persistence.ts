@@ -322,7 +322,7 @@ export function useRecordsPersistence({
       }));
       await supabase
         .from("attendance_records")
-        .upsert(rows, { onConflict: "user_id,work_date" });
+        .upsert(rows as any, { onConflict: "user_id,work_date" });
     }, 400);
 
     return () => window.clearTimeout(t);
