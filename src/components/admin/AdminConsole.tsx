@@ -65,6 +65,7 @@ export default function AdminConsole({
       case "appraisal": return <AppraisalPanel companyId={companyId} meUserId={meUserId ?? null} meEmployeeId={meEmployeeId ?? null} meName={uploaderName} isAdmin={true} />;
       case "resumes": return <AdminResumeBankPanel companyId={companyId} uploaderName={uploaderName} />;
       case "seats": return <AdminSeatMasterPanel companyId={companyId} />;
+      case "attendance": return <AdminAttendancePanel companyId={companyId} />;
       case "announcements": return renderAnnouncements?.() ?? <Empty label="Announcements" />;
       case "reports": return renderReports?.() ?? <Empty label="Reports" />;
       case "billing": return renderBilling?.() ?? <Empty label="Billing" />;
