@@ -53,6 +53,7 @@ import hrgreatlyLogo from "@/assets/hrgreatly-logo.png";
 import DocumentsPanel from "@/components/DocumentsPanel";
 import TrainingPanel from "@/components/TrainingPanel";
 import AppraisalPanel from "@/components/AppraisalPanel";
+import AttendanceMap from "@/components/AttendanceMap";
 import { GraduationCap, ClipboardList } from "lucide-react";
 import AdminDocumentsPanel from "@/components/AdminDocumentsPanel";
 import AdminDepartmentsPanel from "@/components/AdminDepartmentsPanel";
