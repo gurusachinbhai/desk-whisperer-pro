@@ -3645,7 +3645,25 @@ const Index = () => {
             {officeLoc ? "Update office" : "Set office to here"}
           </button>
         </div>
+
+        {/* Live GPS map */}
+        <div className="mt-3">
+          <AttendanceMap
+            office={officeLoc ?? null}
+            signIn={myTodayRecord?.signInGeo ?? null}
+            signOut={myTodayRecord?.signOutGeo ?? null}
+            height={240}
+          />
+          <p className="mt-1.5 text-[11px] text-muted-foreground">
+            <span className="inline-block h-2 w-2 rounded-full bg-blue-600 align-middle" /> Office
+            {" · "}
+            <span className="inline-block h-2 w-2 rounded-full bg-green-600 align-middle" /> Sign-in
+            {" · "}
+            <span className="inline-block h-2 w-2 rounded-full bg-red-600 align-middle" /> Sign-out
+          </p>
+        </div>
       </div>
+
 
       {/* Who's in today */}
       <div className="rounded-[1.5rem] bg-surface-raised p-4 shadow-card">
