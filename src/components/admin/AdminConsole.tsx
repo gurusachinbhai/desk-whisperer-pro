@@ -1,12 +1,13 @@
 import { useState, ReactNode } from "react";
 import {
-  LayoutDashboard, UserPlus, LogOut, Search, Building2, FileText, Armchair, Bell, BarChart3, CreditCard, Menu, X, GraduationCap, ClipboardList, FolderArchive,
+  LayoutDashboard, UserPlus, LogOut, Search, Building2, FileText, Armchair, Bell, BarChart3, CreditCard, Menu, X, GraduationCap, ClipboardList, FolderArchive, MapPin,
 } from "lucide-react";
 import AdminOnboardingPanel from "./AdminOnboardingPanel";
 import AdminResignationsPanel from "./AdminResignationsPanel";
 import AdminEmployeeSearchPanel from "./AdminEmployeeSearchPanel";
 import AdminSeatMasterPanel from "./AdminSeatMasterPanel";
 import AdminResumeBankPanel from "./AdminResumeBankPanel";
+import AdminAttendancePanel from "./AdminAttendancePanel";
 import AdminDepartmentsPanel from "@/components/AdminDepartmentsPanel";
 import AdminDocumentsPanel from "@/components/AdminDocumentsPanel";
 import TrainingPanel from "@/components/TrainingPanel";
@@ -14,7 +15,7 @@ import AppraisalPanel from "@/components/AppraisalPanel";
 
 type Section =
   | "dashboard" | "onboarding" | "resignation" | "search"
-  | "departments" | "documents" | "training" | "appraisal" | "resumes" | "seats" | "announcements" | "reports" | "billing";
+  | "departments" | "documents" | "training" | "appraisal" | "resumes" | "seats" | "attendance" | "announcements" | "reports" | "billing";
 
 type Props = {
   companyId: string;
