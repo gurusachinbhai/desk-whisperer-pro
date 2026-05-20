@@ -3772,9 +3772,26 @@ const Index = () => {
                       )}
                     </div>
                   )}
+                  {(r.signInGeo || r.signOutGeo) && (
+                    <details className="mt-2 group">
+                      <summary className="cursor-pointer text-[11px] font-semibold text-primary hover:underline list-none">
+                        <span className="group-open:hidden">▸ Show map</span>
+                        <span className="hidden group-open:inline">▾ Hide map</span>
+                      </summary>
+                      <div className="mt-2">
+                        <AttendanceMap
+                          office={officeLoc ?? null}
+                          signIn={r.signInGeo ?? null}
+                          signOut={r.signOutGeo ?? null}
+                          height={180}
+                        />
+                      </div>
+                    </details>
+                  )}
                 </li>
               );
             })}
+
           </ul>
         )}
       </div>
