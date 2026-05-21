@@ -3441,6 +3441,50 @@ const Index = () => {
     } catch { setOfficeLoc(null); }
   }, [officeKey]);
 
+  // ---- Geolocation permission + availability state ----
+  type GeoStatus = "unknown" | "prompt" | "granted" | "denied" | "unsupported" | "unavailable";
+  const [geoStatus, setGeoStatus] = useState<GeoStatus>("unknown");
+
+  useEffect(() => {
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      setGeoStatus("unsupported");
+      return;
+    }
+    const anyNav = navigator as any;
+    if (!anyNav.permissions?.query) {
+      setGeoStatus("prompt");
+      return;
+    }
+    let cancelled = false;
+    let statusRef: any = null;
+    anyNav.permissions
+      .query({ name: "geolocation" as PermissionName })
+      .then((status: any) => {
+        if (cancelled) return;
+        statusRef = status;
+        setGeoStatus(status.state as GeoStatus);
+        status.onchange = () => setGeoStatus(status.state as GeoStatus);
+      })
+      .catch(() => !cancelled && setGeoStatus("prompt"));
+    return () => {
+      cancelled = true;
+      if (statusRef) statusRef.onchange = null;
+    };
+  }, []);
+
+  const describeGeoError = (err: GeolocationPositionError) => {
+    switch (err.code) {
+      case err.PERMISSION_DENIED:
+        return "Location permission denied. Enable it in your browser settings and try again.";
+      case err.POSITION_UNAVAILABLE:
+        return "GPS is unavailable. Turn on location services on your device and try again.";
+      case err.TIMEOUT:
+        return "Couldn't get a GPS fix in time. Move to an open area and retry.";
+      default:
+        return err.message || "Unable to read your location.";
+    }
+  };
+
   const haversineM = (a: { lat: number; lng: number }, b: { lat: number; lng: number }) => {
     const R = 6371000;
     const toRad = (d: number) => (d * Math.PI) / 180;
@@ -3453,12 +3497,14 @@ const Index = () => {
   const getCurrentGeo = (): Promise<GeoPoint | null> =>
     new Promise((resolve) => {
       if (typeof navigator === "undefined" || !navigator.geolocation) {
+        setGeoStatus("unsupported");
         toast.error("Geolocation not supported on this device");
         resolve(null);
         return;
       }
       navigator.geolocation.getCurrentPosition(
         (pos) => {
+          setGeoStatus("granted");
           const point: GeoPoint = {
             lat: pos.coords.latitude,
             lng: pos.coords.longitude,
@@ -3468,28 +3514,57 @@ const Index = () => {
           resolve(point);
         },
         (err) => {
-          toast.error(`Location blocked: ${err.message}`);
+          if (err.code === err.PERMISSION_DENIED) setGeoStatus("denied");
+          else if (err.code === err.POSITION_UNAVAILABLE) setGeoStatus("unavailable");
+          toast.error(describeGeoError(err));
           resolve(null);
         },
         { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
       );
     });
 
+  const requestLocationPermission = () => {
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      setGeoStatus("unsupported");
+      toast.error("Geolocation not supported on this device");
+      return;
+    }
+    toast.info("Requesting location permission…");
+    navigator.geolocation.getCurrentPosition(
+      () => {
+        setGeoStatus("granted");
+        toast.success("Location enabled");
+      },
+      (err) => {
+        if (err.code === err.PERMISSION_DENIED) setGeoStatus("denied");
+        else if (err.code === err.POSITION_UNAVAILABLE) setGeoStatus("unavailable");
+        toast.error(describeGeoError(err));
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
+    );
+  };
+
   const handleSetOffice = () => {
     if (!officeKey) { toast.error("Join a company first"); return; }
-    if (!navigator.geolocation) { toast.error("Geolocation not supported"); return; }
+    if (!navigator.geolocation) { setGeoStatus("unsupported"); toast.error("Geolocation not supported"); return; }
     toast.info("Capturing office location…");
     navigator.geolocation.getCurrentPosition(
       (pos) => {
+        setGeoStatus("granted");
         const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
         window.localStorage.setItem(officeKey, JSON.stringify(loc));
         setOfficeLoc(loc);
         toast.success("Office location saved");
       },
-      (err) => toast.error(`Could not get location: ${err.message}`),
+      (err) => {
+        if (err.code === err.PERMISSION_DENIED) setGeoStatus("denied");
+        else if (err.code === err.POSITION_UNAVAILABLE) setGeoStatus("unavailable");
+        toast.error(describeGeoError(err));
+      },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
     );
   };
+
 
   const handleSignIn = async () => {
     if (myTodayRecord?.signInAt) {
@@ -3648,7 +3723,34 @@ const Index = () => {
 
         {/* Live GPS map */}
         <div className="mt-3">
+          {geoStatus !== "granted" && (
+            <div
+              role="alert"
+              className={`mb-2 flex flex-wrap items-center justify-between gap-2 rounded-2xl border px-3 py-2 text-xs ${
+                geoStatus === "denied" || geoStatus === "unsupported" || geoStatus === "unavailable"
+                  ? "border-destructive/40 bg-destructive/10 text-destructive"
+                  : "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300"
+              }`}
+            >
+              <span className="flex items-center gap-2">
+                <MapPin className="h-3.5 w-3.5" />
+                {geoStatus === "unsupported" && "GPS isn't supported in this browser. Open the app on a phone or a Chromium-based browser."}
+                {geoStatus === "denied" && "Location is blocked. Allow it in your browser/site settings, then retry."}
+                {geoStatus === "unavailable" && "GPS is off or unavailable. Enable location services on your device and retry."}
+                {(geoStatus === "prompt" || geoStatus === "unknown") && "Location access is needed to geo-tag your sign-in / sign-out."}
+              </span>
+              {geoStatus !== "unsupported" && (
+                <button
+                  onClick={requestLocationPermission}
+                  className="rounded-full border border-current bg-background/60 px-3 py-1 text-[11px] font-bold hover:bg-background"
+                >
+                  Enable location
+                </button>
+              )}
+            </div>
+          )}
           <AttendanceMap
+
             office={officeLoc ?? null}
             signIn={myTodayRecord?.signInGeo ?? null}
             signOut={myTodayRecord?.signOutGeo ?? null}
