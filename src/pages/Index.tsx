@@ -3723,7 +3723,34 @@ const Index = () => {
 
         {/* Live GPS map */}
         <div className="mt-3">
+          {geoStatus !== "granted" && (
+            <div
+              role="alert"
+              className={`mb-2 flex flex-wrap items-center justify-between gap-2 rounded-2xl border px-3 py-2 text-xs ${
+                geoStatus === "denied" || geoStatus === "unsupported" || geoStatus === "unavailable"
+                  ? "border-destructive/40 bg-destructive/10 text-destructive"
+                  : "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300"
+              }`}
+            >
+              <span className="flex items-center gap-2">
+                <MapPin className="h-3.5 w-3.5" />
+                {geoStatus === "unsupported" && "GPS isn't supported in this browser. Open the app on a phone or a Chromium-based browser."}
+                {geoStatus === "denied" && "Location is blocked. Allow it in your browser/site settings, then retry."}
+                {geoStatus === "unavailable" && "GPS is off or unavailable. Enable location services on your device and retry."}
+                {(geoStatus === "prompt" || geoStatus === "unknown") && "Location access is needed to geo-tag your sign-in / sign-out."}
+              </span>
+              {geoStatus !== "unsupported" && (
+                <button
+                  onClick={requestLocationPermission}
+                  className="rounded-full border border-current bg-background/60 px-3 py-1 text-[11px] font-bold hover:bg-background"
+                >
+                  Enable location
+                </button>
+              )}
+            </div>
+          )}
           <AttendanceMap
+
             office={officeLoc ?? null}
             signIn={myTodayRecord?.signInGeo ?? null}
             signOut={myTodayRecord?.signOutGeo ?? null}
