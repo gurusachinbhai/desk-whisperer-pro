@@ -52,8 +52,14 @@ export default function AdminAttendancePanel({ companyId }: { companyId: string 
   const [loading, setLoading] = useState(false);
   const [totalCount, setTotalCount] = useState<number | null>(null);
 
-  // export progress
-  const [exporting, setExporting] = useState<null | { kind: "csv" | "pdf"; done: number; total: number }>(null);
+  // export progress.
+  // `done` = filtered rows emitted so far (matches the user's search).
+  // `total` = filtered total (best estimate). When a search is active we don't
+  // know the filtered total until the scan finishes, so we project it from the
+  // current match rate against scanned rows and clamp `done <= total`.
+  const [exporting, setExporting] = useState<
+    null | { kind: "csv" | "pdf"; done: number; total: number; scanned: number; rangeTotal: number; filtering: boolean }
+  >(null);
   const cancelRef = useRef(false);
 
   const load = async () => {
