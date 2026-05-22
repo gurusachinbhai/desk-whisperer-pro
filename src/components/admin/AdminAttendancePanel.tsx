@@ -52,8 +52,14 @@ export default function AdminAttendancePanel({ companyId }: { companyId: string 
   const [loading, setLoading] = useState(false);
   const [totalCount, setTotalCount] = useState<number | null>(null);
 
-  // export progress
-  const [exporting, setExporting] = useState<null | { kind: "csv" | "pdf"; done: number; total: number }>(null);
+  // export progress.
+  // `done` = filtered rows emitted so far (matches the user's search).
+  // `total` = filtered total (best estimate). When a search is active we don't
+  // know the filtered total until the scan finishes, so we project it from the
+  // current match rate against scanned rows and clamp `done <= total`.
+  const [exporting, setExporting] = useState<
+    null | { kind: "csv" | "pdf"; done: number; total: number; scanned: number; rangeTotal: number; filtering: boolean }
+  >(null);
   const cancelRef = useRef(false);
 
   const load = async () => {
@@ -120,8 +126,13 @@ export default function AdminAttendancePanel({ companyId }: { companyId: string 
    * more than PAGE_SIZE rows in a single request — avoids gateway timeouts on
    * wide date ranges.
    */
-  async function* streamRows(): AsyncGenerator<{ batch: Row[]; total: number }> {
-    // total first
+  async function* streamRows(): AsyncGenerator<{
+    batch: Row[];
+    matched: number;
+    scanned: number;
+    rangeTotal: number;
+    filtering: boolean;
+  }> {
     const { count, error: cErr } = await supabase
       .from("attendance_records")
       .select("*", { count: "exact", head: true })
@@ -129,12 +140,15 @@ export default function AdminAttendancePanel({ companyId }: { companyId: string 
       .gte("work_date", from)
       .lte("work_date", to);
     if (cErr) throw cErr;
-    const total = count ?? 0;
-    if (total === 0) return;
+    const rangeTotal = count ?? 0;
+    if (rangeTotal === 0) return;
 
     const q = search.trim().toLowerCase();
+    const filtering = q.length > 0;
     let offset = 0;
-    while (offset < total) {
+    let matched = 0;
+    let scanned = 0;
+    while (offset < rangeTotal) {
       if (cancelRef.current) return;
       const { data, error } = await supabase
         .from("attendance_records")
@@ -146,30 +160,69 @@ export default function AdminAttendancePanel({ companyId }: { companyId: string 
         .order("user_name", { ascending: true })
         .range(offset, offset + PAGE_SIZE - 1);
       if (error) throw error;
-      let batch = (data ?? []) as Row[];
-      if (q) {
-        batch = batch.filter(
+      const raw = (data ?? []) as Row[];
+      scanned += raw.length;
+      let batch = raw;
+      if (filtering) {
+        batch = raw.filter(
           (r) =>
             r.user_name?.toLowerCase().includes(q) ||
             r.check_in_address?.toLowerCase().includes(q) ||
             r.check_out_address?.toLowerCase().includes(q),
         );
       }
-      yield { batch, total };
+      matched += batch.length;
+      yield { batch, matched, scanned, rangeTotal, filtering };
       offset += PAGE_SIZE;
-      // yield to the event loop so the UI stays responsive
       await sleep(0);
     }
   }
 
   const startExport = (kind: "csv" | "pdf") => {
     cancelRef.current = false;
-    setExporting({ kind, done: 0, total: totalCount ?? 0 });
+    const filtering = search.trim().length > 0;
+    const rangeTotal = totalCount ?? 0;
+    setExporting({
+      kind,
+      done: 0,
+      // When filtering, the filtered total is unknown until the scan completes.
+      // Start at 0 and grow it as matches come in. Without a filter the range
+      // total is the answer.
+      total: filtering ? 0 : rangeTotal,
+      scanned: 0,
+      rangeTotal,
+      filtering,
+    });
   };
 
   const finishExport = () => {
     setExporting(null);
     cancelRef.current = false;
+  };
+
+  // Builds the next progress snapshot from a stream tick. When a search is
+  // active the filtered total is unknown until the scan completes; we project
+  // it from the current match rate so the bar reflects "X of filtered total".
+  const projectExportTotal = (
+    kind: "csv" | "pdf",
+    done: number,
+    matched: number,
+    scanned: number,
+    rangeTotal: number,
+    filtering: boolean,
+  ) => {
+    let total: number;
+    if (!filtering) {
+      total = rangeTotal;
+    } else if (scanned >= rangeTotal) {
+      total = matched; // scan finished, exact filtered total
+    } else if (matched === 0) {
+      total = Math.max(done, 1); // no matches yet — keep bar near 0
+    } else {
+      // project match rate forward across remaining unscanned rows
+      total = Math.max(done, Math.round((matched / scanned) * rangeTotal));
+    }
+    return { kind, done, total, scanned, rangeTotal, filtering };
   };
 
   const exportCsv = async () => {
@@ -181,12 +234,12 @@ export default function AdminAttendancePanel({ companyId }: { companyId: string 
       };
       const chunks: string[] = [headers.join(",") + "\n"];
       let done = 0;
-      for await (const { batch, total } of streamRows()) {
+      for await (const { batch, matched, scanned, rangeTotal, filtering } of streamRows()) {
         if (batch.length) {
           chunks.push(batch.map((r) => toRowArray(r).map(esc).join(",")).join("\n") + "\n");
         }
         done += batch.length;
-        setExporting({ kind: "csv", done, total });
+        setExporting(projectExportTotal("csv", done, matched, scanned, rangeTotal, filtering));
       }
       if (cancelRef.current) {
         toast.info("Export cancelled");
@@ -218,13 +271,11 @@ export default function AdminAttendancePanel({ companyId }: { companyId: string 
 
       let done = 0;
       let firstPage = true;
-      for await (const { batch, total } of streamRows()) {
+      for await (const { batch, matched, scanned, rangeTotal, filtering } of streamRows()) {
         if (!batch.length) {
-          setExporting({ kind: "pdf", done, total });
+          setExporting(projectExportTotal("pdf", done, matched, scanned, rangeTotal, filtering));
           continue;
         }
-        // Append each page as its own autoTable block. lastAutoTable.finalY
-        // continues the layout without keeping the whole dataset in one body.
         const startY = firstPage ? 60 : (doc as any).lastAutoTable?.finalY + 16 || 60;
         autoTable(doc, {
           startY,
@@ -236,7 +287,7 @@ export default function AdminAttendancePanel({ companyId }: { companyId: string 
         });
         firstPage = false;
         done += batch.length;
-        setExporting({ kind: "pdf", done, total });
+        setExporting(projectExportTotal("pdf", done, matched, scanned, rangeTotal, filtering));
       }
       if (cancelRef.current) {
         toast.info("Export cancelled");
@@ -299,6 +350,12 @@ export default function AdminAttendancePanel({ companyId }: { companyId: string 
               <span>
                 Exporting {exporting.kind.toUpperCase()} · {exporting.done.toLocaleString()} /{" "}
                 {exporting.total.toLocaleString()}
+                {exporting.filtering && (
+                  <span className="ml-1 font-normal text-muted-foreground">
+                    matching “{search.trim()}” ({exporting.scanned.toLocaleString()}/
+                    {exporting.rangeTotal.toLocaleString()} scanned)
+                  </span>
+                )}
               </span>
               <span>{progressPct}%</span>
             </div>
