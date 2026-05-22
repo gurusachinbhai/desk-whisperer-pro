@@ -350,6 +350,12 @@ export default function AdminAttendancePanel({ companyId }: { companyId: string 
               <span>
                 Exporting {exporting.kind.toUpperCase()} · {exporting.done.toLocaleString()} /{" "}
                 {exporting.total.toLocaleString()}
+                {exporting.filtering && (
+                  <span className="ml-1 font-normal text-muted-foreground">
+                    matching “{search.trim()}” ({exporting.scanned.toLocaleString()}/
+                    {exporting.rangeTotal.toLocaleString()} scanned)
+                  </span>
+                )}
               </span>
               <span>{progressPct}%</span>
             </div>
