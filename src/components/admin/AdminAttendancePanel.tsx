@@ -200,6 +200,31 @@ export default function AdminAttendancePanel({ companyId }: { companyId: string 
     cancelRef.current = false;
   };
 
+  // Builds the next progress snapshot from a stream tick. When a search is
+  // active the filtered total is unknown until the scan completes; we project
+  // it from the current match rate so the bar reflects "X of filtered total".
+  const projectExportTotal = (
+    kind: "csv" | "pdf",
+    done: number,
+    matched: number,
+    scanned: number,
+    rangeTotal: number,
+    filtering: boolean,
+  ) => {
+    let total: number;
+    if (!filtering) {
+      total = rangeTotal;
+    } else if (scanned >= rangeTotal) {
+      total = matched; // scan finished, exact filtered total
+    } else if (matched === 0) {
+      total = Math.max(done, 1); // no matches yet — keep bar near 0
+    } else {
+      // project match rate forward across remaining unscanned rows
+      total = Math.max(done, Math.round((matched / scanned) * rangeTotal));
+    }
+    return { kind, done, total, scanned, rangeTotal, filtering };
+  };
+
   const exportCsv = async () => {
     startExport("csv");
     try {
@@ -209,12 +234,12 @@ export default function AdminAttendancePanel({ companyId }: { companyId: string 
       };
       const chunks: string[] = [headers.join(",") + "\n"];
       let done = 0;
-      for await (const { batch, total } of streamRows()) {
+      for await (const { batch, matched, scanned, rangeTotal, filtering } of streamRows()) {
         if (batch.length) {
           chunks.push(batch.map((r) => toRowArray(r).map(esc).join(",")).join("\n") + "\n");
         }
         done += batch.length;
-        setExporting({ kind: "csv", done, total });
+        setExporting(projectExportTotal("csv", done, matched, scanned, rangeTotal, filtering));
       }
       if (cancelRef.current) {
         toast.info("Export cancelled");
@@ -246,13 +271,11 @@ export default function AdminAttendancePanel({ companyId }: { companyId: string 
 
       let done = 0;
       let firstPage = true;
-      for await (const { batch, total } of streamRows()) {
+      for await (const { batch, matched, scanned, rangeTotal, filtering } of streamRows()) {
         if (!batch.length) {
-          setExporting({ kind: "pdf", done, total });
+          setExporting(projectExportTotal("pdf", done, matched, scanned, rangeTotal, filtering));
           continue;
         }
-        // Append each page as its own autoTable block. lastAutoTable.finalY
-        // continues the layout without keeping the whole dataset in one body.
         const startY = firstPage ? 60 : (doc as any).lastAutoTable?.finalY + 16 || 60;
         autoTable(doc, {
           startY,
@@ -264,7 +287,7 @@ export default function AdminAttendancePanel({ companyId }: { companyId: string 
         });
         firstPage = false;
         done += batch.length;
-        setExporting({ kind: "pdf", done, total });
+        setExporting(projectExportTotal("pdf", done, matched, scanned, rangeTotal, filtering));
       }
       if (cancelRef.current) {
         toast.info("Export cancelled");
