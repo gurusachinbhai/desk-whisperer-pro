@@ -909,6 +909,260 @@ export type Database = {
           },
         ]
       }
+      it_asset_assignments: {
+        Row: {
+          action: string
+          company_id: string
+          condition_check: string | null
+          created_at: string
+          department: string | null
+          employee_id: string | null
+          employee_name: string | null
+          hardware_asset_id: string
+          id: string
+          location: string | null
+          notes: string | null
+          performed_at: string
+          performed_by: string | null
+          performed_by_name: string | null
+        }
+        Insert: {
+          action: string
+          company_id: string
+          condition_check?: string | null
+          created_at?: string
+          department?: string | null
+          employee_id?: string | null
+          employee_name?: string | null
+          hardware_asset_id: string
+          id?: string
+          location?: string | null
+          notes?: string | null
+          performed_at?: string
+          performed_by?: string | null
+          performed_by_name?: string | null
+        }
+        Update: {
+          action?: string
+          company_id?: string
+          condition_check?: string | null
+          created_at?: string
+          department?: string | null
+          employee_id?: string | null
+          employee_name?: string | null
+          hardware_asset_id?: string
+          id?: string
+          location?: string | null
+          notes?: string | null
+          performed_at?: string
+          performed_by?: string | null
+          performed_by_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "it_asset_assignments_hardware_asset_id_fkey"
+            columns: ["hardware_asset_id"]
+            isOneToOne: false
+            referencedRelation: "it_hardware_assets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      it_hardware_assets: {
+        Row: {
+          asset_tag: string
+          asset_type: string
+          company_id: string
+          condition: string | null
+          created_at: string
+          created_by: string | null
+          currency: string | null
+          current_owner_employee_id: string | null
+          current_owner_name: string | null
+          department: string | null
+          device_model: string | null
+          id: string
+          in_service_date: string | null
+          location: string | null
+          manufacturer: string | null
+          notes: string | null
+          order_date: string | null
+          purchase_cost: number | null
+          serial_number: string | null
+          status: string
+          updated_at: string
+          vendor: string | null
+          warranty_expiry: string | null
+        }
+        Insert: {
+          asset_tag: string
+          asset_type?: string
+          company_id: string
+          condition?: string | null
+          created_at?: string
+          created_by?: string | null
+          currency?: string | null
+          current_owner_employee_id?: string | null
+          current_owner_name?: string | null
+          department?: string | null
+          device_model?: string | null
+          id?: string
+          in_service_date?: string | null
+          location?: string | null
+          manufacturer?: string | null
+          notes?: string | null
+          order_date?: string | null
+          purchase_cost?: number | null
+          serial_number?: string | null
+          status?: string
+          updated_at?: string
+          vendor?: string | null
+          warranty_expiry?: string | null
+        }
+        Update: {
+          asset_tag?: string
+          asset_type?: string
+          company_id?: string
+          condition?: string | null
+          created_at?: string
+          created_by?: string | null
+          currency?: string | null
+          current_owner_employee_id?: string | null
+          current_owner_name?: string | null
+          department?: string | null
+          device_model?: string | null
+          id?: string
+          in_service_date?: string | null
+          location?: string | null
+          manufacturer?: string | null
+          notes?: string | null
+          order_date?: string | null
+          purchase_cost?: number | null
+          serial_number?: string | null
+          status?: string
+          updated_at?: string
+          vendor?: string | null
+          warranty_expiry?: string | null
+        }
+        Relationships: []
+      }
+      it_software_assignments: {
+        Row: {
+          assigned_at: string
+          company_id: string
+          created_at: string
+          created_by: string | null
+          employee_id: string | null
+          employee_name: string | null
+          hardware_asset_id: string | null
+          id: string
+          license_id: string
+          notes: string | null
+          revoked_at: string | null
+        }
+        Insert: {
+          assigned_at?: string
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          employee_id?: string | null
+          employee_name?: string | null
+          hardware_asset_id?: string | null
+          id?: string
+          license_id: string
+          notes?: string | null
+          revoked_at?: string | null
+        }
+        Update: {
+          assigned_at?: string
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          employee_id?: string | null
+          employee_name?: string | null
+          hardware_asset_id?: string | null
+          id?: string
+          license_id?: string
+          notes?: string | null
+          revoked_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "it_software_assignments_hardware_asset_id_fkey"
+            columns: ["hardware_asset_id"]
+            isOneToOne: false
+            referencedRelation: "it_hardware_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "it_software_assignments_license_id_fkey"
+            columns: ["license_id"]
+            isOneToOne: false
+            referencedRelation: "it_software_licenses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      it_software_licenses: {
+        Row: {
+          company_id: string
+          cost: number | null
+          created_at: string
+          created_by: string | null
+          currency: string | null
+          duration_months: number | null
+          expiry_date: string | null
+          id: string
+          license_key: string | null
+          license_type: string
+          notes: string | null
+          renewal_alert_days: number | null
+          software_name: string
+          start_date: string | null
+          total_seats: number | null
+          updated_at: string
+          vendor: string | null
+        }
+        Insert: {
+          company_id: string
+          cost?: number | null
+          created_at?: string
+          created_by?: string | null
+          currency?: string | null
+          duration_months?: number | null
+          expiry_date?: string | null
+          id?: string
+          license_key?: string | null
+          license_type?: string
+          notes?: string | null
+          renewal_alert_days?: number | null
+          software_name: string
+          start_date?: string | null
+          total_seats?: number | null
+          updated_at?: string
+          vendor?: string | null
+        }
+        Update: {
+          company_id?: string
+          cost?: number | null
+          created_at?: string
+          created_by?: string | null
+          currency?: string | null
+          duration_months?: number | null
+          expiry_date?: string | null
+          id?: string
+          license_key?: string | null
+          license_type?: string
+          notes?: string | null
+          renewal_alert_days?: number | null
+          software_name?: string
+          start_date?: string | null
+          total_seats?: number | null
+          updated_at?: string
+          vendor?: string | null
+        }
+        Relationships: []
+      }
       leave_requests: {
         Row: {
           company_id: string
