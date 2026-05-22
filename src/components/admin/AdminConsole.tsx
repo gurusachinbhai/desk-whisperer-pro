@@ -41,6 +41,7 @@ const NAV: { id: Section; label: string; icon: any; group: string }[] = [
   { id: "resumes", label: "Resume Bank", icon: FolderArchive, group: "Org" },
   { id: "seats", label: "Open Desk · Seats", icon: Armchair, group: "Workspace" },
   { id: "attendance", label: "Attendance & Geo", icon: MapPin, group: "Workspace" },
+  { id: "itassets", label: "IT Asset Management", icon: Laptop, group: "Workspace" },
   { id: "announcements", label: "Announcements", icon: Bell, group: "Comms" },
   { id: "reports", label: "Reports", icon: BarChart3, group: "Comms" },
   { id: "billing", label: "Billing", icon: CreditCard, group: "Comms" },
