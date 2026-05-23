@@ -14,6 +14,203 @@ export type Database = {
   }
   public: {
     Tables: {
+      acct_expenses: {
+        Row: {
+          amount_spent: number
+          category: string
+          company_id: string
+          created_at: string
+          created_by: string | null
+          created_by_name: string | null
+          currency: string
+          expense_date: string
+          expense_number: string
+          id: string
+          is_reversal: boolean
+          notes: string | null
+          payment_method: string
+          receipt_attachment_url: string | null
+          reference_invoice_no: string | null
+          reverses_expense_id: string | null
+          updated_at: string
+          vendor_name: string
+        }
+        Insert: {
+          amount_spent?: number
+          category?: string
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          created_by_name?: string | null
+          currency?: string
+          expense_date?: string
+          expense_number: string
+          id?: string
+          is_reversal?: boolean
+          notes?: string | null
+          payment_method?: string
+          receipt_attachment_url?: string | null
+          reference_invoice_no?: string | null
+          reverses_expense_id?: string | null
+          updated_at?: string
+          vendor_name: string
+        }
+        Update: {
+          amount_spent?: number
+          category?: string
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          created_by_name?: string | null
+          currency?: string
+          expense_date?: string
+          expense_number?: string
+          id?: string
+          is_reversal?: boolean
+          notes?: string | null
+          payment_method?: string
+          receipt_attachment_url?: string | null
+          reference_invoice_no?: string | null
+          reverses_expense_id?: string | null
+          updated_at?: string
+          vendor_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "acct_expenses_reverses_expense_id_fkey"
+            columns: ["reverses_expense_id"]
+            isOneToOne: false
+            referencedRelation: "acct_expenses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      acct_orders: {
+        Row: {
+          client_email: string | null
+          client_name: string
+          company_id: string
+          created_at: string
+          created_by: string | null
+          created_by_name: string | null
+          currency: string
+          id: string
+          notes: string | null
+          order_date: string
+          order_number: string
+          status: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          client_email?: string | null
+          client_name: string
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          created_by_name?: string | null
+          currency?: string
+          id?: string
+          notes?: string | null
+          order_date?: string
+          order_number: string
+          status?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          client_email?: string | null
+          client_name?: string
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          created_by_name?: string | null
+          currency?: string
+          id?: string
+          notes?: string | null
+          order_date?: string
+          order_number?: string
+          status?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      acct_receipts: {
+        Row: {
+          amount_received: number
+          client_name: string
+          company_id: string
+          created_at: string
+          created_by: string | null
+          created_by_name: string | null
+          currency: string
+          id: string
+          is_reversal: boolean
+          notes: string | null
+          order_id: string | null
+          payment_date: string
+          payment_method: string
+          receipt_number: string
+          reference: string | null
+          reverses_receipt_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount_received?: number
+          client_name: string
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          created_by_name?: string | null
+          currency?: string
+          id?: string
+          is_reversal?: boolean
+          notes?: string | null
+          order_id?: string | null
+          payment_date?: string
+          payment_method?: string
+          receipt_number: string
+          reference?: string | null
+          reverses_receipt_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount_received?: number
+          client_name?: string
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          created_by_name?: string | null
+          currency?: string
+          id?: string
+          is_reversal?: boolean
+          notes?: string | null
+          order_id?: string | null
+          payment_date?: string
+          payment_method?: string
+          receipt_number?: string
+          reference?: string | null
+          reverses_receipt_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "acct_receipts_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "acct_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "acct_receipts_reverses_receipt_id_fkey"
+            columns: ["reverses_receipt_id"]
+            isOneToOne: false
+            referencedRelation: "acct_receipts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       admin_role_audit: {
         Row: {
           action: string
@@ -1791,6 +1988,15 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      acct_next_number: {
+        Args: {
+          _column: string
+          _company: string
+          _prefix: string
+          _table: unknown
+        }
+        Returns: string
       }
       approve_company: {
         Args: { _company_id: string }
