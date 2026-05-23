@@ -1981,6 +1981,8 @@ const Index = () => {
         </button>
       </div>
 
+      {companyProfile?.id && <LicenseAlertsCard companyId={companyProfile.id} />}
+
       {/* Announcements composer */}
       <div className="rounded-[1.5rem] bg-surface-raised p-4 shadow-card">
         <div className="flex items-center gap-3">
