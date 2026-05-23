@@ -58,6 +58,7 @@ import { GraduationCap, ClipboardList } from "lucide-react";
 import AdminDocumentsPanel from "@/components/AdminDocumentsPanel";
 import AdminDepartmentsPanel from "@/components/AdminDepartmentsPanel";
 import AdminConsole from "@/components/admin/AdminConsole";
+import LicenseAlertsCard from "@/components/admin/LicenseAlertsCard";
 import EmployeeWorkInfoCard from "@/components/EmployeeWorkInfoCard";
 import ManagerHierarchy, { type HierarchyEmployee } from "@/components/ManagerHierarchy";
 import {
@@ -1979,6 +1980,8 @@ const Index = () => {
           <span className="text-muted-foreground">View</span>
         </button>
       </div>
+
+      {companyProfile?.id && <LicenseAlertsCard companyId={companyProfile.id} />}
 
       {/* Announcements composer */}
       <div className="rounded-[1.5rem] bg-surface-raised p-4 shadow-card">

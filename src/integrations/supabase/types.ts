@@ -1046,6 +1046,57 @@ export type Database = {
         }
         Relationships: []
       }
+      it_license_alerts: {
+        Row: {
+          alerted_at: string
+          company_id: string
+          created_at: string
+          days_remaining: number
+          dismissed_at: string | null
+          dismissed_by: string | null
+          expiry_date: string
+          id: string
+          last_seen_at: string
+          license_id: string
+          message: string | null
+          severity: string
+          software_name: string
+          updated_at: string
+        }
+        Insert: {
+          alerted_at?: string
+          company_id: string
+          created_at?: string
+          days_remaining: number
+          dismissed_at?: string | null
+          dismissed_by?: string | null
+          expiry_date: string
+          id?: string
+          last_seen_at?: string
+          license_id: string
+          message?: string | null
+          severity: string
+          software_name: string
+          updated_at?: string
+        }
+        Update: {
+          alerted_at?: string
+          company_id?: string
+          created_at?: string
+          days_remaining?: number
+          dismissed_at?: string | null
+          dismissed_by?: string | null
+          expiry_date?: string
+          id?: string
+          last_seen_at?: string
+          license_id?: string
+          message?: string | null
+          severity?: string
+          software_name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       it_software_assignments: {
         Row: {
           assigned_at: string
