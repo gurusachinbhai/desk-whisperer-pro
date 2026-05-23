@@ -9,6 +9,7 @@ import AdminSeatMasterPanel from "./AdminSeatMasterPanel";
 import AdminResumeBankPanel from "./AdminResumeBankPanel";
 import AdminAttendancePanel from "./AdminAttendancePanel";
 import AdminITAssetPanel from "./AdminITAssetPanel";
+import AdminAccountingPanel from "./AdminAccountingPanel";
 import AdminDepartmentsPanel from "@/components/AdminDepartmentsPanel";
 import AdminDocumentsPanel from "@/components/AdminDocumentsPanel";
 import TrainingPanel from "@/components/TrainingPanel";
