@@ -58,6 +58,7 @@ import { GraduationCap, ClipboardList } from "lucide-react";
 import AdminDocumentsPanel from "@/components/AdminDocumentsPanel";
 import AdminDepartmentsPanel from "@/components/AdminDepartmentsPanel";
 import AdminConsole from "@/components/admin/AdminConsole";
+import LicenseAlertsCard from "@/components/admin/LicenseAlertsCard";
 import EmployeeWorkInfoCard from "@/components/EmployeeWorkInfoCard";
 import ManagerHierarchy, { type HierarchyEmployee } from "@/components/ManagerHierarchy";
 import {
