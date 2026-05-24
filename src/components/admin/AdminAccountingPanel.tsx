@@ -8,7 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Plus, Download, Undo2, Receipt, Wallet, ShoppingCart, TrendingUp } from "lucide-react";
+import { Plus, Download, FileSpreadsheet, Undo2, Receipt, Wallet, ShoppingCart, TrendingUp } from "lucide-react";
+import * as XLSX from "xlsx";
 
 type Props = { companyId: string; uploaderName: string; meUserId?: string | null };
 
