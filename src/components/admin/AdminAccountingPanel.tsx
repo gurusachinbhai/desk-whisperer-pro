@@ -49,6 +49,38 @@ function downloadCsv(name: string, rows: any[], headers: string[]) {
   URL.revokeObjectURL(url);
 }
 
+/**
+ * Build and download an .xlsx workbook from one or more sheets.
+ * Uses SheetJS (browser equivalent of pandas/openpyxl) so reports open
+ * cleanly in Excel / Google Sheets / LibreOffice.
+ */
+function downloadXlsx(
+  name: string,
+  sheets: { name: string; rows: any[]; headers: string[]; headerLabels?: string[] }[],
+) {
+  const wb = XLSX.utils.book_new();
+  for (const s of sheets) {
+    const data = s.rows.map((r) => {
+      const o: Record<string, any> = {};
+      s.headers.forEach((h, i) => { o[s.headerLabels?.[i] ?? h] = r[h] ?? ""; });
+      return o;
+    });
+    const ws = XLSX.utils.json_to_sheet(data, { header: s.headerLabels ?? s.headers });
+    // simple auto column width
+    const colWidths = (s.headerLabels ?? s.headers).map((h, i) => {
+      const key = h;
+      const max = Math.max(
+        key.length,
+        ...data.map((r) => String(r[key] ?? "").length),
+      );
+      return { wch: Math.min(40, Math.max(10, max + 2)) };
+    });
+    (ws as any)["!cols"] = colWidths;
+    XLSX.utils.book_append_sheet(wb, ws, s.name.slice(0, 31));
+  }
+  XLSX.writeFile(wb, name);
+}
+
 export default function AdminAccountingPanel({ companyId, uploaderName, meUserId }: Props) {
   const today = new Date().toISOString().slice(0, 10);
   const monthStart = today.slice(0, 8) + "01";
