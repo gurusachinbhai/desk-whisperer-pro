@@ -205,13 +205,19 @@ function OrdersTab({ companyId, uploaderName, meUserId, orders, reload, nextNumb
     if (error) toast.error(error.message); else { toast.success("Status updated"); reload(); }
   };
 
-  const exportCsv = () => downloadCsv(`orders_${Date.now()}.csv`, orders, ["order_number","order_date","client_name","client_email","total_amount","currency","status","notes"]);
+  const orderHeaders = ["order_number","order_date","client_name","client_email","total_amount","currency","status","notes"];
+  const exportCsv = () => downloadCsv(`orders_${Date.now()}.csv`, orders, orderHeaders);
+  const exportXlsx = () => downloadXlsx(`orders_${Date.now()}.xlsx`, [
+    { name: "Orders", rows: orders, headers: orderHeaders,
+      headerLabels: ["Order #","Date","Client","Email","Total","Currency","Status","Notes"] },
+  ]);
 
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap gap-2">
         <Button size="sm" onClick={() => setOpen(!open)}><Plus className="mr-1 h-4 w-4" />New order</Button>
-        <Button size="sm" variant="outline" onClick={exportCsv}><Download className="mr-1 h-4 w-4" />Export CSV</Button>
+        <Button size="sm" variant="outline" onClick={exportXlsx}><FileSpreadsheet className="mr-1 h-4 w-4" />Export XLSX</Button>
+        <Button size="sm" variant="ghost" onClick={exportCsv}><Download className="mr-1 h-4 w-4" />CSV</Button>
       </div>
       {open && (
         <div className="grid gap-3 rounded-2xl border border-border bg-card p-4 md:grid-cols-2">
