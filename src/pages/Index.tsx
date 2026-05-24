@@ -5485,6 +5485,26 @@ const Index = () => {
           maxLevels={5}
         />
 
+        {/* Appraisals shortcut (visible to all employees) */}
+        <div className="rounded-[1.5rem] bg-surface-raised p-4 shadow-card">
+          <div className="mb-3 flex items-center gap-2">
+            <ClipboardList className="h-4 w-4 text-primary" />
+            <h3 className="font-display text-base font-extrabold">Appraisals</h3>
+          </div>
+          <p className="text-xs font-semibold leading-5 text-muted-foreground">
+            View your performance reviews, fill out self-assessments, and track manager feedback across review cycles.
+          </p>
+          <button
+            type="button"
+            onClick={() => setActiveTab("appraisal")}
+            className="focus-premium mt-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-extrabold text-primary-foreground shadow-glow"
+          >
+            <ClipboardList className="h-4 w-4" /> Open my appraisals
+          </button>
+        </div>
+
+
+
         {/* Become an Admin (only show for non-admins) */}
         {!isAdmin && (
           <div className="rounded-[1.5rem] bg-surface-raised p-4 shadow-card">
