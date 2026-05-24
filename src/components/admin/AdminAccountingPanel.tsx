@@ -315,13 +315,19 @@ function ReceiptsTab({ companyId, uploaderName, meUserId, receipts, orders, relo
     } catch (e:any) { toast.error(e.message); }
   };
 
-  const exportCsv = () => downloadCsv(`receipts_${Date.now()}.csv`, receipts, ["receipt_number","payment_date","client_name","amount_received","currency","payment_method","reference","is_reversal","notes"]);
+  const receiptHeaders = ["receipt_number","payment_date","client_name","amount_received","currency","payment_method","reference","is_reversal","notes"];
+  const exportCsv = () => downloadCsv(`receipts_${Date.now()}.csv`, receipts, receiptHeaders);
+  const exportXlsx = () => downloadXlsx(`receipts_${Date.now()}.xlsx`, [
+    { name: "Receipts", rows: receipts, headers: receiptHeaders,
+      headerLabels: ["Receipt #","Date","Client","Amount","Currency","Method","Reference","Reversal","Notes"] },
+  ]);
 
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap gap-2">
         <Button size="sm" onClick={()=>setOpen(!open)}><Plus className="mr-1 h-4 w-4" />Record payment</Button>
-        <Button size="sm" variant="outline" onClick={exportCsv}><Download className="mr-1 h-4 w-4" />Export CSV</Button>
+        <Button size="sm" variant="outline" onClick={exportXlsx}><FileSpreadsheet className="mr-1 h-4 w-4" />Export XLSX</Button>
+        <Button size="sm" variant="ghost" onClick={exportCsv}><Download className="mr-1 h-4 w-4" />CSV</Button>
       </div>
       {open && (
         <div className="grid gap-3 rounded-2xl border border-border bg-card p-4 md:grid-cols-2">
