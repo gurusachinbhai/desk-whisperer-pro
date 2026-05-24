@@ -502,20 +502,36 @@ function ProfitLossTab({ from, to, totals, receipts, expenses }: any) {
     return Array.from(map.entries()).sort((a, b) => b[1] - a[1]);
   }, [expenses]);
 
-  const exportPl = () => {
-    const rows = [
-      { metric: "Total Revenue", amount: totals.rev },
-      { metric: "Total Expenses", amount: -totals.exp },
-      { metric: "Net Profit", amount: totals.net },
-      { metric: "Pending Pipeline", amount: totals.pending },
-      ...byCategory.map(([c,v])=>({ metric: `Expense · ${c}`, amount: -v })),
-    ];
-    downloadCsv(`pl_${from}_${to}.csv`, rows, ["metric","amount"]);
+  const plRows = [
+    { metric: "Total Revenue", amount: totals.rev },
+    { metric: "Total Expenses", amount: -totals.exp },
+    { metric: "Net Profit", amount: totals.net },
+    { metric: "Pending Pipeline", amount: totals.pending },
+    ...byCategory.map(([c,v]: [string, number])=>({ metric: `Expense · ${c}`, amount: -v })),
+  ];
+
+  const exportPl = () => downloadCsv(`pl_${from}_${to}.csv`, plRows, ["metric","amount"]);
+
+  const exportPlXlsx = () => {
+    downloadXlsx(`pl_${from}_${to}.xlsx`, [
+      { name: "P&L Summary", rows: plRows, headers: ["metric","amount"], headerLabels: ["Metric","Amount"] },
+      { name: "Expenses by Category", rows: byCategory.map(([c,v]: [string, number])=>({ category: c, amount: v })),
+        headers: ["category","amount"], headerLabels: ["Category","Amount"] },
+      { name: "Receipts", rows: receipts,
+        headers: ["receipt_number","payment_date","client_name","amount_received","currency","payment_method","reference","is_reversal","notes"],
+        headerLabels: ["Receipt #","Date","Client","Amount","Currency","Method","Reference","Reversal","Notes"] },
+      { name: "Expenses", rows: expenses,
+        headers: ["expense_number","expense_date","vendor_name","category","amount_spent","currency","payment_method","reference_invoice_no","receipt_attachment_url","is_reversal","notes"],
+        headerLabels: ["Expense #","Date","Vendor","Category","Amount","Currency","Method","Invoice #","Receipt URL","Reversal","Notes"] },
+    ]);
   };
 
   return (
     <div className="space-y-3">
-      <div className="flex justify-end"><Button size="sm" variant="outline" onClick={exportPl}><Download className="mr-1 h-4 w-4" />Export P&amp;L</Button></div>
+      <div className="flex justify-end gap-2">
+        <Button size="sm" variant="outline" onClick={exportPlXlsx}><FileSpreadsheet className="mr-1 h-4 w-4" />Export XLSX</Button>
+        <Button size="sm" variant="ghost" onClick={exportPl}><Download className="mr-1 h-4 w-4" />CSV</Button>
+      </div>
       <div className="rounded-2xl border border-border bg-card p-4">
         <h3 className="mb-3 text-sm font-extrabold uppercase tracking-wider text-muted-foreground">Profit &amp; Loss · {from} → {to}</h3>
         <table className="w-full text-sm">
