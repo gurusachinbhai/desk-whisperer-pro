@@ -8,7 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Plus, Download, Undo2, Receipt, Wallet, ShoppingCart, TrendingUp } from "lucide-react";
+import { Plus, Download, FileSpreadsheet, Undo2, Receipt, Wallet, ShoppingCart, TrendingUp } from "lucide-react";
+import * as XLSX from "xlsx";
 
 type Props = { companyId: string; uploaderName: string; meUserId?: string | null };
 
@@ -46,6 +47,38 @@ function downloadCsv(name: string, rows: any[], headers: string[]) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a"); a.href = url; a.download = name; a.click();
   URL.revokeObjectURL(url);
+}
+
+/**
+ * Build and download an .xlsx workbook from one or more sheets.
+ * Uses SheetJS (browser equivalent of pandas/openpyxl) so reports open
+ * cleanly in Excel / Google Sheets / LibreOffice.
+ */
+function downloadXlsx(
+  name: string,
+  sheets: { name: string; rows: any[]; headers: string[]; headerLabels?: string[] }[],
+) {
+  const wb = XLSX.utils.book_new();
+  for (const s of sheets) {
+    const data = s.rows.map((r) => {
+      const o: Record<string, any> = {};
+      s.headers.forEach((h, i) => { o[s.headerLabels?.[i] ?? h] = r[h] ?? ""; });
+      return o;
+    });
+    const ws = XLSX.utils.json_to_sheet(data, { header: s.headerLabels ?? s.headers });
+    // simple auto column width
+    const colWidths = (s.headerLabels ?? s.headers).map((h, i) => {
+      const key = h;
+      const max = Math.max(
+        key.length,
+        ...data.map((r) => String(r[key] ?? "").length),
+      );
+      return { wch: Math.min(40, Math.max(10, max + 2)) };
+    });
+    (ws as any)["!cols"] = colWidths;
+    XLSX.utils.book_append_sheet(wb, ws, s.name.slice(0, 31));
+  }
+  XLSX.writeFile(wb, name);
 }
 
 export default function AdminAccountingPanel({ companyId, uploaderName, meUserId }: Props) {
@@ -172,13 +205,19 @@ function OrdersTab({ companyId, uploaderName, meUserId, orders, reload, nextNumb
     if (error) toast.error(error.message); else { toast.success("Status updated"); reload(); }
   };
 
-  const exportCsv = () => downloadCsv(`orders_${Date.now()}.csv`, orders, ["order_number","order_date","client_name","client_email","total_amount","currency","status","notes"]);
+  const orderHeaders = ["order_number","order_date","client_name","client_email","total_amount","currency","status","notes"];
+  const exportCsv = () => downloadCsv(`orders_${Date.now()}.csv`, orders, orderHeaders);
+  const exportXlsx = () => downloadXlsx(`orders_${Date.now()}.xlsx`, [
+    { name: "Orders", rows: orders, headers: orderHeaders,
+      headerLabels: ["Order #","Date","Client","Email","Total","Currency","Status","Notes"] },
+  ]);
 
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap gap-2">
         <Button size="sm" onClick={() => setOpen(!open)}><Plus className="mr-1 h-4 w-4" />New order</Button>
-        <Button size="sm" variant="outline" onClick={exportCsv}><Download className="mr-1 h-4 w-4" />Export CSV</Button>
+        <Button size="sm" variant="outline" onClick={exportXlsx}><FileSpreadsheet className="mr-1 h-4 w-4" />Export XLSX</Button>
+        <Button size="sm" variant="ghost" onClick={exportCsv}><Download className="mr-1 h-4 w-4" />CSV</Button>
       </div>
       {open && (
         <div className="grid gap-3 rounded-2xl border border-border bg-card p-4 md:grid-cols-2">
@@ -276,13 +315,19 @@ function ReceiptsTab({ companyId, uploaderName, meUserId, receipts, orders, relo
     } catch (e:any) { toast.error(e.message); }
   };
 
-  const exportCsv = () => downloadCsv(`receipts_${Date.now()}.csv`, receipts, ["receipt_number","payment_date","client_name","amount_received","currency","payment_method","reference","is_reversal","notes"]);
+  const receiptHeaders = ["receipt_number","payment_date","client_name","amount_received","currency","payment_method","reference","is_reversal","notes"];
+  const exportCsv = () => downloadCsv(`receipts_${Date.now()}.csv`, receipts, receiptHeaders);
+  const exportXlsx = () => downloadXlsx(`receipts_${Date.now()}.xlsx`, [
+    { name: "Receipts", rows: receipts, headers: receiptHeaders,
+      headerLabels: ["Receipt #","Date","Client","Amount","Currency","Method","Reference","Reversal","Notes"] },
+  ]);
 
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap gap-2">
         <Button size="sm" onClick={()=>setOpen(!open)}><Plus className="mr-1 h-4 w-4" />Record payment</Button>
-        <Button size="sm" variant="outline" onClick={exportCsv}><Download className="mr-1 h-4 w-4" />Export CSV</Button>
+        <Button size="sm" variant="outline" onClick={exportXlsx}><FileSpreadsheet className="mr-1 h-4 w-4" />Export XLSX</Button>
+        <Button size="sm" variant="ghost" onClick={exportCsv}><Download className="mr-1 h-4 w-4" />CSV</Button>
       </div>
       {open && (
         <div className="grid gap-3 rounded-2xl border border-border bg-card p-4 md:grid-cols-2">
@@ -381,13 +426,19 @@ function ExpensesTab({ companyId, uploaderName, meUserId, expenses, reload, next
     } catch(e:any){ toast.error(e.message); }
   };
 
-  const exportCsv = () => downloadCsv(`expenses_${Date.now()}.csv`, expenses, ["expense_number","expense_date","vendor_name","category","amount_spent","currency","payment_method","reference_invoice_no","receipt_attachment_url","is_reversal","notes"]);
+  const expenseHeaders = ["expense_number","expense_date","vendor_name","category","amount_spent","currency","payment_method","reference_invoice_no","receipt_attachment_url","is_reversal","notes"];
+  const exportCsv = () => downloadCsv(`expenses_${Date.now()}.csv`, expenses, expenseHeaders);
+  const exportXlsx = () => downloadXlsx(`expenses_${Date.now()}.xlsx`, [
+    { name: "Expenses", rows: expenses, headers: expenseHeaders,
+      headerLabels: ["Expense #","Date","Vendor","Category","Amount","Currency","Method","Invoice #","Receipt URL","Reversal","Notes"] },
+  ]);
 
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap gap-2">
         <Button size="sm" onClick={()=>setOpen(!open)}><Plus className="mr-1 h-4 w-4" />Log expense</Button>
-        <Button size="sm" variant="outline" onClick={exportCsv}><Download className="mr-1 h-4 w-4" />Export CSV</Button>
+        <Button size="sm" variant="outline" onClick={exportXlsx}><FileSpreadsheet className="mr-1 h-4 w-4" />Export XLSX</Button>
+        <Button size="sm" variant="ghost" onClick={exportCsv}><Download className="mr-1 h-4 w-4" />CSV</Button>
       </div>
       {open && (
         <div className="grid gap-3 rounded-2xl border border-border bg-card p-4 md:grid-cols-2">
@@ -451,20 +502,36 @@ function ProfitLossTab({ from, to, totals, receipts, expenses }: any) {
     return Array.from(map.entries()).sort((a, b) => b[1] - a[1]);
   }, [expenses]);
 
-  const exportPl = () => {
-    const rows = [
-      { metric: "Total Revenue", amount: totals.rev },
-      { metric: "Total Expenses", amount: -totals.exp },
-      { metric: "Net Profit", amount: totals.net },
-      { metric: "Pending Pipeline", amount: totals.pending },
-      ...byCategory.map(([c,v])=>({ metric: `Expense · ${c}`, amount: -v })),
-    ];
-    downloadCsv(`pl_${from}_${to}.csv`, rows, ["metric","amount"]);
+  const plRows = [
+    { metric: "Total Revenue", amount: totals.rev },
+    { metric: "Total Expenses", amount: -totals.exp },
+    { metric: "Net Profit", amount: totals.net },
+    { metric: "Pending Pipeline", amount: totals.pending },
+    ...byCategory.map(([c,v]: [string, number])=>({ metric: `Expense · ${c}`, amount: -v })),
+  ];
+
+  const exportPl = () => downloadCsv(`pl_${from}_${to}.csv`, plRows, ["metric","amount"]);
+
+  const exportPlXlsx = () => {
+    downloadXlsx(`pl_${from}_${to}.xlsx`, [
+      { name: "P&L Summary", rows: plRows, headers: ["metric","amount"], headerLabels: ["Metric","Amount"] },
+      { name: "Expenses by Category", rows: byCategory.map(([c,v]: [string, number])=>({ category: c, amount: v })),
+        headers: ["category","amount"], headerLabels: ["Category","Amount"] },
+      { name: "Receipts", rows: receipts,
+        headers: ["receipt_number","payment_date","client_name","amount_received","currency","payment_method","reference","is_reversal","notes"],
+        headerLabels: ["Receipt #","Date","Client","Amount","Currency","Method","Reference","Reversal","Notes"] },
+      { name: "Expenses", rows: expenses,
+        headers: ["expense_number","expense_date","vendor_name","category","amount_spent","currency","payment_method","reference_invoice_no","receipt_attachment_url","is_reversal","notes"],
+        headerLabels: ["Expense #","Date","Vendor","Category","Amount","Currency","Method","Invoice #","Receipt URL","Reversal","Notes"] },
+    ]);
   };
 
   return (
     <div className="space-y-3">
-      <div className="flex justify-end"><Button size="sm" variant="outline" onClick={exportPl}><Download className="mr-1 h-4 w-4" />Export P&amp;L</Button></div>
+      <div className="flex justify-end gap-2">
+        <Button size="sm" variant="outline" onClick={exportPlXlsx}><FileSpreadsheet className="mr-1 h-4 w-4" />Export XLSX</Button>
+        <Button size="sm" variant="ghost" onClick={exportPl}><Download className="mr-1 h-4 w-4" />CSV</Button>
+      </div>
       <div className="rounded-2xl border border-border bg-card p-4">
         <h3 className="mb-3 text-sm font-extrabold uppercase tracking-wider text-muted-foreground">Profit &amp; Loss · {from} → {to}</h3>
         <table className="w-full text-sm">
