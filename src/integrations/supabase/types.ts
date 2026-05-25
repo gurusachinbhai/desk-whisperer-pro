@@ -2200,6 +2200,10 @@ export type Database = {
       generate_employee_code: { Args: { _company_id: string }; Returns: string }
       generate_support_ticket_number: { Args: never; Returns: string }
       get_platform_stats: { Args: never; Returns: Json }
+      get_software_license_key: {
+        Args: { _license_id: string }
+        Returns: string
+      }
       grant_super_admin: { Args: { _email: string }; Returns: boolean }
       has_role: {
         Args: {
