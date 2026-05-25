@@ -149,6 +149,7 @@ export default function AdminAccountingPanel({ companyId, uploaderName, meUserId
           <TabsTrigger value="receipts">Receipts</TabsTrigger>
           <TabsTrigger value="expenses">Expenses</TabsTrigger>
           <TabsTrigger value="pl">P&amp;L Report</TabsTrigger>
+          <TabsTrigger value="tb">Trial Balance</TabsTrigger>
         </TabsList>
 
         <TabsContent value="orders">
@@ -162,6 +163,9 @@ export default function AdminAccountingPanel({ companyId, uploaderName, meUserId
         </TabsContent>
         <TabsContent value="pl">
           <ProfitLossTab from={from} to={to} totals={totals} receipts={receipts} expenses={expenses} />
+        </TabsContent>
+        <TabsContent value="tb">
+          <TrialBalanceTab from={from} to={to} totals={totals} orders={orders} receipts={receipts} expenses={expenses} />
         </TabsContent>
       </Tabs>
     </div>
