@@ -53,6 +53,7 @@ import hrgreatlyLogo from "@/assets/hrgreatly-logo.png";
 import DocumentsPanel from "@/components/DocumentsPanel";
 import TrainingPanel from "@/components/TrainingPanel";
 import AppraisalPanel from "@/components/AppraisalPanel";
+import AssistantPanel from "@/components/AssistantPanel";
 import AttendanceMap from "@/components/AttendanceMap";
 import { GraduationCap, ClipboardList } from "lucide-react";
 import AdminDocumentsPanel from "@/components/AdminDocumentsPanel";
@@ -118,7 +119,7 @@ type EmployeeInvite = {
 };
 
 type AppMode = "signup" | "login";
-type ActiveTab = "home" | "book" | "attendance" | "leave" | "payroll" | "documents" | "training" | "appraisal" | "billing" | "reports" | "map" | "rooms" | "directory" | "admin" | "team";
+type ActiveTab = "home" | "book" | "attendance" | "leave" | "payroll" | "documents" | "training" | "appraisal" | "assistant" | "billing" | "reports" | "map" | "rooms" | "directory" | "admin" | "team";
 type LoginStep = "form" | "otp";
 type LoginIdentifier = "email" | "phone";
 
@@ -237,6 +238,7 @@ const bottomTabs: { id: ActiveTab; icon: typeof CalendarCheck; label: string }[]
   { id: "documents", icon: FileText, label: "Documents" },
   { id: "training", icon: GraduationCap, label: "Training" },
   { id: "appraisal", icon: ClipboardList, label: "Appraisal" },
+  { id: "assistant", icon: Sparkles, label: "AI Assistant" },
   { id: "admin", icon: BarChart3, label: "Admin" },
 ];
 
@@ -5872,6 +5874,9 @@ const Index = () => {
                   meName={currentUser?.displayName ?? null}
                   isAdmin={!!isAdmin}
                 />
+              )}
+              {activeTab === "assistant" && (
+                <AssistantPanel userName={currentUser?.displayName ?? null} />
               )}
               {activeTab === "billing" && renderBillingPanel()}
               {isAdmin && activeTab === "reports" && renderReportsPanel()}
