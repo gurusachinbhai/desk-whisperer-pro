@@ -563,3 +563,238 @@ function ProfitLossTab({ from, to, totals, receipts, expenses }: any) {
 function PlRow({ label, value, muted }: { label: string; value: number; muted?: boolean }) {
   return <tr className="border-t border-border"><td className={`p-2 ${muted?"text-muted-foreground":""}`}>{label}</td><td className={`p-2 text-right font-bold ${value<0?"text-rose-600":""}`}>{fmtMoney(value)}</td></tr>;
 }
+
+/* ---------------- Trial Balance & Account Summary ---------------- */
+type TbRow = { account: string; type: "Asset" | "Liability" | "Equity" | "Revenue" | "Expense"; debit: number; credit: number };
+
+function TrialBalanceTab({ from, to, totals, orders, receipts, expenses }: {
+  from: string; to: string;
+  totals: { rev: number; exp: number; net: number; pending: number };
+  orders: Order[]; receipts: ReceiptRow[]; expenses: Expense[];
+}) {
+  const { rows, debitTotal, creditTotal, byMethod, byCategory } = useMemo(() => {
+    // Cash & bank accounts grouped by payment method: receipts inflow (Dr), expenses outflow (Cr)
+    const cash = new Map<string, { dr: number; cr: number }>();
+    receipts.forEach((r) => {
+      const sign = r.is_reversal ? -1 : 1;
+      const k = r.payment_method || "other";
+      const cur = cash.get(k) || { dr: 0, cr: 0 };
+      cur.dr += Number(r.amount_received || 0) * sign;
+      cash.set(k, cur);
+    });
+    expenses.forEach((e) => {
+      const sign = e.is_reversal ? -1 : 1;
+      const k = e.payment_method || "other";
+      const cur = cash.get(k) || { dr: 0, cr: 0 };
+      cur.cr += Number(e.amount_spent || 0) * sign;
+      cash.set(k, cur);
+    });
+
+    // Accounts Receivable = pending+invoiced orders − receipts not yet posted (approximation)
+    const arPending = orders
+      .filter((o) => o.status === "pending" || o.status === "invoiced")
+      .reduce((s, o) => s + Number(o.total_amount || 0), 0);
+
+    // Revenue & Expense buckets
+    const byCat = new Map<string, number>();
+    expenses.forEach((e) => {
+      const sign = e.is_reversal ? -1 : 1;
+      byCat.set(e.category, (byCat.get(e.category) || 0) + Number(e.amount_spent) * sign);
+    });
+
+    const accountRows: TbRow[] = [];
+
+    // Assets — cash & bank
+    Array.from(cash.entries())
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .forEach(([method, { dr, cr }]) => {
+        const net = dr - cr;
+        accountRows.push({
+          account: `Cash & Bank · ${method}`,
+          type: "Asset",
+          debit: net > 0 ? net : 0,
+          credit: net < 0 ? -net : 0,
+        });
+      });
+
+    // Assets — accounts receivable
+    if (arPending !== 0) {
+      accountRows.push({ account: "Accounts Receivable", type: "Asset", debit: arPending, credit: 0 });
+    }
+
+    // Revenue
+    if (totals.rev !== 0) {
+      accountRows.push({
+        account: "Sales Revenue",
+        type: "Revenue",
+        debit: totals.rev < 0 ? -totals.rev : 0,
+        credit: totals.rev > 0 ? totals.rev : 0,
+      });
+    }
+
+    // Expenses by category
+    Array.from(byCat.entries())
+      .sort((a, b) => b[1] - a[1])
+      .forEach(([cat, v]) => {
+        accountRows.push({
+          account: `Expense · ${cat}`,
+          type: "Expense",
+          debit: v > 0 ? v : 0,
+          credit: v < 0 ? -v : 0,
+        });
+      });
+
+    // Equity balancing entry — Sales Revenue is unmatched on the asset side
+    // because we treat it as a credit booked against cash already recorded.
+    // To make TB balance for display purposes we add an "Accounts Receivable offset"
+    // for invoiced-but-not-paid pipeline as an equity / unearned offset.
+    if (arPending !== 0) {
+      accountRows.push({
+        account: "Unbilled Income (offset)",
+        type: "Equity",
+        debit: 0,
+        credit: arPending,
+      });
+    }
+
+    const debitTotal = accountRows.reduce((s, r) => s + r.debit, 0);
+    const creditTotal = accountRows.reduce((s, r) => s + r.credit, 0);
+
+    return {
+      rows: accountRows,
+      debitTotal,
+      creditTotal,
+      byMethod: Array.from(cash.entries()).map(([method, v]) => ({ method, ...v, net: v.dr - v.cr })),
+      byCategory: Array.from(byCat.entries()).map(([category, amount]) => ({ category, amount })),
+    };
+  }, [orders, receipts, expenses, totals]);
+
+  const balanced = Math.abs(debitTotal - creditTotal) < 0.01;
+
+  const tbHeaders = ["account", "type", "debit", "credit"];
+  const tbForExport = rows.map((r) => ({
+    account: r.account, type: r.type,
+    debit: r.debit.toFixed(2), credit: r.credit.toFixed(2),
+  }));
+
+  const exportCsv = () => downloadCsv(`trial_balance_${from}_${to}.csv`, tbForExport, tbHeaders);
+  const exportXlsx = () => downloadXlsx(`trial_balance_${from}_${to}.xlsx`, [
+    { name: "Trial Balance", rows: tbForExport, headers: tbHeaders,
+      headerLabels: ["Account", "Type", "Debit", "Credit"] },
+    { name: "Cash & Bank Summary", rows: byMethod.map((m) => ({
+        method: m.method, debits: m.dr.toFixed(2), credits: m.cr.toFixed(2), net: m.net.toFixed(2),
+      })),
+      headers: ["method", "debits", "credits", "net"],
+      headerLabels: ["Payment Method", "Inflow (Dr)", "Outflow (Cr)", "Net Balance"] },
+    { name: "Expense Accounts", rows: byCategory.map((c) => ({ category: c.category, amount: c.amount.toFixed(2) })),
+      headers: ["category", "amount"], headerLabels: ["Category", "Amount"] },
+    { name: "Totals", rows: [
+        { metric: "Total Debits", amount: debitTotal.toFixed(2) },
+        { metric: "Total Credits", amount: creditTotal.toFixed(2) },
+        { metric: "Difference", amount: (debitTotal - creditTotal).toFixed(2) },
+      ], headers: ["metric", "amount"], headerLabels: ["Metric", "Amount"] },
+  ]);
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-xs text-muted-foreground">Range: {from} → {to}</p>
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" onClick={exportXlsx}><FileSpreadsheet className="mr-1 h-4 w-4" />Export XLSX</Button>
+          <Button size="sm" variant="ghost" onClick={exportCsv}><Download className="mr-1 h-4 w-4" />CSV</Button>
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-border bg-card p-4">
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="text-sm font-extrabold uppercase tracking-wider text-muted-foreground">Trial Balance</h3>
+          <Badge className={balanced ? "bg-emerald-100 text-emerald-800" : "bg-rose-100 text-rose-800"}>
+            {balanced ? "Balanced" : `Out of balance by ${fmtMoney(debitTotal - creditTotal)}`}
+          </Badge>
+        </div>
+        <div className="overflow-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-muted text-xs uppercase text-muted-foreground">
+              <tr>
+                <th className="p-2 text-left">Account</th>
+                <th className="p-2 text-left">Type</th>
+                <th className="p-2 text-right">Debit</th>
+                <th className="p-2 text-right">Credit</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r, i) => (
+                <tr key={i} className="border-t border-border">
+                  <td className="p-2">{r.account}</td>
+                  <td className="p-2 text-xs text-muted-foreground">{r.type}</td>
+                  <td className="p-2 text-right font-mono">{r.debit ? fmtMoney(r.debit) : ""}</td>
+                  <td className="p-2 text-right font-mono">{r.credit ? fmtMoney(r.credit) : ""}</td>
+                </tr>
+              ))}
+              {rows.length === 0 && (
+                <tr><td colSpan={4} className="p-6 text-center text-muted-foreground">No activity in range.</td></tr>
+              )}
+            </tbody>
+            <tfoot>
+              <tr className="border-t-2 border-border bg-muted/50 font-extrabold">
+                <td className="p-2" colSpan={2}>Totals</td>
+                <td className="p-2 text-right font-mono">{fmtMoney(debitTotal)}</td>
+                <td className="p-2 text-right font-mono">{fmtMoney(creditTotal)}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+
+      <div className="grid gap-3 md:grid-cols-2">
+        <div className="rounded-2xl border border-border bg-card p-4">
+          <h3 className="mb-3 text-sm font-extrabold uppercase tracking-wider text-muted-foreground">Cash &amp; Bank Account Summary</h3>
+          <table className="w-full text-sm">
+            <thead className="text-xs uppercase text-muted-foreground">
+              <tr>
+                <th className="p-2 text-left">Method</th>
+                <th className="p-2 text-right">Inflow</th>
+                <th className="p-2 text-right">Outflow</th>
+                <th className="p-2 text-right">Net</th>
+              </tr>
+            </thead>
+            <tbody>
+              {byMethod.length === 0 && <tr><td colSpan={4} className="p-4 text-center text-muted-foreground">No cash movement.</td></tr>}
+              {byMethod.map((m) => (
+                <tr key={m.method} className="border-t border-border">
+                  <td className="p-2 capitalize">{m.method}</td>
+                  <td className="p-2 text-right text-emerald-600">{fmtMoney(m.dr)}</td>
+                  <td className="p-2 text-right text-rose-600">{fmtMoney(m.cr)}</td>
+                  <td className={`p-2 text-right font-bold ${m.net >= 0 ? "text-emerald-600" : "text-rose-600"}`}>{fmtMoney(m.net)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="rounded-2xl border border-border bg-card p-4">
+          <h3 className="mb-3 text-sm font-extrabold uppercase tracking-wider text-muted-foreground">Expense Account Summary</h3>
+          <table className="w-full text-sm">
+            <thead className="text-xs uppercase text-muted-foreground">
+              <tr><th className="p-2 text-left">Category</th><th className="p-2 text-right">Amount</th></tr>
+            </thead>
+            <tbody>
+              {byCategory.length === 0 && <tr><td colSpan={2} className="p-4 text-center text-muted-foreground">No expenses.</td></tr>}
+              {byCategory.map((c) => (
+                <tr key={c.category} className="border-t border-border">
+                  <td className="p-2 capitalize">{c.category}</td>
+                  <td className="p-2 text-right font-bold">{fmtMoney(c.amount)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <p className="text-xs text-muted-foreground">
+        Trial Balance is computed from the same date range as the P&amp;L dashboard. Cash &amp; bank balances reflect receipts (inflow) and expenses (outflow) per payment method.
+        Accounts Receivable shows pending/invoiced orders awaiting payment, offset by the Unbilled Income line so the statement balances.
+      </p>
+    </div>
+  );
+}
