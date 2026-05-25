@@ -5875,6 +5875,9 @@ const Index = () => {
                   isAdmin={!!isAdmin}
                 />
               )}
+              {activeTab === "assistant" && (
+                <AssistantPanel userName={currentUser?.displayName ?? null} />
+              )}
               {activeTab === "billing" && renderBillingPanel()}
               {isAdmin && activeTab === "reports" && renderReportsPanel()}
               {activeTab === "book" && renderBookingPanel()}
