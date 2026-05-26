@@ -241,6 +241,48 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_assistant_logs: {
+        Row: {
+          block_reason: string | null
+          blocked: boolean
+          company_id: string | null
+          created_at: string
+          id: string
+          message_count: number
+          prompt: string
+          reply_preview: string | null
+          user_email: string | null
+          user_id: string
+          user_name: string | null
+        }
+        Insert: {
+          block_reason?: string | null
+          blocked?: boolean
+          company_id?: string | null
+          created_at?: string
+          id?: string
+          message_count?: number
+          prompt: string
+          reply_preview?: string | null
+          user_email?: string | null
+          user_id: string
+          user_name?: string | null
+        }
+        Update: {
+          block_reason?: string | null
+          blocked?: boolean
+          company_id?: string | null
+          created_at?: string
+          id?: string
+          message_count?: number
+          prompt?: string
+          reply_preview?: string | null
+          user_email?: string | null
+          user_id?: string
+          user_name?: string | null
+        }
+        Relationships: []
+      }
       appraisal_cycles: {
         Row: {
           company_id: string
