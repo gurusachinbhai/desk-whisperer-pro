@@ -78,6 +78,41 @@ export default function AssistantPanel({ userName }: { userName?: string | null 
         </div>
       </div>
 
+      <div className="rounded-2xl border border-warning/20 bg-warning/10 p-4">
+        <div className="flex items-start gap-3">
+          <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-warning/20 text-warning">
+            <Info className="h-4 w-4" />
+          </div>
+          <div className="space-y-2">
+            <p className="text-sm font-semibold text-foreground">
+              Security questions are blocked for your protection
+            </p>
+            <p className="text-xs leading-relaxed text-muted-foreground">
+              To keep company data safe, I cannot answer questions about passwords, credentials,
+              system vulnerabilities, hacking, or internal security settings. Please contact your IT
+              or Security team for help with those topics.
+            </p>
+            <div className="flex flex-wrap gap-2 pt-1">
+              {[
+                "HR policies",
+                "Leave & attendance",
+                "Payroll & benefits",
+                "Training & growth",
+                "Appraisals",
+                "Workplace tips",
+              ].map((topic) => (
+                <span
+                  key={topic}
+                  className="inline-flex items-center gap-1 rounded-full border border-success/30 bg-success/10 px-2.5 py-1 text-xs font-medium text-success"
+                >
+                  <CheckCircle2 className="h-3 w-3" /> {topic}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div className="rounded-3xl border border-border bg-card shadow-sm">
         <div
           ref={scrollRef}
