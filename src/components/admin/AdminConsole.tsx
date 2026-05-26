@@ -18,7 +18,7 @@ import AppraisalPanel from "@/components/AppraisalPanel";
 
 type Section =
   | "dashboard" | "onboarding" | "resignation" | "search"
-  | "departments" | "documents" | "training" | "appraisal" | "resumes" | "seats" | "attendance" | "itassets" | "accounting" | "announcements" | "reports" | "billing";
+  | "departments" | "documents" | "training" | "appraisal" | "resumes" | "seats" | "attendance" | "itassets" | "accounting" | "assistantlogs" | "announcements" | "reports" | "billing";
 
 type Props = {
   companyId: string;
