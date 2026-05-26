@@ -1,4 +1,6 @@
 // AI Assistant for employees - blocks security-related questions
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -22,8 +24,76 @@ const isSecurityRelated = (text: string): boolean => {
   return SECURITY_KEYWORDS.some((kw) => t.includes(kw));
 };
 
+// Redact obvious sensitive substrings before logging.
+const redact = (text: string): string => {
+  if (!text) return text;
+  return text
+    .replace(/[\w.+-]+@[\w-]+\.[\w.-]+/g, "[email]")
+    .replace(/\b(?:\d[ -]*?){13,19}\b/g, "[card]")
+    .replace(/\b[A-Za-z0-9]{24,}\b/g, "[token]")
+    .replace(/(?:password|pwd|secret|token|key)\s*[:=]\s*\S+/gi, "[redacted]");
+};
+
+const truncate = (s: string, n: number) => (s.length > n ? s.slice(0, n) + "…" : s);
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+
+  // Resolve calling user (for logging) from JWT
+  const authHeader = req.headers.get("Authorization") ?? "";
+  const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
+  const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
+  const userClient = SUPABASE_URL && ANON_KEY
+    ? createClient(SUPABASE_URL, ANON_KEY, { global: { headers: { Authorization: authHeader } } })
+    : null;
+  const adminClient = SUPABASE_URL && SERVICE_KEY ? createClient(SUPABASE_URL, SERVICE_KEY) : null;
+
+  let userId: string | null = null;
+  let userEmail: string | null = null;
+  let userName: string | null = null;
+  let companyId: string | null = null;
+  if (userClient) {
+    const { data: ures } = await userClient.auth.getUser();
+    if (ures?.user) {
+      userId = ures.user.id;
+      userEmail = ures.user.email ?? null;
+      if (adminClient) {
+        const { data: emp } = await adminClient
+          .from("employee_profiles")
+          .select("company_id, display_name")
+          .eq("user_id", userId)
+          .maybeSingle();
+        companyId = emp?.company_id ?? null;
+        userName = emp?.display_name ?? null;
+      }
+    }
+  }
+
+  const logEntry = async (params: {
+    prompt: string;
+    reply: string;
+    blocked: boolean;
+    blockReason?: string;
+    messageCount: number;
+  }) => {
+    if (!adminClient || !userId) return;
+    try {
+      await adminClient.from("ai_assistant_logs").insert({
+        company_id: companyId,
+        user_id: userId,
+        user_name: userName,
+        user_email: userEmail,
+        prompt: truncate(redact(params.prompt), 1000),
+        reply_preview: truncate(redact(params.reply), 1000),
+        blocked: params.blocked,
+        block_reason: params.blockReason ?? null,
+        message_count: params.messageCount,
+      });
+    } catch (_) {
+      // swallow logging errors
+    }
+  };
 
   try {
     const { messages } = await req.json();
@@ -35,15 +105,22 @@ Deno.serve(async (req) => {
     }
 
     const lastUser = [...messages].reverse().find((m: any) => m.role === "user");
-    if (lastUser && typeof lastUser.content === "string" && isSecurityRelated(lastUser.content)) {
-      return new Response(
-        JSON.stringify({
-          reply:
-            "I'm not able to help with security-related questions (passwords, credentials, tokens, vulnerabilities, account access, etc.). Please reach out to your IT or Security team for help with that. Ask me about HR, attendance, leave, payroll, training, appraisals, or general workplace questions instead.",
-          blocked: true,
-        }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+    const promptText =
+      lastUser && typeof lastUser.content === "string" ? lastUser.content : "";
+
+    if (promptText && isSecurityRelated(promptText)) {
+      const reply =
+        "I'm not able to help with security-related questions (passwords, credentials, tokens, vulnerabilities, account access, etc.). Please reach out to your IT or Security team for help with that. Ask me about HR, attendance, leave, payroll, training, appraisals, or general workplace questions instead.";
+      await logEntry({
+        prompt: promptText,
+        reply,
+        blocked: true,
+        blockReason: "security_prompt",
+        messageCount: messages.length,
+      });
+      return new Response(JSON.stringify({ reply, blocked: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
@@ -98,17 +175,27 @@ STRICT RULES:
     const data = await resp.json();
     const reply = data?.choices?.[0]?.message?.content ?? "";
 
-    // Post-filter: if the model somehow produced sensitive content, replace it.
     if (isSecurityRelated(reply)) {
-      return new Response(
-        JSON.stringify({
-          reply:
-            "I'm not able to help with security-related topics. Please contact your IT or Security team.",
-          blocked: true,
-        }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+      const safe =
+        "I'm not able to help with security-related topics. Please contact your IT or Security team.";
+      await logEntry({
+        prompt: promptText,
+        reply: safe,
+        blocked: true,
+        blockReason: "security_reply",
+        messageCount: messages.length,
+      });
+      return new Response(JSON.stringify({ reply: safe, blocked: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
+
+    await logEntry({
+      prompt: promptText,
+      reply,
+      blocked: false,
+      messageCount: messages.length,
+    });
 
     return new Response(JSON.stringify({ reply }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
