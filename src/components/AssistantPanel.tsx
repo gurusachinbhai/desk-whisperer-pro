@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
-import { Sparkles, Send, ShieldAlert, Loader2 } from "lucide-react";
+import { Sparkles, Send, ShieldAlert, Loader2, Info, CheckCircle2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
