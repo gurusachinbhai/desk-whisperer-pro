@@ -142,8 +142,17 @@ Deno.serve(async (req) => {
       lastUser && typeof lastUser.content === "string" ? lastUser.content : "";
 
     if (promptText && isSecurityRelated(promptText)) {
+      const escalationId = await escalateToIT({
+        prompt: promptText,
+        blockReason: "security_prompt",
+        messageCount: messages.length,
+      });
       const reply =
-        "I'm not able to help with security-related questions (passwords, credentials, tokens, vulnerabilities, account access, etc.). Please reach out to your IT or Security team for help with that. Ask me about HR, attendance, leave, payroll, training, appraisals, or general workplace questions instead.";
+        "I'm not able to help with security-related questions (passwords, credentials, tokens, vulnerabilities, account access, etc.).\n\n" +
+        (escalationId
+          ? "I've forwarded your question to your IT/Security team — they'll follow up with you directly. "
+          : "Please reach out to your IT/Security team directly. ") +
+        "In the meantime, ask me about HR, attendance, leave, payroll, training, appraisals, or general workplace questions.";
       await logEntry({
         prompt: promptText,
         reply,
@@ -151,7 +160,7 @@ Deno.serve(async (req) => {
         blockReason: "security_prompt",
         messageCount: messages.length,
       });
-      return new Response(JSON.stringify({ reply, blocked: true }), {
+      return new Response(JSON.stringify({ reply, blocked: true, escalated: !!escalationId, escalationId }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
