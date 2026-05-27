@@ -218,8 +218,16 @@ STRICT RULES:
     const reply = data?.choices?.[0]?.message?.content ?? "";
 
     if (isSecurityRelated(reply)) {
+      const escalationId = await escalateToIT({
+        prompt: promptText,
+        blockReason: "security_reply",
+        messageCount: messages.length,
+      });
       const safe =
-        "I'm not able to help with security-related topics. Please contact your IT or Security team.";
+        "I'm not able to help with security-related topics." +
+        (escalationId
+          ? " I've forwarded your question to your IT/Security team — they'll follow up with you."
+          : " Please contact your IT or Security team.");
       await logEntry({
         prompt: promptText,
         reply: safe,
@@ -227,7 +235,7 @@ STRICT RULES:
         blockReason: "security_reply",
         messageCount: messages.length,
       });
-      return new Response(JSON.stringify({ reply: safe, blocked: true }), {
+      return new Response(JSON.stringify({ reply: safe, blocked: true, escalated: !!escalationId, escalationId }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
