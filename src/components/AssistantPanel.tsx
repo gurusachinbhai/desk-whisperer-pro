@@ -3,7 +3,7 @@ import { Sparkles, Send, ShieldAlert, Loader2, Info, CheckCircle2 } from "lucide
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-type ChatMsg = { role: "user" | "assistant"; content: string; blocked?: boolean };
+type ChatMsg = { role: "user" | "assistant"; content: string; blocked?: boolean; escalated?: boolean };
 
 const SUGGESTIONS = [
   "How do I apply for leave?",
