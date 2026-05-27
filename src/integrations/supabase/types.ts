@@ -1336,6 +1336,57 @@ export type Database = {
         }
         Relationships: []
       }
+      it_security_escalations: {
+        Row: {
+          block_reason: string | null
+          company_id: string | null
+          context: Json
+          created_at: string
+          id: string
+          it_notes: string | null
+          prompt: string
+          resolved_at: string | null
+          resolved_by: string | null
+          status: string
+          updated_at: string
+          user_email: string | null
+          user_id: string | null
+          user_name: string | null
+        }
+        Insert: {
+          block_reason?: string | null
+          company_id?: string | null
+          context?: Json
+          created_at?: string
+          id?: string
+          it_notes?: string | null
+          prompt: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          updated_at?: string
+          user_email?: string | null
+          user_id?: string | null
+          user_name?: string | null
+        }
+        Update: {
+          block_reason?: string | null
+          company_id?: string | null
+          context?: Json
+          created_at?: string
+          id?: string
+          it_notes?: string | null
+          prompt?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          updated_at?: string
+          user_email?: string | null
+          user_id?: string | null
+          user_name?: string | null
+        }
+        Relationships: []
+      }
       it_software_assignments: {
         Row: {
           assigned_at: string
