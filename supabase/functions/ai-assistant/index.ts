@@ -95,6 +95,39 @@ Deno.serve(async (req) => {
     }
   };
 
+  const userAgent = req.headers.get("user-agent");
+  const escalateToIT = async (params: {
+    prompt: string;
+    blockReason: string;
+    messageCount: number;
+  }) => {
+    if (!adminClient || !userId) return null;
+    try {
+      const { data } = await adminClient
+        .from("it_security_escalations")
+        .insert({
+          company_id: companyId,
+          user_id: userId,
+          user_name: userName,
+          user_email: userEmail,
+          prompt: truncate(redact(params.prompt), 2000),
+          block_reason: params.blockReason,
+          context: {
+            source: "ai_assistant",
+            message_count: params.messageCount,
+            user_agent: userAgent,
+            escalated_at: new Date().toISOString(),
+          },
+          status: "open",
+        })
+        .select("id")
+        .maybeSingle();
+      return data?.id ?? null;
+    } catch (_) {
+      return null;
+    }
+  };
+
   try {
     const { messages } = await req.json();
     if (!Array.isArray(messages) || messages.length === 0) {
