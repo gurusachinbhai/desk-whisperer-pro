@@ -1,8 +1,9 @@
 import { useState, ReactNode } from "react";
 import {
-  LayoutDashboard, UserPlus, LogOut, Search, Building2, FileText, Armchair, Bell, BarChart3, CreditCard, Menu, X, GraduationCap, ClipboardList, FolderArchive, MapPin, Laptop, Calculator, Sparkles,
+  LayoutDashboard, UserPlus, LogOut, Search, Building2, FileText, Armchair, Bell, BarChart3, CreditCard, Menu, X, GraduationCap, ClipboardList, FolderArchive, MapPin, Laptop, Calculator, Sparkles, ShieldAlert,
 } from "lucide-react";
 import AdminAssistantLogsPanel from "./AdminAssistantLogsPanel";
+import AdminITEscalationsPanel from "./AdminITEscalationsPanel";
 import AdminOnboardingPanel from "./AdminOnboardingPanel";
 import AdminResignationsPanel from "./AdminResignationsPanel";
 import AdminEmployeeSearchPanel from "./AdminEmployeeSearchPanel";
