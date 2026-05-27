@@ -138,6 +138,11 @@ export default function AssistantPanel({ userName }: { userName?: string | null 
                   </div>
                 )}
                 {m.content}
+                {m.escalated && (
+                  <div className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">
+                    <CheckCircle2 className="h-3 w-3" /> Forwarded to IT/Security
+                  </div>
+                )}
               </div>
             </div>
           ))}
