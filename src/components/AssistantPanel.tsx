@@ -44,7 +44,7 @@ export default function AssistantPanel({ userName }: { userName?: string | null 
       if (data?.error) throw new Error(data.error);
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: data?.reply ?? "(no reply)", blocked: !!data?.blocked },
+        { role: "assistant", content: data?.reply ?? "(no reply)", blocked: !!data?.blocked, escalated: !!data?.escalated },
       ]);
     } catch (e: any) {
       toast.error(e?.message ?? "AI request failed");
