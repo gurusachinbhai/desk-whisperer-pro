@@ -3,7 +3,7 @@ import { Sparkles, Send, ShieldAlert, Loader2, Info, CheckCircle2 } from "lucide
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-type ChatMsg = { role: "user" | "assistant"; content: string; blocked?: boolean };
+type ChatMsg = { role: "user" | "assistant"; content: string; blocked?: boolean; escalated?: boolean };
 
 const SUGGESTIONS = [
   "How do I apply for leave?",
@@ -44,7 +44,7 @@ export default function AssistantPanel({ userName }: { userName?: string | null 
       if (data?.error) throw new Error(data.error);
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: data?.reply ?? "(no reply)", blocked: !!data?.blocked },
+        { role: "assistant", content: data?.reply ?? "(no reply)", blocked: !!data?.blocked, escalated: !!data?.escalated },
       ]);
     } catch (e: any) {
       toast.error(e?.message ?? "AI request failed");
@@ -138,6 +138,11 @@ export default function AssistantPanel({ userName }: { userName?: string | null 
                   </div>
                 )}
                 {m.content}
+                {m.escalated && (
+                  <div className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">
+                    <CheckCircle2 className="h-3 w-3" /> Forwarded to IT/Security
+                  </div>
+                )}
               </div>
             </div>
           ))}

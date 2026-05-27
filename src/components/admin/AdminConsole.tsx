@@ -1,8 +1,9 @@
 import { useState, ReactNode } from "react";
 import {
-  LayoutDashboard, UserPlus, LogOut, Search, Building2, FileText, Armchair, Bell, BarChart3, CreditCard, Menu, X, GraduationCap, ClipboardList, FolderArchive, MapPin, Laptop, Calculator, Sparkles,
+  LayoutDashboard, UserPlus, LogOut, Search, Building2, FileText, Armchair, Bell, BarChart3, CreditCard, Menu, X, GraduationCap, ClipboardList, FolderArchive, MapPin, Laptop, Calculator, Sparkles, ShieldAlert,
 } from "lucide-react";
 import AdminAssistantLogsPanel from "./AdminAssistantLogsPanel";
+import AdminITEscalationsPanel from "./AdminITEscalationsPanel";
 import AdminOnboardingPanel from "./AdminOnboardingPanel";
 import AdminResignationsPanel from "./AdminResignationsPanel";
 import AdminEmployeeSearchPanel from "./AdminEmployeeSearchPanel";
@@ -18,7 +19,7 @@ import AppraisalPanel from "@/components/AppraisalPanel";
 
 type Section =
   | "dashboard" | "onboarding" | "resignation" | "search"
-  | "departments" | "documents" | "training" | "appraisal" | "resumes" | "seats" | "attendance" | "itassets" | "accounting" | "assistantlogs" | "announcements" | "reports" | "billing";
+  | "departments" | "documents" | "training" | "appraisal" | "resumes" | "seats" | "attendance" | "itassets" | "accounting" | "assistantlogs" | "itescalations" | "announcements" | "reports" | "billing";
 
 type Props = {
   companyId: string;
@@ -47,6 +48,7 @@ const NAV: { id: Section; label: string; icon: any; group: string }[] = [
   { id: "accounting", label: "Accounting", icon: Calculator, group: "Workspace" },
   { id: "announcements", label: "Announcements", icon: Bell, group: "Comms" },
   { id: "assistantlogs", label: "AI Assistant Logs", icon: Sparkles, group: "Comms" },
+  { id: "itescalations", label: "IT Security Escalations", icon: ShieldAlert, group: "Comms" },
   { id: "reports", label: "Reports", icon: BarChart3, group: "Comms" },
   { id: "billing", label: "Billing", icon: CreditCard, group: "Comms" },
 ];
@@ -76,6 +78,7 @@ export default function AdminConsole({
       case "accounting": return <AdminAccountingPanel companyId={companyId} uploaderName={uploaderName} meUserId={meUserId} />;
       case "announcements": return renderAnnouncements?.() ?? <Empty label="Announcements" />;
       case "assistantlogs": return <AdminAssistantLogsPanel companyId={companyId} />;
+      case "itescalations": return <AdminITEscalationsPanel companyId={companyId} />;
       case "reports": return renderReports?.() ?? <Empty label="Reports" />;
       case "billing": return renderBilling?.() ?? <Empty label="Billing" />;
     }
