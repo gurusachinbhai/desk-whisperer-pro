@@ -78,6 +78,7 @@ export default function AdminConsole({
       case "accounting": return <AdminAccountingPanel companyId={companyId} uploaderName={uploaderName} meUserId={meUserId} />;
       case "announcements": return renderAnnouncements?.() ?? <Empty label="Announcements" />;
       case "assistantlogs": return <AdminAssistantLogsPanel companyId={companyId} />;
+      case "itescalations": return <AdminITEscalationsPanel companyId={companyId} />;
       case "reports": return renderReports?.() ?? <Empty label="Reports" />;
       case "billing": return renderBilling?.() ?? <Empty label="Billing" />;
     }
