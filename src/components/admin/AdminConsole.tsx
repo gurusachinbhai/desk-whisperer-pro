@@ -48,6 +48,7 @@ const NAV: { id: Section; label: string; icon: any; group: string }[] = [
   { id: "accounting", label: "Accounting", icon: Calculator, group: "Workspace" },
   { id: "announcements", label: "Announcements", icon: Bell, group: "Comms" },
   { id: "assistantlogs", label: "AI Assistant Logs", icon: Sparkles, group: "Comms" },
+  { id: "itescalations", label: "IT Security Escalations", icon: ShieldAlert, group: "Comms" },
   { id: "reports", label: "Reports", icon: BarChart3, group: "Comms" },
   { id: "billing", label: "Billing", icon: CreditCard, group: "Comms" },
 ];
