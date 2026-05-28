@@ -54,7 +54,10 @@ export type LeaveRequest = {
   toDate: string;
   days: number;
   reason: string;
-  status: "pending" | "approved" | "rejected";
+  status: "pending" | "manager_approved" | "approved" | "rejected";
+  approvalStage?: "manager" | "hr" | "done";
+  managerApprovedBy?: string;
+  managerApprovedAt?: number;
   createdAt: number;
   reviewedBy?: string;
   reviewedAt?: number;
