@@ -4351,10 +4351,12 @@ const Index = () => {
                           ? "bg-emerald-500/15 text-emerald-600"
                           : l.status === "rejected"
                             ? "bg-destructive/15 text-destructive"
-                            : "bg-muted text-muted-foreground"
+                            : l.status === "manager_approved"
+                              ? "bg-primary/15 text-primary"
+                              : "bg-muted text-muted-foreground"
                       }`}
                     >
-                      {l.status}
+                      {l.status === "manager_approved" ? "Manager approved · awaiting HR" : l.status}
                     </span>
                     {l.status === "pending" && (
                       <button
