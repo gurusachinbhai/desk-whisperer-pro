@@ -3715,6 +3715,11 @@ const Index = () => {
           </button>
         </div>
 
+        <BiometricCheckIn
+          disabled={Boolean(myTodayRecord?.signInAt)}
+          onVerified={(method) => handleSignIn(method)}
+        />
+
         <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-background/50 px-3 py-2 text-xs">
           <div className="flex items-center gap-2 text-muted-foreground">
             <MapPin className="h-3.5 w-3.5 text-primary" />
