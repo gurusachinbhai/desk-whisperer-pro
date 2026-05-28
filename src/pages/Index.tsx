@@ -1165,6 +1165,49 @@ const Index = () => {
     setBookings: setConfirmedBookings,
   });
 
+  // Load company-wide leaves for managers and admins so they can review
+  // reports / company leave requests. The persistence hook only loads the
+  // current user's own leaves; this fills the gap for reviewers.
+  useEffect(() => {
+    const companyId = companyProfile?.id;
+    if (!companyId || !authUserId) return;
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await supabase
+        .from("leave_requests")
+        .select("*")
+        .eq("company_id", companyId)
+        .order("start_date", { ascending: false });
+      if (cancelled || error || !data) return;
+      setLeaves((prev) => {
+        const mine = prev.filter((l) => l.userId === authUserId);
+        const others = data
+          .filter((r: any) => r.user_id !== authUserId)
+          .map((r: any) => ({
+            id: r.id,
+            userId: r.user_id,
+            userName: r.user_name,
+            type: (r.leave_type ?? "casual") as LeaveType,
+            fromDate: r.start_date,
+            toDate: r.end_date,
+            days: Number(r.days) || 1,
+            reason: r.reason ?? "",
+            status: (r.status ?? "pending") as LeaveRequest["status"],
+            createdAt: r.created_at ? new Date(r.created_at).getTime() : Date.now(),
+            reviewedBy: r.reviewer_name ?? undefined,
+            reviewedAt: r.reviewed_at ? new Date(r.reviewed_at).getTime() : undefined,
+            reviewNote: r.reviewer_note ?? undefined,
+          }));
+        return [...mine, ...others];
+      });
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [companyProfile?.id, authUserId, isAdmin]);
+
+
   // Company-wide desk reservations (everyone in the same company) so the seat map
   // can show colleague-booked seats in light red with the booker's name and prevent
   // double-booking.
