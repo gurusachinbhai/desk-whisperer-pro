@@ -300,7 +300,7 @@ const Index = () => {
   const [companyProfile, setCompanyProfile] = useState<CompanyProfile | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [invites, setInvites] = useState<EmployeeInvite[]>([]);
-  const [employees, setEmployees] = useState<Array<{ id: string; display_name: string; email: string | null; phone: string | null; manager_id?: string | null; photo_url?: string | null }>>([]);
+  const [employees, setEmployees] = useState<Array<{ id: string; display_name: string; email: string | null; phone: string | null; manager_id?: string | null; photo_url?: string | null; user_id?: string | null }>>([]);
   const [floorDraft, setFloorDraft] = useState<string>("");
   const [areaDraft, setAreaDraft] = useState<string>("");
   const [latestInviteUrl, setLatestInviteUrl] = useState("");
@@ -536,7 +536,7 @@ const Index = () => {
     toDate: string;
     days: number;
     reason: string;
-    status: "pending" | "approved" | "rejected";
+    status: "pending" | "manager_approved" | "approved" | "rejected";
     createdAt: number;
     reviewedBy?: string;
     reviewedAt?: number;
@@ -1032,10 +1032,10 @@ const Index = () => {
     (async () => {
       const { data } = await supabase
         .from("employee_profiles")
-        .select("id, display_name, email, phone, manager_id, photo_url")
+        .select("id, user_id, display_name, email, phone, manager_id, photo_url")
         .eq("company_id", companyProfile.id)
         .order("display_name", { ascending: true });
-      setEmployees((data ?? []) as Array<{ id: string; display_name: string; email: string | null; phone: string | null; manager_id: string | null; photo_url: string | null }>);
+      setEmployees((data ?? []) as Array<{ id: string; user_id: string | null; display_name: string; email: string | null; phone: string | null; manager_id: string | null; photo_url: string | null }>);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [companyProfile?.id]);
@@ -1164,6 +1164,49 @@ const Index = () => {
     bookings: confirmedBookings,
     setBookings: setConfirmedBookings,
   });
+
+  // Load company-wide leaves for managers and admins so they can review
+  // reports / company leave requests. The persistence hook only loads the
+  // current user's own leaves; this fills the gap for reviewers.
+  useEffect(() => {
+    const companyId = companyProfile?.id;
+    if (!companyId || !authUserId) return;
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await supabase
+        .from("leave_requests")
+        .select("*")
+        .eq("company_id", companyId)
+        .order("start_date", { ascending: false });
+      if (cancelled || error || !data) return;
+      setLeaves((prev) => {
+        const mine = prev.filter((l) => l.userId === authUserId);
+        const others = data
+          .filter((r: any) => r.user_id !== authUserId)
+          .map((r: any) => ({
+            id: r.id,
+            userId: r.user_id,
+            userName: r.user_name,
+            type: (r.leave_type ?? "casual") as LeaveType,
+            fromDate: r.start_date,
+            toDate: r.end_date,
+            days: Number(r.days) || 1,
+            reason: r.reason ?? "",
+            status: (r.status ?? "pending") as LeaveRequest["status"],
+            createdAt: r.created_at ? new Date(r.created_at).getTime() : Date.now(),
+            reviewedBy: r.reviewer_name ?? undefined,
+            reviewedAt: r.reviewed_at ? new Date(r.reviewed_at).getTime() : undefined,
+            reviewNote: r.reviewer_note ?? undefined,
+          }));
+        return [...mine, ...others];
+      });
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [companyProfile?.id, authUserId, isAdmin]);
+
 
   // Company-wide desk reservations (everyone in the same company) so the seat map
   // can show colleague-booked seats in light red with the booker's name and prevent
@@ -4094,23 +4137,97 @@ const Index = () => {
     toast.success("Leave request submitted");
   };
 
-  const reviewLeave = (id: string, decision: "approved" | "rejected") => {
+  // Reporting-line awareness for two-stage leave approval
+  const meEmployee = useMemo(
+    () => employees.find((e) => (e.user_id && e.user_id === authUserId) || (e.email && currentUser?.email && e.email.toLowerCase() === currentUser.email.toLowerCase())) ?? null,
+    [employees, authUserId, currentUser?.email],
+  );
+  const reportEmployeeUserIds = useMemo(() => {
+    if (!meEmployee) return new Set<string>();
+    return new Set(
+      employees
+        .filter((e) => e.manager_id === meEmployee.id && e.user_id)
+        .map((e) => e.user_id as string),
+    );
+  }, [employees, meEmployee]);
+  const isManagerOfAnyone = reportEmployeeUserIds.size > 0;
+
+  const reviewLeave = (id: string, decision: "approved" | "rejected", role: "manager" | "hr") => {
+    const target = leaves.find((l) => l.id === id);
+    if (!target) return;
+    // Hard guard: employees cannot approve/reject their own leave at any stage
+    if (target.userId === myUserId) {
+      toast.error("You cannot review your own leave request");
+      return;
+    }
+    if (decision === "approved") {
+      if (role === "manager") {
+        if (target.status !== "pending") {
+          toast.error("This request is no longer awaiting manager approval");
+          return;
+        }
+        if (!reportEmployeeUserIds.has(target.userId)) {
+          toast.error("Only the employee's reporting manager can approve this");
+          return;
+        }
+        setLeaves((prev) =>
+          prev.map((l) =>
+            l.id === id
+              ? { ...l, status: "manager_approved", reviewedBy: myName, reviewedAt: Date.now() }
+              : l,
+          ),
+        );
+        toast.success("Approved — forwarded to HR for final approval");
+        return;
+      }
+      // HR stage
+      if (!isAdmin) {
+        toast.error("Only HR/Admin can grant final approval");
+        return;
+      }
+      if (target.status !== "manager_approved") {
+        toast.error("HR can approve only after the reporting manager approves");
+        return;
+      }
+      setLeaves((prev) =>
+        prev.map((l) =>
+          l.id === id
+            ? { ...l, status: "approved", reviewedBy: myName, reviewedAt: Date.now() }
+            : l,
+        ),
+      );
+      toast.success("Leave approved by HR");
+      return;
+    }
+    // Rejection — allowed by the relevant reviewer for the current stage
+    if (role === "manager" && !reportEmployeeUserIds.has(target.userId)) {
+      toast.error("Only the employee's reporting manager can reject at this stage");
+      return;
+    }
+    if (role === "hr" && !isAdmin) {
+      toast.error("Only HR/Admin can reject at this stage");
+      return;
+    }
     setLeaves((prev) =>
       prev.map((l) =>
         l.id === id
-          ? { ...l, status: decision, reviewedBy: myName, reviewedAt: Date.now() }
-          : l
-      )
+          ? { ...l, status: "rejected", reviewedBy: myName, reviewedAt: Date.now() }
+          : l,
+      ),
     );
-    toast.success(`Leave ${decision}`);
+    toast.success("Leave rejected");
   };
+
 
   const cancelLeave = (id: string) => {
     setLeaves((prev) => prev.filter((l) => l.id !== id));
     toast.success("Leave request removed");
   };
 
-  const pendingLeaves = leaves.filter((l) => l.status === "pending");
+  const managerQueue = leaves.filter(
+    (l) => l.status === "pending" && reportEmployeeUserIds.has(l.userId) && l.userId !== myUserId,
+  );
+  const hrQueue = leaves.filter((l) => l.status === "manager_approved" && l.userId !== myUserId);
   const upcomingApproved = leaves.filter(
     (l) => l.status === "approved" && new Date(l.toDate + "T23:59:59").getTime() >= nowTs
   );
@@ -4234,10 +4351,12 @@ const Index = () => {
                           ? "bg-emerald-500/15 text-emerald-600"
                           : l.status === "rejected"
                             ? "bg-destructive/15 text-destructive"
-                            : "bg-muted text-muted-foreground"
+                            : l.status === "manager_approved"
+                              ? "bg-primary/15 text-primary"
+                              : "bg-muted text-muted-foreground"
                       }`}
                     >
-                      {l.status}
+                      {l.status === "manager_approved" ? "Manager approved · awaiting HR" : l.status}
                     </span>
                     {l.status === "pending" && (
                       <button
@@ -4255,16 +4374,73 @@ const Index = () => {
         )}
       </div>
 
-      {/* Admin: review */}
+      {/* Manager queue: first-stage approval by reporting manager */}
+      {isManagerOfAnyone && (
+        <div className="rounded-[1.5rem] bg-surface-raised p-4 shadow-card">
+          <div className="flex items-center justify-between">
+            <h3 className="font-display text-lg font-extrabold">Awaiting your approval (Manager)</h3>
+            <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold uppercase text-primary">
+              Stage 1 of 2
+            </span>
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Approve to forward the request to HR. Employees cannot approve their own leaves.
+          </p>
+          {managerQueue.length === 0 ? (
+            <p className="mt-3 text-sm text-muted-foreground">No requests from your reports.</p>
+          ) : (
+            <ul className="mt-3 space-y-2">
+              {managerQueue.map((l) => (
+                <li key={l.id} className="rounded-2xl bg-background/60 p-3">
+                  <p className="text-sm font-semibold">
+                    {l.userName} ·{" "}
+                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${leaveTypeMeta[l.type].tone}`}>
+                      {leaveTypeMeta[l.type].label}
+                    </span>
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {l.fromDate} → {l.toDate} · {l.days} day(s)
+                  </p>
+                  <p className="mt-1 text-xs italic text-muted-foreground">"{l.reason}"</p>
+                  <div className="mt-2 flex gap-2">
+                    <button
+                      onClick={() => reviewLeave(l.id, "approved", "manager")}
+                      className="focus-premium flex-1 rounded-xl bg-primary px-3 py-2 text-xs font-bold text-primary-foreground hover:opacity-90"
+                    >
+                      Approve & forward to HR
+                    </button>
+                    <button
+                      onClick={() => reviewLeave(l.id, "rejected", "manager")}
+                      className="focus-premium flex-1 rounded-xl bg-destructive px-3 py-2 text-xs font-bold text-destructive-foreground hover:opacity-90"
+                    >
+                      Reject
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
+      {/* HR/Admin queue: final approval after manager sign-off */}
       {isAdmin && (
         <>
           <div className="rounded-[1.5rem] bg-surface-raised p-4 shadow-card">
-            <h3 className="font-display text-lg font-extrabold">Pending leave requests</h3>
-            {pendingLeaves.length === 0 ? (
-              <p className="mt-3 text-sm text-muted-foreground">No pending requests.</p>
+            <div className="flex items-center justify-between">
+              <h3 className="font-display text-lg font-extrabold">HR final approval</h3>
+              <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold uppercase text-emerald-600">
+                Stage 2 of 2
+              </span>
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              These have been approved by the reporting manager and are awaiting your final sign-off.
+            </p>
+            {hrQueue.length === 0 ? (
+              <p className="mt-3 text-sm text-muted-foreground">No requests awaiting HR approval.</p>
             ) : (
               <ul className="mt-3 space-y-2">
-                {pendingLeaves.map((l) => (
+                {hrQueue.map((l) => (
                   <li key={l.id} className="rounded-2xl bg-background/60 p-3">
                     <p className="text-sm font-semibold">
                       {l.userName} ·{" "}
@@ -4276,15 +4452,20 @@ const Index = () => {
                       {l.fromDate} → {l.toDate} · {l.days} day(s)
                     </p>
                     <p className="mt-1 text-xs italic text-muted-foreground">"{l.reason}"</p>
+                    {l.reviewedBy && (
+                      <p className="mt-1 text-[10px] font-bold uppercase text-muted-foreground">
+                        Manager approved by {l.reviewedBy}
+                      </p>
+                    )}
                     <div className="mt-2 flex gap-2">
                       <button
-                        onClick={() => reviewLeave(l.id, "approved")}
+                        onClick={() => reviewLeave(l.id, "approved", "hr")}
                         className="focus-premium flex-1 rounded-xl bg-primary px-3 py-2 text-xs font-bold text-primary-foreground hover:opacity-90"
                       >
-                        Approve
+                        Final approve
                       </button>
                       <button
-                        onClick={() => reviewLeave(l.id, "rejected")}
+                        onClick={() => reviewLeave(l.id, "rejected", "hr")}
                         className="focus-premium flex-1 rounded-xl bg-destructive px-3 py-2 text-xs font-bold text-destructive-foreground hover:opacity-90"
                       >
                         Reject
@@ -4295,6 +4476,8 @@ const Index = () => {
               </ul>
             )}
           </div>
+
+
 
           <div className="rounded-[1.5rem] bg-surface-raised p-4 shadow-card">
             <h3 className="font-display text-lg font-extrabold">Upcoming approved leaves</h3>
