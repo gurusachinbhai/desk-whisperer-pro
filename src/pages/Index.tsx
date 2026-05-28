@@ -4224,7 +4224,10 @@ const Index = () => {
     toast.success("Leave request removed");
   };
 
-  const pendingLeaves = leaves.filter((l) => l.status === "pending");
+  const managerQueue = leaves.filter(
+    (l) => l.status === "pending" && reportEmployeeUserIds.has(l.userId) && l.userId !== myUserId,
+  );
+  const hrQueue = leaves.filter((l) => l.status === "manager_approved" && l.userId !== myUserId);
   const upcomingApproved = leaves.filter(
     (l) => l.status === "approved" && new Date(l.toDate + "T23:59:59").getTime() >= nowTs
   );
