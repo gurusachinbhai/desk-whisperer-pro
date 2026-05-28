@@ -1032,10 +1032,10 @@ const Index = () => {
     (async () => {
       const { data } = await supabase
         .from("employee_profiles")
-        .select("id, display_name, email, phone, manager_id, photo_url")
+        .select("id, user_id, display_name, email, phone, manager_id, photo_url")
         .eq("company_id", companyProfile.id)
         .order("display_name", { ascending: true });
-      setEmployees((data ?? []) as Array<{ id: string; display_name: string; email: string | null; phone: string | null; manager_id: string | null; photo_url: string | null }>);
+      setEmployees((data ?? []) as Array<{ id: string; user_id: string | null; display_name: string; email: string | null; phone: string | null; manager_id: string | null; photo_url: string | null }>);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [companyProfile?.id]);
