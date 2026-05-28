@@ -4137,16 +4137,87 @@ const Index = () => {
     toast.success("Leave request submitted");
   };
 
-  const reviewLeave = (id: string, decision: "approved" | "rejected") => {
+  // Reporting-line awareness for two-stage leave approval
+  const meEmployee = useMemo(
+    () => employees.find((e) => (e.user_id && e.user_id === authUserId) || (e.email && currentUser?.email && e.email.toLowerCase() === currentUser.email.toLowerCase())) ?? null,
+    [employees, authUserId, currentUser?.email],
+  );
+  const reportEmployeeUserIds = useMemo(() => {
+    if (!meEmployee) return new Set<string>();
+    return new Set(
+      employees
+        .filter((e) => e.manager_id === meEmployee.id && e.user_id)
+        .map((e) => e.user_id as string),
+    );
+  }, [employees, meEmployee]);
+  const isManagerOfAnyone = reportEmployeeUserIds.size > 0;
+
+  const reviewLeave = (id: string, decision: "approved" | "rejected", role: "manager" | "hr") => {
+    const target = leaves.find((l) => l.id === id);
+    if (!target) return;
+    // Hard guard: employees cannot approve/reject their own leave at any stage
+    if (target.userId === myUserId) {
+      toast.error("You cannot review your own leave request");
+      return;
+    }
+    if (decision === "approved") {
+      if (role === "manager") {
+        if (target.status !== "pending") {
+          toast.error("This request is no longer awaiting manager approval");
+          return;
+        }
+        if (!reportEmployeeUserIds.has(target.userId)) {
+          toast.error("Only the employee's reporting manager can approve this");
+          return;
+        }
+        setLeaves((prev) =>
+          prev.map((l) =>
+            l.id === id
+              ? { ...l, status: "manager_approved", reviewedBy: myName, reviewedAt: Date.now() }
+              : l,
+          ),
+        );
+        toast.success("Approved — forwarded to HR for final approval");
+        return;
+      }
+      // HR stage
+      if (!isAdmin) {
+        toast.error("Only HR/Admin can grant final approval");
+        return;
+      }
+      if (target.status !== "manager_approved") {
+        toast.error("HR can approve only after the reporting manager approves");
+        return;
+      }
+      setLeaves((prev) =>
+        prev.map((l) =>
+          l.id === id
+            ? { ...l, status: "approved", reviewedBy: myName, reviewedAt: Date.now() }
+            : l,
+        ),
+      );
+      toast.success("Leave approved by HR");
+      return;
+    }
+    // Rejection — allowed by the relevant reviewer for the current stage
+    if (role === "manager" && !reportEmployeeUserIds.has(target.userId)) {
+      toast.error("Only the employee's reporting manager can reject at this stage");
+      return;
+    }
+    if (role === "hr" && !isAdmin) {
+      toast.error("Only HR/Admin can reject at this stage");
+      return;
+    }
     setLeaves((prev) =>
       prev.map((l) =>
         l.id === id
-          ? { ...l, status: decision, reviewedBy: myName, reviewedAt: Date.now() }
-          : l
-      )
+          ? { ...l, status: "rejected", reviewedBy: myName, reviewedAt: Date.now() }
+          : l,
+      ),
     );
-    toast.success(`Leave ${decision}`);
+    toast.success("Leave rejected");
   };
+
 
   const cancelLeave = (id: string) => {
     setLeaves((prev) => prev.filter((l) => l.id !== id));
