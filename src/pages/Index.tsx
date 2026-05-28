@@ -3698,7 +3698,7 @@ const Index = () => {
 
         <div className="mt-4 grid grid-cols-2 gap-3">
           <button
-            onClick={handleSignIn}
+            onClick={() => handleSignIn("manual")}
             disabled={Boolean(myTodayRecord?.signInAt)}
             className="focus-premium flex items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-extrabold text-primary-foreground shadow-card transition hover:opacity-90 disabled:opacity-40"
           >
