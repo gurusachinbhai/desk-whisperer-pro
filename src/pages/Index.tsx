@@ -4372,16 +4372,73 @@ const Index = () => {
         )}
       </div>
 
-      {/* Admin: review */}
+      {/* Manager queue: first-stage approval by reporting manager */}
+      {isManagerOfAnyone && (
+        <div className="rounded-[1.5rem] bg-surface-raised p-4 shadow-card">
+          <div className="flex items-center justify-between">
+            <h3 className="font-display text-lg font-extrabold">Awaiting your approval (Manager)</h3>
+            <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold uppercase text-primary">
+              Stage 1 of 2
+            </span>
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Approve to forward the request to HR. Employees cannot approve their own leaves.
+          </p>
+          {managerQueue.length === 0 ? (
+            <p className="mt-3 text-sm text-muted-foreground">No requests from your reports.</p>
+          ) : (
+            <ul className="mt-3 space-y-2">
+              {managerQueue.map((l) => (
+                <li key={l.id} className="rounded-2xl bg-background/60 p-3">
+                  <p className="text-sm font-semibold">
+                    {l.userName} ·{" "}
+                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${leaveTypeMeta[l.type].tone}`}>
+                      {leaveTypeMeta[l.type].label}
+                    </span>
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {l.fromDate} → {l.toDate} · {l.days} day(s)
+                  </p>
+                  <p className="mt-1 text-xs italic text-muted-foreground">"{l.reason}"</p>
+                  <div className="mt-2 flex gap-2">
+                    <button
+                      onClick={() => reviewLeave(l.id, "approved", "manager")}
+                      className="focus-premium flex-1 rounded-xl bg-primary px-3 py-2 text-xs font-bold text-primary-foreground hover:opacity-90"
+                    >
+                      Approve & forward to HR
+                    </button>
+                    <button
+                      onClick={() => reviewLeave(l.id, "rejected", "manager")}
+                      className="focus-premium flex-1 rounded-xl bg-destructive px-3 py-2 text-xs font-bold text-destructive-foreground hover:opacity-90"
+                    >
+                      Reject
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
+      {/* HR/Admin queue: final approval after manager sign-off */}
       {isAdmin && (
         <>
           <div className="rounded-[1.5rem] bg-surface-raised p-4 shadow-card">
-            <h3 className="font-display text-lg font-extrabold">Pending leave requests</h3>
-            {pendingLeaves.length === 0 ? (
-              <p className="mt-3 text-sm text-muted-foreground">No pending requests.</p>
+            <div className="flex items-center justify-between">
+              <h3 className="font-display text-lg font-extrabold">HR final approval</h3>
+              <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold uppercase text-emerald-600">
+                Stage 2 of 2
+              </span>
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              These have been approved by the reporting manager and are awaiting your final sign-off.
+            </p>
+            {hrQueue.length === 0 ? (
+              <p className="mt-3 text-sm text-muted-foreground">No requests awaiting HR approval.</p>
             ) : (
               <ul className="mt-3 space-y-2">
-                {pendingLeaves.map((l) => (
+                {hrQueue.map((l) => (
                   <li key={l.id} className="rounded-2xl bg-background/60 p-3">
                     <p className="text-sm font-semibold">
                       {l.userName} ·{" "}
@@ -4393,15 +4450,20 @@ const Index = () => {
                       {l.fromDate} → {l.toDate} · {l.days} day(s)
                     </p>
                     <p className="mt-1 text-xs italic text-muted-foreground">"{l.reason}"</p>
+                    {l.reviewedBy && (
+                      <p className="mt-1 text-[10px] font-bold uppercase text-muted-foreground">
+                        Manager approved by {l.reviewedBy}
+                      </p>
+                    )}
                     <div className="mt-2 flex gap-2">
                       <button
-                        onClick={() => reviewLeave(l.id, "approved")}
+                        onClick={() => reviewLeave(l.id, "approved", "hr")}
                         className="focus-premium flex-1 rounded-xl bg-primary px-3 py-2 text-xs font-bold text-primary-foreground hover:opacity-90"
                       >
-                        Approve
+                        Final approve
                       </button>
                       <button
-                        onClick={() => reviewLeave(l.id, "rejected")}
+                        onClick={() => reviewLeave(l.id, "rejected", "hr")}
                         className="focus-premium flex-1 rounded-xl bg-destructive px-3 py-2 text-xs font-bold text-destructive-foreground hover:opacity-90"
                       >
                         Reject
@@ -4412,6 +4474,8 @@ const Index = () => {
               </ul>
             )}
           </div>
+
+
 
           <div className="rounded-[1.5rem] bg-surface-raised p-4 shadow-card">
             <h3 className="font-display text-lg font-extrabold">Upcoming approved leaves</h3>
