@@ -55,6 +55,7 @@ import TrainingPanel from "@/components/TrainingPanel";
 import AppraisalPanel from "@/components/AppraisalPanel";
 import AssistantPanel from "@/components/AssistantPanel";
 import AttendanceMap from "@/components/AttendanceMap";
+import BiometricCheckIn from "@/components/BiometricCheckIn";
 import { GraduationCap, ClipboardList } from "lucide-react";
 import AdminDocumentsPanel from "@/components/AdminDocumentsPanel";
 import AdminDepartmentsPanel from "@/components/AdminDepartmentsPanel";
@@ -3571,13 +3572,16 @@ const Index = () => {
   };
 
 
-  const handleSignIn = async () => {
+  const handleSignIn = async (method: "manual" | "thumb" | "face" = "manual") => {
     if (myTodayRecord?.signInAt) {
       toast.error("You've already signed in today");
       return;
     }
     const geo = await getCurrentGeo();
     const id = window.crypto.randomUUID();
+    const methodNote =
+      method === "thumb" ? "Verified via thumb impression" :
+      method === "face" ? "Verified via face recognition" : undefined;
     const newRec: AttendanceRecord = {
       id,
       userId: myUserId,
@@ -3586,10 +3590,12 @@ const Index = () => {
       signInAt: Date.now(),
       signOutAt: null,
       signInGeo: geo ?? undefined,
+      note: methodNote,
     };
     setAttendance((prev) => [newRec, ...prev.filter((r) => !(r.userId === myUserId && r.date === todayKey))]);
     const distMsg = geo?.distanceM != null ? ` · ${Math.round(geo.distanceM)}m from office` : geo ? " · location captured" : "";
-    toast.success(`Signed in at ${format(new Date(), "hh:mm a")}${distMsg}`);
+    const methodMsg = method === "thumb" ? " · 👍 thumb" : method === "face" ? " · 😊 face" : "";
+    toast.success(`Signed in at ${format(new Date(), "hh:mm a")}${distMsg}${methodMsg}`);
   };
 
   const handleSignOut = async () => {
@@ -3692,7 +3698,7 @@ const Index = () => {
 
         <div className="mt-4 grid grid-cols-2 gap-3">
           <button
-            onClick={handleSignIn}
+            onClick={() => handleSignIn("manual")}
             disabled={Boolean(myTodayRecord?.signInAt)}
             className="focus-premium flex items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-extrabold text-primary-foreground shadow-card transition hover:opacity-90 disabled:opacity-40"
           >
@@ -3708,6 +3714,11 @@ const Index = () => {
             {myTodayRecord?.signOutAt ? `Out · ${formatHm(myTodayRecord.signOutAt)}` : "Sign Out"}
           </button>
         </div>
+
+        <BiometricCheckIn
+          disabled={Boolean(myTodayRecord?.signInAt)}
+          onVerified={(method) => handleSignIn(method)}
+        />
 
         <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-background/50 px-3 py-2 text-xs">
           <div className="flex items-center gap-2 text-muted-foreground">
