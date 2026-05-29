@@ -895,12 +895,24 @@ const Index = () => {
     return h * 60 + mm;
   };
   const minutesToLabel = (n: number) => {
-    const h = Math.floor(n / 60);
-    const mm = n % 60;
+    const wrapped = ((n % (24 * 60)) + 24 * 60) % (24 * 60);
+    const h = Math.floor(wrapped / 60);
+    const mm = wrapped % 60;
     const period = h >= 12 ? "PM" : "AM";
     const h12 = ((h + 11) % 12) + 1;
     return `${h12}:${String(mm).padStart(2, "0")} ${period}`;
   };
+  // 15-minute clock slots around the clock (00:00, 00:15, ... 23:45)
+  const CLOCK_SLOTS_15 = useMemo(() => {
+    const out: { value: string; label: string; minutes: number }[] = [];
+    for (let m = 0; m < 24 * 60; m += 15) {
+      const h = Math.floor(m / 60);
+      const mm = m % 60;
+      const value = `${String(h).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
+      out.push({ value, label: minutesToLabel(m), minutes: m });
+    }
+    return out;
+  }, []);
 
   const handleToggleAttendee = (employeeId: string) => {
     setMeetingForm((prev) => ({
@@ -925,12 +937,25 @@ const Index = () => {
     const startMin = parseTimeToMinutes(meetingForm.startTime);
     const endMin = parseTimeToMinutes(meetingForm.endTime);
     if (startMin === null || endMin === null) {
-      toast.error("Enter valid times");
+      toast.error("Pick a start and end time");
       return;
     }
-    if (endMin <= startMin) {
-      toast.error("End time must be after start time");
+    if (startMin % 15 !== 0 || endMin % 15 !== 0) {
+      toast.error("Times must align to 15-minute slots");
       return;
+    }
+    if (endMin - startMin < 15) {
+      toast.error("Meeting must be at least 15 minutes");
+      return;
+    }
+    // Don't allow booking a slot already in the past for today
+    const todayKey = format(new Date(nowTs), "yyyy-MM-dd");
+    if (meetingForm.date === todayKey) {
+      const nowMin = new Date(nowTs).getHours() * 60 + new Date(nowTs).getMinutes();
+      if (endMin <= nowMin) {
+        toast.error("That time slot has already passed");
+        return;
+      }
     }
     if (!meetingForm.title.trim()) {
       toast.error("Add a meeting title");
@@ -951,6 +976,20 @@ const Index = () => {
     if (conflict) {
       toast.error(`Conflicts with "${conflict.title}"`, {
         description: `${minutesToLabel(conflict.startMinutes)} – ${minutesToLabel(conflict.endMinutes)}`,
+      });
+      return;
+    }
+    // One user can hold only one room per overlapping time slot
+    const ownConflict = roomMeetings.find(
+      (m) =>
+        m.organizerId === currentUser.email &&
+        m.date === meetingForm.date &&
+        startMin < m.endMinutes &&
+        endMin > m.startMinutes,
+    );
+    if (ownConflict) {
+      toast.error("You already have a room booked for this time", {
+        description: `${ownConflict.roomName} · ${minutesToLabel(ownConflict.startMinutes)} – ${minutesToLabel(ownConflict.endMinutes)}`,
       });
       return;
     }
@@ -982,12 +1021,28 @@ const Index = () => {
     const meeting = roomMeetings.find((m) => m.id === id);
     if (!meeting) return;
     if (!isAdmin && meeting.organizerId !== currentUser?.email) {
-      toast.error("Only the organizer or an admin can cancel");
+      toast.error("Only the organizer or an admin can release this room");
       return;
     }
     setRoomMeetings((prev) => prev.filter((m) => m.id !== id));
-    toast.success("Meeting cancelled");
+    toast.success(`${meeting.roomName} released — now available`);
   };
+
+  // Auto-prune expired meetings (slot ended) so the room is immediately
+  // available for the next person.
+  useEffect(() => {
+    const now = new Date(nowTs);
+    const todayKey = format(now, "yyyy-MM-dd");
+    const nowMin = now.getHours() * 60 + now.getMinutes();
+    setRoomMeetings((prev) => {
+      const next = prev.filter((m) => {
+        if (m.date < todayKey) return false;
+        if (m.date === todayKey && m.endMinutes <= nowMin) return false;
+        return true;
+      });
+      return next.length === prev.length ? prev : next;
+    });
+  }, [nowTs]);
 
 
   useEffect(() => {
@@ -1928,10 +1983,38 @@ const Index = () => {
               <KeyRound className="h-4 w-4" />
               {loginForm.method === "password" ? "Login with OTP instead" : "Login with password instead"}
             </button>
+
+            {loginForm.method === "password" && (
+              <button
+                type="button"
+                onClick={handleForgotPassword}
+                className="focus-premium w-full text-center text-xs font-extrabold text-primary hover:underline"
+              >
+                Forgot password?
+              </button>
+            )}
           </form>
         )}
       </div>
     );
+  };
+
+  const handleForgotPassword = async () => {
+    const email = loginForm.identifier.trim().toLowerCase();
+    if (!email || !email.includes("@")) {
+      toast.error("Enter your email above first, then tap Forgot password");
+      return;
+    }
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    if (error) {
+      toast.error("Couldn't send reset link", { description: error.message });
+      return;
+    }
+    toast.success("Password reset link sent", {
+      description: `Check ${email} for instructions.`,
+    });
   };
 
   const handleAddFloor = () => {
@@ -2907,8 +2990,11 @@ const Index = () => {
 
   // ============== ROOMS PANEL ==============
   const renderRoomsPanel = () => {
+    const todayKey = format(new Date(nowTs), "yyyy-MM-dd");
+    const nowMin = new Date(nowTs).getHours() * 60 + new Date(nowTs).getMinutes();
     const dayMeetings = roomMeetings
       .filter((m) => m.date === meetingForm.date)
+      .filter((m) => !(meetingForm.date === todayKey && m.endMinutes <= nowMin))
       .sort((a, b) => a.startMinutes - b.startMinutes);
     const selectedRoomMeta = meetingRoomCatalog.find((r) => r.id === meetingForm.roomId)!;
 
@@ -2974,24 +3060,50 @@ const Index = () => {
                 />
               </div>
               <div>
-                <label className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Start</label>
-                <Input
-                  type="time"
-                  className="mt-1 rounded-2xl"
+                <label className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+                  <Clock className="h-3 w-3" /> Start
+                </label>
+                <Select
                   value={meetingForm.startTime}
-                  onChange={(e) => setMeetingForm((p) => ({ ...p, startTime: e.target.value }))}
-                />
+                  onValueChange={(v) => setMeetingForm((p) => ({ ...p, startTime: v }))}
+                >
+                  <SelectTrigger className="mt-1 rounded-2xl">
+                    <SelectValue placeholder="--:--" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-72">
+                    {CLOCK_SLOTS_15.map((s) => (
+                      <SelectItem key={`s-${s.value}`} value={s.value}>{s.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div>
-                <label className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">End</label>
-                <Input
-                  type="time"
-                  className="mt-1 rounded-2xl"
+                <label className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+                  <Clock className="h-3 w-3" /> End
+                </label>
+                <Select
                   value={meetingForm.endTime}
-                  onChange={(e) => setMeetingForm((p) => ({ ...p, endTime: e.target.value }))}
-                />
+                  onValueChange={(v) => setMeetingForm((p) => ({ ...p, endTime: v }))}
+                >
+                  <SelectTrigger className="mt-1 rounded-2xl">
+                    <SelectValue placeholder="--:--" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-72">
+                    {CLOCK_SLOTS_15
+                      .filter((s) => {
+                        const startM = parseTimeToMinutes(meetingForm.startTime);
+                        return startM === null ? true : s.minutes >= startM + 15;
+                      })
+                      .map((s) => (
+                        <SelectItem key={`e-${s.value}`} value={s.value}>{s.label}</SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
+            <p className="-mt-1 text-[11px] font-semibold text-muted-foreground">
+              Round-the-clock 15-minute slots · room auto-releases when the slot ends
+            </p>
 
             <div>
               <div className="flex items-center justify-between">
@@ -3053,27 +3165,42 @@ const Index = () => {
           ) : (
             <ul className="mt-3 space-y-2">
               {dayMeetings.map((m) => {
-                const canCancel = isAdmin || m.organizerId === currentUser?.email;
+                const canRelease = isAdmin || m.organizerId === currentUser?.email;
+                const isLive = meetingForm.date === todayKey && m.startMinutes <= nowMin && nowMin < m.endMinutes;
+                const isUpcoming = meetingForm.date > todayKey || (meetingForm.date === todayKey && nowMin < m.startMinutes);
                 return (
                   <li key={m.id} className="rounded-2xl border border-border bg-surface-muted p-3">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
-                        <p className="truncate font-display text-sm font-extrabold">{m.title}</p>
-                        <p className="text-[11px] font-bold text-muted-foreground">
-                          {m.roomName} · {minutesToLabel(m.startMinutes)} – {minutesToLabel(m.endMinutes)}
+                        <div className="flex items-center gap-2">
+                          <p className="truncate font-display text-sm font-extrabold">{m.title}</p>
+                          {isLive && (
+                            <span className="rounded-full bg-destructive px-2 py-0.5 text-[10px] font-extrabold uppercase text-destructive-foreground">
+                              In use
+                            </span>
+                          )}
+                          {isUpcoming && (
+                            <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-extrabold uppercase text-primary">
+                              Upcoming
+                            </span>
+                          )}
+                        </div>
+                        <p className="mt-0.5 flex items-center gap-1 text-[11px] font-bold text-foreground">
+                          <DoorOpen className="h-3 w-3" /> {m.roomName}
+                          <Clock className="ml-2 h-3 w-3" /> {minutesToLabel(m.startMinutes)} – {minutesToLabel(m.endMinutes)}
                         </p>
                         <p className="mt-1 text-[11px] font-semibold text-muted-foreground">
-                          By {m.organizerName}
+                          Booked by <span className="font-extrabold text-foreground">{m.organizerName}</span> · until {minutesToLabel(m.endMinutes)}
                           {m.attendeeNames.length > 0 && ` · with ${m.attendeeNames.slice(0, 3).join(", ")}${m.attendeeNames.length > 3 ? ` +${m.attendeeNames.length - 3}` : ""}`}
                         </p>
                       </div>
-                      {canCancel && (
+                      {canRelease && (
                         <button
                           onClick={() => handleCancelMeeting(m.id)}
-                          className="focus-premium grid h-8 w-8 place-items-center rounded-xl bg-destructive/10 text-destructive"
-                          title="Cancel"
+                          className="focus-premium flex items-center gap-1 rounded-xl bg-destructive/10 px-3 py-1.5 text-[11px] font-extrabold text-destructive"
+                          title="Release room"
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="h-3.5 w-3.5" /> Release
                         </button>
                       )}
                     </div>
