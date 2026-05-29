@@ -895,12 +895,24 @@ const Index = () => {
     return h * 60 + mm;
   };
   const minutesToLabel = (n: number) => {
-    const h = Math.floor(n / 60);
-    const mm = n % 60;
+    const wrapped = ((n % (24 * 60)) + 24 * 60) % (24 * 60);
+    const h = Math.floor(wrapped / 60);
+    const mm = wrapped % 60;
     const period = h >= 12 ? "PM" : "AM";
     const h12 = ((h + 11) % 12) + 1;
     return `${h12}:${String(mm).padStart(2, "0")} ${period}`;
   };
+  // 15-minute clock slots around the clock (00:00, 00:15, ... 23:45)
+  const CLOCK_SLOTS_15 = useMemo(() => {
+    const out: { value: string; label: string; minutes: number }[] = [];
+    for (let m = 0; m < 24 * 60; m += 15) {
+      const h = Math.floor(m / 60);
+      const mm = m % 60;
+      const value = `${String(h).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
+      out.push({ value, label: minutesToLabel(m), minutes: m });
+    }
+    return out;
+  }, []);
 
   const handleToggleAttendee = (employeeId: string) => {
     setMeetingForm((prev) => ({
