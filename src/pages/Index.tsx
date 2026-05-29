@@ -1021,12 +1021,28 @@ const Index = () => {
     const meeting = roomMeetings.find((m) => m.id === id);
     if (!meeting) return;
     if (!isAdmin && meeting.organizerId !== currentUser?.email) {
-      toast.error("Only the organizer or an admin can cancel");
+      toast.error("Only the organizer or an admin can release this room");
       return;
     }
     setRoomMeetings((prev) => prev.filter((m) => m.id !== id));
-    toast.success("Meeting cancelled");
+    toast.success(`${meeting.roomName} released — now available`);
   };
+
+  // Auto-prune expired meetings (slot ended) so the room is immediately
+  // available for the next person.
+  useEffect(() => {
+    const now = new Date(nowTs);
+    const todayKey = format(now, "yyyy-MM-dd");
+    const nowMin = now.getHours() * 60 + now.getMinutes();
+    setRoomMeetings((prev) => {
+      const next = prev.filter((m) => {
+        if (m.date < todayKey) return false;
+        if (m.date === todayKey && m.endMinutes <= nowMin) return false;
+        return true;
+      });
+      return next.length === prev.length ? prev : next;
+    });
+  }, [nowTs]);
 
 
   useEffect(() => {
