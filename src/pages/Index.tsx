@@ -3029,24 +3029,50 @@ const Index = () => {
                 />
               </div>
               <div>
-                <label className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Start</label>
-                <Input
-                  type="time"
-                  className="mt-1 rounded-2xl"
+                <label className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+                  <Clock className="h-3 w-3" /> Start
+                </label>
+                <Select
                   value={meetingForm.startTime}
-                  onChange={(e) => setMeetingForm((p) => ({ ...p, startTime: e.target.value }))}
-                />
+                  onValueChange={(v) => setMeetingForm((p) => ({ ...p, startTime: v }))}
+                >
+                  <SelectTrigger className="mt-1 rounded-2xl">
+                    <SelectValue placeholder="--:--" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-72">
+                    {CLOCK_SLOTS_15.map((s) => (
+                      <SelectItem key={`s-${s.value}`} value={s.value}>{s.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div>
-                <label className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">End</label>
-                <Input
-                  type="time"
-                  className="mt-1 rounded-2xl"
+                <label className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+                  <Clock className="h-3 w-3" /> End
+                </label>
+                <Select
                   value={meetingForm.endTime}
-                  onChange={(e) => setMeetingForm((p) => ({ ...p, endTime: e.target.value }))}
-                />
+                  onValueChange={(v) => setMeetingForm((p) => ({ ...p, endTime: v }))}
+                >
+                  <SelectTrigger className="mt-1 rounded-2xl">
+                    <SelectValue placeholder="--:--" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-72">
+                    {CLOCK_SLOTS_15
+                      .filter((s) => {
+                        const startM = parseTimeToMinutes(meetingForm.startTime);
+                        return startM === null ? true : s.minutes >= startM + 15;
+                      })
+                      .map((s) => (
+                        <SelectItem key={`e-${s.value}`} value={s.value}>{s.label}</SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
+            <p className="-mt-1 text-[11px] font-semibold text-muted-foreground">
+              Round-the-clock 15-minute slots · room auto-releases when the slot ends
+            </p>
 
             <div>
               <div className="flex items-center justify-between">
