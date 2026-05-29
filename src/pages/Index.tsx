@@ -2962,8 +2962,11 @@ const Index = () => {
 
   // ============== ROOMS PANEL ==============
   const renderRoomsPanel = () => {
+    const todayKey = format(new Date(nowTs), "yyyy-MM-dd");
+    const nowMin = new Date(nowTs).getHours() * 60 + new Date(nowTs).getMinutes();
     const dayMeetings = roomMeetings
       .filter((m) => m.date === meetingForm.date)
+      .filter((m) => !(meetingForm.date === todayKey && m.endMinutes <= nowMin))
       .sort((a, b) => a.startMinutes - b.startMinutes);
     const selectedRoomMeta = meetingRoomCatalog.find((r) => r.id === meetingForm.roomId)!;
 
