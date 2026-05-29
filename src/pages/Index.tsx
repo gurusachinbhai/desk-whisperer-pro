@@ -1983,10 +1983,38 @@ const Index = () => {
               <KeyRound className="h-4 w-4" />
               {loginForm.method === "password" ? "Login with OTP instead" : "Login with password instead"}
             </button>
+
+            {loginForm.method === "password" && (
+              <button
+                type="button"
+                onClick={handleForgotPassword}
+                className="focus-premium w-full text-center text-xs font-extrabold text-primary hover:underline"
+              >
+                Forgot password?
+              </button>
+            )}
           </form>
         )}
       </div>
     );
+  };
+
+  const handleForgotPassword = async () => {
+    const email = loginForm.identifier.trim().toLowerCase();
+    if (!email || !email.includes("@")) {
+      toast.error("Enter your email above first, then tap Forgot password");
+      return;
+    }
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    if (error) {
+      toast.error("Couldn't send reset link", { description: error.message });
+      return;
+    }
+    toast.success("Password reset link sent", {
+      description: `Check ${email} for instructions.`,
+    });
   };
 
   const handleAddFloor = () => {
