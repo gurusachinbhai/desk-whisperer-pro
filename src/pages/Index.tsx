@@ -3137,27 +3137,42 @@ const Index = () => {
           ) : (
             <ul className="mt-3 space-y-2">
               {dayMeetings.map((m) => {
-                const canCancel = isAdmin || m.organizerId === currentUser?.email;
+                const canRelease = isAdmin || m.organizerId === currentUser?.email;
+                const isLive = meetingForm.date === todayKey && m.startMinutes <= nowMin && nowMin < m.endMinutes;
+                const isUpcoming = meetingForm.date > todayKey || (meetingForm.date === todayKey && nowMin < m.startMinutes);
                 return (
                   <li key={m.id} className="rounded-2xl border border-border bg-surface-muted p-3">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
-                        <p className="truncate font-display text-sm font-extrabold">{m.title}</p>
-                        <p className="text-[11px] font-bold text-muted-foreground">
-                          {m.roomName} · {minutesToLabel(m.startMinutes)} – {minutesToLabel(m.endMinutes)}
+                        <div className="flex items-center gap-2">
+                          <p className="truncate font-display text-sm font-extrabold">{m.title}</p>
+                          {isLive && (
+                            <span className="rounded-full bg-destructive px-2 py-0.5 text-[10px] font-extrabold uppercase text-destructive-foreground">
+                              In use
+                            </span>
+                          )}
+                          {isUpcoming && (
+                            <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-extrabold uppercase text-primary">
+                              Upcoming
+                            </span>
+                          )}
+                        </div>
+                        <p className="mt-0.5 flex items-center gap-1 text-[11px] font-bold text-foreground">
+                          <DoorOpen className="h-3 w-3" /> {m.roomName}
+                          <Clock className="ml-2 h-3 w-3" /> {minutesToLabel(m.startMinutes)} – {minutesToLabel(m.endMinutes)}
                         </p>
                         <p className="mt-1 text-[11px] font-semibold text-muted-foreground">
-                          By {m.organizerName}
+                          Booked by <span className="font-extrabold text-foreground">{m.organizerName}</span> · until {minutesToLabel(m.endMinutes)}
                           {m.attendeeNames.length > 0 && ` · with ${m.attendeeNames.slice(0, 3).join(", ")}${m.attendeeNames.length > 3 ? ` +${m.attendeeNames.length - 3}` : ""}`}
                         </p>
                       </div>
-                      {canCancel && (
+                      {canRelease && (
                         <button
                           onClick={() => handleCancelMeeting(m.id)}
-                          className="focus-premium grid h-8 w-8 place-items-center rounded-xl bg-destructive/10 text-destructive"
-                          title="Cancel"
+                          className="focus-premium flex items-center gap-1 rounded-xl bg-destructive/10 px-3 py-1.5 text-[11px] font-extrabold text-destructive"
+                          title="Release room"
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="h-3.5 w-3.5" /> Release
                         </button>
                       )}
                     </div>
