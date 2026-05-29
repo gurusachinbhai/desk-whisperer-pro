@@ -937,12 +937,25 @@ const Index = () => {
     const startMin = parseTimeToMinutes(meetingForm.startTime);
     const endMin = parseTimeToMinutes(meetingForm.endTime);
     if (startMin === null || endMin === null) {
-      toast.error("Enter valid times");
+      toast.error("Pick a start and end time");
       return;
     }
-    if (endMin <= startMin) {
-      toast.error("End time must be after start time");
+    if (startMin % 15 !== 0 || endMin % 15 !== 0) {
+      toast.error("Times must align to 15-minute slots");
       return;
+    }
+    if (endMin - startMin < 15) {
+      toast.error("Meeting must be at least 15 minutes");
+      return;
+    }
+    // Don't allow booking a slot already in the past for today
+    const todayKey = format(new Date(nowTs), "yyyy-MM-dd");
+    if (meetingForm.date === todayKey) {
+      const nowMin = new Date(nowTs).getHours() * 60 + new Date(nowTs).getMinutes();
+      if (endMin <= nowMin) {
+        toast.error("That time slot has already passed");
+        return;
+      }
     }
     if (!meetingForm.title.trim()) {
       toast.error("Add a meeting title");
@@ -963,6 +976,20 @@ const Index = () => {
     if (conflict) {
       toast.error(`Conflicts with "${conflict.title}"`, {
         description: `${minutesToLabel(conflict.startMinutes)} – ${minutesToLabel(conflict.endMinutes)}`,
+      });
+      return;
+    }
+    // One user can hold only one room per overlapping time slot
+    const ownConflict = roomMeetings.find(
+      (m) =>
+        m.organizerId === currentUser.email &&
+        m.date === meetingForm.date &&
+        startMin < m.endMinutes &&
+        endMin > m.startMinutes,
+    );
+    if (ownConflict) {
+      toast.error("You already have a room booked for this time", {
+        description: `${ownConflict.roomName} · ${minutesToLabel(ownConflict.startMinutes)} – ${minutesToLabel(ownConflict.endMinutes)}`,
       });
       return;
     }
