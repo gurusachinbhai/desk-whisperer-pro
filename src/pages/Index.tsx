@@ -3872,7 +3872,7 @@ const Index = () => {
                             <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-sm bg-destructive/70" />Booked</span>
                           </div>
                         </div>
-                        <div className="mt-1 grid grid-cols-24 gap-[2px] rounded-xl bg-surface-muted p-2">
+                        <div className="mt-1 grid gap-[2px] rounded-xl bg-surface-muted p-2" style={{ gridTemplateColumns: "repeat(24, minmax(0, 1fr))" }}>
                           {Array.from({ length: 24 }).map((_, hour) => (
                             <div key={`hr-${hour}`} className="flex flex-col items-center gap-[2px]">
                               <div className="grid grid-cols-1 gap-[2px]">
