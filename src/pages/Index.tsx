@@ -3690,29 +3690,49 @@ const Index = () => {
                       !(dateKey === todayKeyW && m.endMinutes <= nowMinW),
                   )
                 : [];
-              const findNextAvailable = (durationMin: number, fromMin: number) => {
+              const avoidRanges = autoSkipPrefs.avoid
+                .map((r) => ({
+                  ...r,
+                  startMin: parseTimeToMinutes(r.start),
+                  endMin: parseTimeToMinutes(r.end),
+                }))
+                .filter((r) => r.startMin !== null && r.endMin !== null && r.endMin! > r.startMin!) as Array<
+                AvoidRange & { startMin: number; endMin: number }
+              >;
+
+              type SkipResult =
+                | { kind: "found"; start: number; end: number; skipped: number }
+                | { kind: "prompt"; start: number; end: number; skipped: number; resumeFrom: number }
+                | { kind: "none" };
+
+              const findNextAvailable = (
+                durationMin: number,
+                fromMin: number,
+                maxSkips: number,
+              ): SkipResult => {
                 const dur = Math.max(15, Math.round(durationMin / 15) * 15);
                 const dayEnd = 24 * 60;
-                const minStart = dateKey === todayKeyW ? Math.max(fromMin, Math.ceil(nowMinW / 15) * 15) : Math.max(0, fromMin);
+                const minStart =
+                  dateKey === todayKeyW ? Math.max(fromMin, Math.ceil(nowMinW / 15) * 15) : Math.max(0, fromMin);
+                let skipped = 0;
                 for (let s = minStart; s + dur <= dayEnd; s += 15) {
                   const e = s + dur;
                   const roomBusy = busyForRoom.some((b) => s < b.endMinutes && e > b.startMinutes);
-                  if (roomBusy) continue;
                   const ownBusy = myMeetingsToday.some((m) => s < m.endMinutes && e > m.startMinutes);
-                  if (ownBusy) continue;
-                  return { start: s, end: e };
+                  const avoidHit = avoidRanges.some((r) => s < r.endMin && e > r.startMin);
+                  if (roomBusy || ownBusy || avoidHit) {
+                    skipped += 1;
+                    if (skipped > maxSkips) {
+                      return { kind: "prompt", start: s, end: e, skipped, resumeFrom: s };
+                    }
+                    continue;
+                  }
+                  return { kind: "found", start: s, end: e, skipped };
                 }
-                return null;
+                return { kind: "none" };
               };
-              const jumpToNextAvailable = () => {
-                const dur =
-                  startM !== null && endM !== null && endM > startM ? endM - startM : 15;
-                const from = startM !== null ? startM + 15 : 0;
-                const slot = findNextAvailable(dur, from);
-                if (!slot) {
-                  toast.error("No free slot of that length left today");
-                  return;
-                }
+
+              const applySlot = (slot: { start: number; end: number }) => {
                 const hh = (n: number) => String(Math.floor(n / 60)).padStart(2, "0");
                 const mm = (n: number) => String(n % 60).padStart(2, "0");
                 setRoomWizard((p) => ({
@@ -3720,10 +3740,44 @@ const Index = () => {
                   startTime: `${hh(slot.start)}:${mm(slot.start)}`,
                   endTime: `${hh(slot.end)}:${mm(slot.end)}`,
                 }));
-                toast.success("Moved to next available slot", {
-                  description: `${minutesToLabel(slot.start)} – ${minutesToLabel(slot.end)}`,
-                });
               };
+
+              const jumpToNextAvailable = (opts?: { continueSearch?: boolean }) => {
+                const dur =
+                  startM !== null && endM !== null && endM > startM ? endM - startM : 15;
+                const from =
+                  opts?.continueSearch && autoSkipResumeRef.current !== null
+                    ? autoSkipResumeRef.current
+                    : startM !== null
+                      ? startM + 15
+                      : 0;
+                const res = findNextAvailable(dur, from, autoSkipPrefs.maxSkips);
+                if (res.kind === "none") {
+                  autoSkipResumeRef.current = null;
+                  toast.error("No free slot of that length left today");
+                  return;
+                }
+                if (res.kind === "prompt") {
+                  autoSkipResumeRef.current = res.resumeFrom + 15;
+                  toast.warning(`Skipped ${res.skipped} conflicting slots`, {
+                    description: `Keep searching past ${minutesToLabel(res.start)}?`,
+                    action: {
+                      label: "Keep searching",
+                      onClick: () => jumpToNextAvailable({ continueSearch: true }),
+                    },
+                  });
+                  return;
+                }
+                autoSkipResumeRef.current = null;
+                applySlot({ start: res.start, end: res.end });
+                toast.success(
+                  res.skipped > 0
+                    ? `Moved to next available slot (skipped ${res.skipped})`
+                    : "Moved to next available slot",
+                  { description: `${minutesToLabel(res.start)} – ${minutesToLabel(res.end)}` },
+                );
+              };
+
 
 
 
