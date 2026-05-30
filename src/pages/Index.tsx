@@ -43,7 +43,7 @@ import {
   UserPlus,
   Users,
 } from "lucide-react";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { lovable } from "@/integrations/lovable";
@@ -363,6 +363,33 @@ const Index = () => {
     step: "slot" | "review";
     title: string;
   }>({ open: false, roomId: "M01", startTime: "09:00", endTime: "09:30", step: "slot", title: "" });
+
+  // ---- Auto-skip preferences (avoid ranges + max skips before prompt) ----
+  type AvoidRange = { id: string; start: string; end: string; label: string };
+  type AutoSkipPrefs = { avoid: AvoidRange[]; maxSkips: number };
+  const AUTO_SKIP_KEY = "deskflow-autoskip-prefs";
+  const [autoSkipPrefs, setAutoSkipPrefs] = useState<AutoSkipPrefs>(() => {
+    if (typeof window === "undefined")
+      return { avoid: [{ id: "lunch", start: "12:00", end: "13:00", label: "Lunch" }], maxSkips: 5 };
+    try {
+      const raw = window.localStorage.getItem(AUTO_SKIP_KEY);
+      if (raw) return JSON.parse(raw) as AutoSkipPrefs;
+    } catch {
+      /* ignore */
+    }
+    return { avoid: [{ id: "lunch", start: "12:00", end: "13:00", label: "Lunch" }], maxSkips: 5 };
+  });
+  const [showAutoSkipSettings, setShowAutoSkipSettings] = useState(false);
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(AUTO_SKIP_KEY, JSON.stringify(autoSkipPrefs));
+    } catch {
+      /* ignore */
+    }
+  }, [autoSkipPrefs]);
+  // Remembers where to resume the search after a "prompt to keep going"
+  const autoSkipResumeRef = useRef<number | null>(null);
+
 
   // Timezone — committed once, then locked forever (per device)
   const [userTimezone, setUserTimezone] = useState<string | null>(() => {
@@ -3663,29 +3690,49 @@ const Index = () => {
                       !(dateKey === todayKeyW && m.endMinutes <= nowMinW),
                   )
                 : [];
-              const findNextAvailable = (durationMin: number, fromMin: number) => {
+              const avoidRanges = autoSkipPrefs.avoid
+                .map((r) => ({
+                  ...r,
+                  startMin: parseTimeToMinutes(r.start),
+                  endMin: parseTimeToMinutes(r.end),
+                }))
+                .filter((r) => r.startMin !== null && r.endMin !== null && r.endMin! > r.startMin!) as Array<
+                AvoidRange & { startMin: number; endMin: number }
+              >;
+
+              type SkipResult =
+                | { kind: "found"; start: number; end: number; skipped: number }
+                | { kind: "prompt"; start: number; end: number; skipped: number; resumeFrom: number }
+                | { kind: "none" };
+
+              const findNextAvailable = (
+                durationMin: number,
+                fromMin: number,
+                maxSkips: number,
+              ): SkipResult => {
                 const dur = Math.max(15, Math.round(durationMin / 15) * 15);
                 const dayEnd = 24 * 60;
-                const minStart = dateKey === todayKeyW ? Math.max(fromMin, Math.ceil(nowMinW / 15) * 15) : Math.max(0, fromMin);
+                const minStart =
+                  dateKey === todayKeyW ? Math.max(fromMin, Math.ceil(nowMinW / 15) * 15) : Math.max(0, fromMin);
+                let skipped = 0;
                 for (let s = minStart; s + dur <= dayEnd; s += 15) {
                   const e = s + dur;
                   const roomBusy = busyForRoom.some((b) => s < b.endMinutes && e > b.startMinutes);
-                  if (roomBusy) continue;
                   const ownBusy = myMeetingsToday.some((m) => s < m.endMinutes && e > m.startMinutes);
-                  if (ownBusy) continue;
-                  return { start: s, end: e };
+                  const avoidHit = avoidRanges.some((r) => s < r.endMin && e > r.startMin);
+                  if (roomBusy || ownBusy || avoidHit) {
+                    skipped += 1;
+                    if (skipped > maxSkips) {
+                      return { kind: "prompt", start: s, end: e, skipped, resumeFrom: s };
+                    }
+                    continue;
+                  }
+                  return { kind: "found", start: s, end: e, skipped };
                 }
-                return null;
+                return { kind: "none" };
               };
-              const jumpToNextAvailable = () => {
-                const dur =
-                  startM !== null && endM !== null && endM > startM ? endM - startM : 15;
-                const from = startM !== null ? startM + 15 : 0;
-                const slot = findNextAvailable(dur, from);
-                if (!slot) {
-                  toast.error("No free slot of that length left today");
-                  return;
-                }
+
+              const applySlot = (slot: { start: number; end: number }) => {
                 const hh = (n: number) => String(Math.floor(n / 60)).padStart(2, "0");
                 const mm = (n: number) => String(n % 60).padStart(2, "0");
                 setRoomWizard((p) => ({
@@ -3693,10 +3740,44 @@ const Index = () => {
                   startTime: `${hh(slot.start)}:${mm(slot.start)}`,
                   endTime: `${hh(slot.end)}:${mm(slot.end)}`,
                 }));
-                toast.success("Moved to next available slot", {
-                  description: `${minutesToLabel(slot.start)} – ${minutesToLabel(slot.end)}`,
-                });
               };
+
+              const jumpToNextAvailable = (opts?: { continueSearch?: boolean }) => {
+                const dur =
+                  startM !== null && endM !== null && endM > startM ? endM - startM : 15;
+                const from =
+                  opts?.continueSearch && autoSkipResumeRef.current !== null
+                    ? autoSkipResumeRef.current
+                    : startM !== null
+                      ? startM + 15
+                      : 0;
+                const res = findNextAvailable(dur, from, autoSkipPrefs.maxSkips);
+                if (res.kind === "none") {
+                  autoSkipResumeRef.current = null;
+                  toast.error("No free slot of that length left today");
+                  return;
+                }
+                if (res.kind === "prompt") {
+                  autoSkipResumeRef.current = res.resumeFrom + 15;
+                  toast.warning(`Skipped ${res.skipped} conflicting slots`, {
+                    description: `Keep searching past ${minutesToLabel(res.start)}?`,
+                    action: {
+                      label: "Keep searching",
+                      onClick: () => jumpToNextAvailable({ continueSearch: true }),
+                    },
+                  });
+                  return;
+                }
+                autoSkipResumeRef.current = null;
+                applySlot({ start: res.start, end: res.end });
+                toast.success(
+                  res.skipped > 0
+                    ? `Moved to next available slot (skipped ${res.skipped})`
+                    : "Moved to next available slot",
+                  { description: `${minutesToLabel(res.start)} – ${minutesToLabel(res.end)}` },
+                );
+              };
+
 
 
 
@@ -3997,6 +4078,122 @@ const Index = () => {
                         )}
                       </div>
 
+                      {/* Auto-skip settings */}
+                      <div className="rounded-xl border border-border bg-surface-muted px-3 py-2">
+                        <button
+                          type="button"
+                          onClick={() => setShowAutoSkipSettings((v) => !v)}
+                          className="flex w-full items-center justify-between text-[11px] font-bold uppercase tracking-wide text-muted-foreground"
+                        >
+                          <span>Auto-skip preferences</span>
+                          <span className="font-extrabold text-primary">
+                            {showAutoSkipSettings ? "Hide" : "Configure"}
+                          </span>
+                        </button>
+                        {!showAutoSkipSettings && (
+                          <p className="mt-1 text-[10px] font-semibold text-muted-foreground">
+                            Avoiding {autoSkipPrefs.avoid.length} window{autoSkipPrefs.avoid.length === 1 ? "" : "s"} · prompts after {autoSkipPrefs.maxSkips} skips
+                          </p>
+                        )}
+                        {showAutoSkipSettings && (
+                          <div className="mt-2 space-y-2">
+                            <div>
+                              <p className="text-[10px] font-bold uppercase text-muted-foreground">Avoid these windows</p>
+                              <div className="mt-1 space-y-1">
+                                {autoSkipPrefs.avoid.length === 0 && (
+                                  <p className="text-[11px] font-semibold text-muted-foreground">No windows — auto-skip only avoids conflicts.</p>
+                                )}
+                                {autoSkipPrefs.avoid.map((r) => (
+                                  <div key={r.id} className="flex items-center gap-1">
+                                    <input
+                                      type="text"
+                                      value={r.label}
+                                      placeholder="Label"
+                                      onChange={(e) =>
+                                        setAutoSkipPrefs((p) => ({
+                                          ...p,
+                                          avoid: p.avoid.map((x) => (x.id === r.id ? { ...x, label: e.target.value } : x)),
+                                        }))
+                                      }
+                                      className="h-7 flex-1 rounded-md border border-border bg-background px-2 text-[11px] font-bold"
+                                    />
+                                    <input
+                                      type="time"
+                                      step={900}
+                                      value={r.start}
+                                      onChange={(e) =>
+                                        setAutoSkipPrefs((p) => ({
+                                          ...p,
+                                          avoid: p.avoid.map((x) => (x.id === r.id ? { ...x, start: e.target.value } : x)),
+                                        }))
+                                      }
+                                      className="h-7 rounded-md border border-border bg-background px-1 text-[11px] font-bold"
+                                    />
+                                    <span className="text-[10px]">–</span>
+                                    <input
+                                      type="time"
+                                      step={900}
+                                      value={r.end}
+                                      onChange={(e) =>
+                                        setAutoSkipPrefs((p) => ({
+                                          ...p,
+                                          avoid: p.avoid.map((x) => (x.id === r.id ? { ...x, end: e.target.value } : x)),
+                                        }))
+                                      }
+                                      className="h-7 rounded-md border border-border bg-background px-1 text-[11px] font-bold"
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        setAutoSkipPrefs((p) => ({ ...p, avoid: p.avoid.filter((x) => x.id !== r.id) }))
+                                      }
+                                      className="h-7 rounded-md px-2 text-[10px] font-bold text-destructive hover:bg-destructive/10"
+                                      aria-label={`Remove ${r.label}`}
+                                    >
+                                      ✕
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setAutoSkipPrefs((p) => ({
+                                    ...p,
+                                    avoid: [
+                                      ...p.avoid,
+                                      { id: `av-${Date.now()}`, start: "12:00", end: "13:00", label: "Break" },
+                                    ],
+                                  }))
+                                }
+                                className="mt-1 rounded-md border border-dashed border-border px-2 py-1 text-[10px] font-bold text-muted-foreground hover:bg-background"
+                              >
+                                + Add window
+                              </button>
+                            </div>
+                            <div className="flex items-center justify-between gap-2">
+                              <label className="text-[11px] font-bold text-muted-foreground">
+                                Prompt after this many skips
+                              </label>
+                              <input
+                                type="number"
+                                min={1}
+                                max={50}
+                                value={autoSkipPrefs.maxSkips}
+                                onChange={(e) =>
+                                  setAutoSkipPrefs((p) => ({
+                                    ...p,
+                                    maxSkips: Math.max(1, Math.min(50, Number(e.target.value) || 1)),
+                                  }))
+                                }
+                                className="h-7 w-16 rounded-md border border-border bg-background px-2 text-right text-[11px] font-extrabold"
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+
                       {conflictingBookings.length > 0 && (
                         <div className="rounded-xl bg-destructive/10 px-3 py-2 text-[11px] font-extrabold text-destructive">
                           <p>
@@ -4027,7 +4224,7 @@ const Index = () => {
                           type="button"
                           variant="secondary"
                           size="sm"
-                          onClick={jumpToNextAvailable}
+                          onClick={() => jumpToNextAvailable()}
                           className="w-full"
                         >
                           Auto-skip to next available slot
