@@ -3372,30 +3372,32 @@ const Index = () => {
             </Popover>
           </div>
 
-          {/* Shift */}
-          <div className="rounded-2xl bg-surface-raised p-4 shadow-card">
-            <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Shift</p>
-            <div className="mt-2 grid grid-cols-2 gap-1.5">
-              {shiftDefinitions.map((shift) => (
-                <button
-                  key={shift.id}
-                  type="button"
-                  onClick={() => {
-                    setSelectedShift(shift.id);
-                    setSelectedHourlySlot(shift.times[0]);
-                  }}
-                  className={`focus-premium rounded-xl px-2 py-1.5 text-left transition-all ${
-                    selectedShift === shift.id
-                      ? "bg-primary text-primary-foreground shadow-glow"
-                      : "bg-muted text-muted-foreground hover:bg-primary/10"
-                  }`}
-                >
-                  <span className="block text-xs font-extrabold leading-tight">{shift.label}</span>
-                  <span className="block text-[10px] font-semibold opacity-80">{shift.range}</span>
-                </button>
-              ))}
+          {/* Shift — only for desk bookings */}
+          {bookingKind === "desk" && (
+            <div className="rounded-2xl bg-surface-raised p-4 shadow-card">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Shift</p>
+              <div className="mt-2 grid grid-cols-2 gap-1.5">
+                {shiftDefinitions.map((shift) => (
+                  <button
+                    key={shift.id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedShift(shift.id);
+                      setSelectedHourlySlot(shift.times[0]);
+                    }}
+                    className={`focus-premium rounded-xl px-2 py-1.5 text-left transition-all ${
+                      selectedShift === shift.id
+                        ? "bg-primary text-primary-foreground shadow-glow"
+                        : "bg-muted text-muted-foreground hover:bg-primary/10"
+                    }`}
+                  >
+                    <span className="block text-xs font-extrabold leading-tight">{shift.label}</span>
+                    <span className="block text-[10px] font-semibold opacity-80">{shift.range}</span>
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Seats / Rooms */}
