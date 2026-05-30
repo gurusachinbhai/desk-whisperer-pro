@@ -3626,12 +3626,42 @@ const Index = () => {
               const overlapsBusy = (s: number, e: number) =>
                 busyForRoom.some((b) => s < b.endMinutes && e > b.startMinutes);
 
+              // Cross-room: any of my own meetings on this date that overlap
+              const myOwnConflict =
+                startM !== null && endM !== null && currentUser
+                  ? roomMeetings.find(
+                      (m) =>
+                        m.organizerId === currentUser.email &&
+                        m.date === dateKey &&
+                        !(dateKey === todayKeyW && m.endMinutes <= nowMinW) &&
+                        startM < m.endMinutes &&
+                        endM > m.startMinutes,
+                    )
+                  : undefined;
+
+              const hasOverlap =
+                startM !== null && endM !== null && overlapsBusy(startM, endM);
+
               const validWindow =
-                startM !== null && endM !== null && endM >= startM + 15 && !overlapsBusy(startM, endM);
+                startM !== null &&
+                endM !== null &&
+                endM >= startM + 15 &&
+                !hasOverlap &&
+                !myOwnConflict;
 
               const goReview = () => {
-                if (!validWindow) {
-                  toast.error("Pick a valid 15-minute window that doesn't overlap an existing booking");
+                if (startM === null || endM === null || endM < startM + 15) {
+                  toast.error("Pick a valid 15-minute window");
+                  return;
+                }
+                if (hasOverlap) {
+                  toast.error("This room is already booked for that time");
+                  return;
+                }
+                if (myOwnConflict) {
+                  toast.error("You already have a meeting at that time", {
+                    description: `${myOwnConflict.roomName} · ${minutesToLabel(myOwnConflict.startMinutes)} – ${minutesToLabel(myOwnConflict.endMinutes)}`,
+                  });
                   return;
                 }
                 setRoomWizard((p) => ({ ...p, step: "review" }));
@@ -3642,7 +3672,21 @@ const Index = () => {
                   toast.error("Sign in to book a room");
                   return;
                 }
-                if (!validWindow || startM === null || endM === null) return;
+                if (startM === null || endM === null || endM < startM + 15) {
+                  toast.error("Pick a valid 15-minute window");
+                  return;
+                }
+                if (hasOverlap) {
+                  toast.error("This room is already booked for that time");
+                  return;
+                }
+                if (myOwnConflict) {
+                  toast.error("You already have a meeting at that time", {
+                    description: `${myOwnConflict.roomName} · ${minutesToLabel(myOwnConflict.startMinutes)} – ${minutesToLabel(myOwnConflict.endMinutes)}`,
+                  });
+                  return;
+                }
+
 
                 // Own conflict — one room per overlapping window
                 const ownConflict = roomMeetings.find(
