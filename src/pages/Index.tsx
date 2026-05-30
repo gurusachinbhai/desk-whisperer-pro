@@ -4078,6 +4078,122 @@ const Index = () => {
                         )}
                       </div>
 
+                      {/* Auto-skip settings */}
+                      <div className="rounded-xl border border-border bg-surface-muted px-3 py-2">
+                        <button
+                          type="button"
+                          onClick={() => setShowAutoSkipSettings((v) => !v)}
+                          className="flex w-full items-center justify-between text-[11px] font-bold uppercase tracking-wide text-muted-foreground"
+                        >
+                          <span>Auto-skip preferences</span>
+                          <span className="font-extrabold text-primary">
+                            {showAutoSkipSettings ? "Hide" : "Configure"}
+                          </span>
+                        </button>
+                        {!showAutoSkipSettings && (
+                          <p className="mt-1 text-[10px] font-semibold text-muted-foreground">
+                            Avoiding {autoSkipPrefs.avoid.length} window{autoSkipPrefs.avoid.length === 1 ? "" : "s"} · prompts after {autoSkipPrefs.maxSkips} skips
+                          </p>
+                        )}
+                        {showAutoSkipSettings && (
+                          <div className="mt-2 space-y-2">
+                            <div>
+                              <p className="text-[10px] font-bold uppercase text-muted-foreground">Avoid these windows</p>
+                              <div className="mt-1 space-y-1">
+                                {autoSkipPrefs.avoid.length === 0 && (
+                                  <p className="text-[11px] font-semibold text-muted-foreground">No windows — auto-skip only avoids conflicts.</p>
+                                )}
+                                {autoSkipPrefs.avoid.map((r) => (
+                                  <div key={r.id} className="flex items-center gap-1">
+                                    <input
+                                      type="text"
+                                      value={r.label}
+                                      placeholder="Label"
+                                      onChange={(e) =>
+                                        setAutoSkipPrefs((p) => ({
+                                          ...p,
+                                          avoid: p.avoid.map((x) => (x.id === r.id ? { ...x, label: e.target.value } : x)),
+                                        }))
+                                      }
+                                      className="h-7 flex-1 rounded-md border border-border bg-background px-2 text-[11px] font-bold"
+                                    />
+                                    <input
+                                      type="time"
+                                      step={900}
+                                      value={r.start}
+                                      onChange={(e) =>
+                                        setAutoSkipPrefs((p) => ({
+                                          ...p,
+                                          avoid: p.avoid.map((x) => (x.id === r.id ? { ...x, start: e.target.value } : x)),
+                                        }))
+                                      }
+                                      className="h-7 rounded-md border border-border bg-background px-1 text-[11px] font-bold"
+                                    />
+                                    <span className="text-[10px]">–</span>
+                                    <input
+                                      type="time"
+                                      step={900}
+                                      value={r.end}
+                                      onChange={(e) =>
+                                        setAutoSkipPrefs((p) => ({
+                                          ...p,
+                                          avoid: p.avoid.map((x) => (x.id === r.id ? { ...x, end: e.target.value } : x)),
+                                        }))
+                                      }
+                                      className="h-7 rounded-md border border-border bg-background px-1 text-[11px] font-bold"
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        setAutoSkipPrefs((p) => ({ ...p, avoid: p.avoid.filter((x) => x.id !== r.id) }))
+                                      }
+                                      className="h-7 rounded-md px-2 text-[10px] font-bold text-destructive hover:bg-destructive/10"
+                                      aria-label={`Remove ${r.label}`}
+                                    >
+                                      ✕
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setAutoSkipPrefs((p) => ({
+                                    ...p,
+                                    avoid: [
+                                      ...p.avoid,
+                                      { id: `av-${Date.now()}`, start: "12:00", end: "13:00", label: "Break" },
+                                    ],
+                                  }))
+                                }
+                                className="mt-1 rounded-md border border-dashed border-border px-2 py-1 text-[10px] font-bold text-muted-foreground hover:bg-background"
+                              >
+                                + Add window
+                              </button>
+                            </div>
+                            <div className="flex items-center justify-between gap-2">
+                              <label className="text-[11px] font-bold text-muted-foreground">
+                                Prompt after this many skips
+                              </label>
+                              <input
+                                type="number"
+                                min={1}
+                                max={50}
+                                value={autoSkipPrefs.maxSkips}
+                                onChange={(e) =>
+                                  setAutoSkipPrefs((p) => ({
+                                    ...p,
+                                    maxSkips: Math.max(1, Math.min(50, Number(e.target.value) || 1)),
+                                  }))
+                                }
+                                className="h-7 w-16 rounded-md border border-border bg-background px-2 text-right text-[11px] font-extrabold"
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+
                       {conflictingBookings.length > 0 && (
                         <div className="rounded-xl bg-destructive/10 px-3 py-2 text-[11px] font-extrabold text-destructive">
                           <p>
