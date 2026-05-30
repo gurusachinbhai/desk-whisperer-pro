@@ -43,7 +43,7 @@ import {
   UserPlus,
   Users,
 } from "lucide-react";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { lovable } from "@/integrations/lovable";
