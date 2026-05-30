@@ -3899,8 +3899,9 @@ const Index = () => {
                         <Button variant="ghost" onClick={() => setRoomWizard((p) => ({ ...p, step: "slot" }))}>
                           Back
                         </Button>
-                        <Button onClick={confirmBooking}>
+                        <Button onClick={confirmBooking} disabled={!validWindow}>
                           <CalendarCheck className="h-4 w-4" /> Confirm booking
+
                         </Button>
                       </div>
                     </div>
