@@ -3660,9 +3660,15 @@ const Index = () => {
                   return;
                 }
                 if (hasOverlap) {
-                  toast.error("This room is already booked for that time");
+                  const c = conflictingBookings[0];
+                  toast.error(`${wizardRoom.name} is already booked at that time`, {
+                    description: c
+                      ? `${minutesToLabel(c.startMinutes)} – ${minutesToLabel(c.endMinutes)} · ${c.organizerName}${c.title ? ` (${c.title})` : ""}`
+                      : undefined,
+                  });
                   return;
                 }
+
                 if (myOwnConflict) {
                   toast.error("You already have a meeting at that time", {
                     description: `${myOwnConflict.roomName} · ${minutesToLabel(myOwnConflict.startMinutes)} – ${minutesToLabel(myOwnConflict.endMinutes)}`,
