@@ -364,6 +364,33 @@ const Index = () => {
     title: string;
   }>({ open: false, roomId: "M01", startTime: "09:00", endTime: "09:30", step: "slot", title: "" });
 
+  // ---- Auto-skip preferences (avoid ranges + max skips before prompt) ----
+  type AvoidRange = { id: string; start: string; end: string; label: string };
+  type AutoSkipPrefs = { avoid: AvoidRange[]; maxSkips: number };
+  const AUTO_SKIP_KEY = "deskflow-autoskip-prefs";
+  const [autoSkipPrefs, setAutoSkipPrefs] = useState<AutoSkipPrefs>(() => {
+    if (typeof window === "undefined")
+      return { avoid: [{ id: "lunch", start: "12:00", end: "13:00", label: "Lunch" }], maxSkips: 5 };
+    try {
+      const raw = window.localStorage.getItem(AUTO_SKIP_KEY);
+      if (raw) return JSON.parse(raw) as AutoSkipPrefs;
+    } catch {
+      /* ignore */
+    }
+    return { avoid: [{ id: "lunch", start: "12:00", end: "13:00", label: "Lunch" }], maxSkips: 5 };
+  });
+  const [showAutoSkipSettings, setShowAutoSkipSettings] = useState(false);
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(AUTO_SKIP_KEY, JSON.stringify(autoSkipPrefs));
+    } catch {
+      /* ignore */
+    }
+  }, [autoSkipPrefs]);
+  // Remembers where to resume the search after a "prompt to keep going"
+  const autoSkipResumeRef = useRef<number | null>(null);
+
+
   // Timezone — committed once, then locked forever (per device)
   const [userTimezone, setUserTimezone] = useState<string | null>(() => {
     if (typeof window === "undefined") return null;
