@@ -81,6 +81,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 type Desk = {
@@ -354,6 +355,14 @@ const Index = () => {
   const [selectedHourlySlot, setSelectedHourlySlot] = useState<string>("06:00 AM");
   const [bookingDate, setBookingDate] = useState<Date>(() => new Date());
   const [confirmedBookings, setConfirmedBookings] = useState<ConfirmedBooking[]>([]);
+  const [roomWizard, setRoomWizard] = useState<{
+    open: boolean;
+    roomId: string;
+    startTime: string;
+    endTime: string;
+    step: "slot" | "review";
+    title: string;
+  }>({ open: false, roomId: "M01", startTime: "09:00", endTime: "09:30", step: "slot", title: "" });
 
   // Timezone — committed once, then locked forever (per device)
   const [userTimezone, setUserTimezone] = useState<string | null>(() => {
@@ -3306,8 +3315,9 @@ const Index = () => {
           </div>
         </div>
 
-        {/* Date + Shift — primary controls */}
-        <div className="grid gap-3 sm:grid-cols-2">
+        {/* Date + Shift — primary controls (Shift hidden for room bookings) */}
+        <div className={cn("grid gap-3", bookingKind === "desk" && "sm:grid-cols-2")}>
+
           {/* Date */}
           <div className="rounded-2xl bg-surface-raised p-4 shadow-card">
             <div className="flex items-center justify-between">
@@ -3363,30 +3373,32 @@ const Index = () => {
             </Popover>
           </div>
 
-          {/* Shift */}
-          <div className="rounded-2xl bg-surface-raised p-4 shadow-card">
-            <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Shift</p>
-            <div className="mt-2 grid grid-cols-2 gap-1.5">
-              {shiftDefinitions.map((shift) => (
-                <button
-                  key={shift.id}
-                  type="button"
-                  onClick={() => {
-                    setSelectedShift(shift.id);
-                    setSelectedHourlySlot(shift.times[0]);
-                  }}
-                  className={`focus-premium rounded-xl px-2 py-1.5 text-left transition-all ${
-                    selectedShift === shift.id
-                      ? "bg-primary text-primary-foreground shadow-glow"
-                      : "bg-muted text-muted-foreground hover:bg-primary/10"
-                  }`}
-                >
-                  <span className="block text-xs font-extrabold leading-tight">{shift.label}</span>
-                  <span className="block text-[10px] font-semibold opacity-80">{shift.range}</span>
-                </button>
-              ))}
+          {/* Shift — only for desk bookings */}
+          {bookingKind === "desk" && (
+            <div className="rounded-2xl bg-surface-raised p-4 shadow-card">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Shift</p>
+              <div className="mt-2 grid grid-cols-2 gap-1.5">
+                {shiftDefinitions.map((shift) => (
+                  <button
+                    key={shift.id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedShift(shift.id);
+                      setSelectedHourlySlot(shift.times[0]);
+                    }}
+                    className={`focus-premium rounded-xl px-2 py-1.5 text-left transition-all ${
+                      selectedShift === shift.id
+                        ? "bg-primary text-primary-foreground shadow-glow"
+                        : "bg-muted text-muted-foreground hover:bg-primary/10"
+                    }`}
+                  >
+                    <span className="block text-xs font-extrabold leading-tight">{shift.label}</span>
+                    <span className="block text-[10px] font-semibold opacity-80">{shift.range}</span>
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Seats / Rooms */}
@@ -3484,24 +3496,36 @@ const Index = () => {
         ) : (
           <div className="rounded-2xl bg-surface-raised p-4 shadow-card">
             <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Meeting room</p>
+            <p className="mt-1 text-[11px] font-semibold text-muted-foreground">
+              Pick a room to choose a 15-minute time slot, then review and confirm.
+            </p>
             <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-5">
-              {meetingRooms.map((room) => (
+              {meetingRoomCatalog.map((room) => (
                 <button
-                  key={room}
+                  key={room.id}
                   type="button"
                   onClick={() => {
-                    setSelectedRoom(room);
-                    setTimeout(() => handleConfirmBooking(room, "room"), 0);
+                    setSelectedRoom(room.id);
+                    setRoomWizard({
+                      open: true,
+                      roomId: room.id,
+                      startTime: "09:00",
+                      endTime: "09:30",
+                      step: "slot",
+                      title: "",
+                    });
                   }}
                   className={cn(
                     "focus-premium flex flex-col items-center gap-1 rounded-2xl border-2 p-3 text-xs font-extrabold transition-all",
-                    selectedRoom === room
+                    selectedRoom === room.id
                       ? "border-primary bg-primary text-primary-foreground shadow-glow"
                       : "border-border bg-background hover:border-primary/40",
                   )}
                 >
                   <DoorOpen className="h-4 w-4" />
-                  {room}
+                  {room.id}
+                  <span className="text-[10px] font-semibold opacity-80">{room.name}</span>
+                  <span className="text-[10px] font-semibold opacity-70">Seats {room.capacity}</span>
                 </button>
               ))}
             </div>
@@ -3580,9 +3604,279 @@ const Index = () => {
             </div>
           </div>
         )}
+
+        {/* ===== Meeting Room Booking Wizard ===== */}
+        <Dialog
+          open={roomWizard.open}
+          onOpenChange={(o) => setRoomWizard((p) => ({ ...p, open: o, step: o ? p.step : "slot" }))}
+        >
+          <DialogContent className="max-w-lg">
+            {(() => {
+              const wizardRoom = meetingRoomCatalog.find((r) => r.id === roomWizard.roomId) ?? meetingRoomCatalog[0];
+              const dateKey = format(bookingDate, "yyyy-MM-dd");
+              const startM = parseTimeToMinutes(roomWizard.startTime);
+              const endM = parseTimeToMinutes(roomWizard.endTime);
+              const todayKeyW = format(new Date(nowTs), "yyyy-MM-dd");
+              const nowMinW = new Date(nowTs).getHours() * 60 + new Date(nowTs).getMinutes();
+              const busyForRoom = roomMeetings
+                .filter((m) => m.roomId === wizardRoom.id && m.date === dateKey)
+                .filter((m) => !(dateKey === todayKeyW && m.endMinutes <= nowMinW))
+                .sort((a, b) => a.startMinutes - b.startMinutes);
+
+              const overlapsBusy = (s: number, e: number) =>
+                busyForRoom.some((b) => s < b.endMinutes && e > b.startMinutes);
+
+              const validWindow =
+                startM !== null && endM !== null && endM >= startM + 15 && !overlapsBusy(startM, endM);
+
+              const goReview = () => {
+                if (!validWindow) {
+                  toast.error("Pick a valid 15-minute window that doesn't overlap an existing booking");
+                  return;
+                }
+                setRoomWizard((p) => ({ ...p, step: "review" }));
+              };
+
+              const confirmBooking = () => {
+                if (!currentUser) {
+                  toast.error("Sign in to book a room");
+                  return;
+                }
+                if (!validWindow || startM === null || endM === null) return;
+
+                // Own conflict — one room per overlapping window
+                const ownConflict = roomMeetings.find(
+                  (m) =>
+                    m.organizerId === currentUser.email &&
+                    m.date === dateKey &&
+                    startM < m.endMinutes &&
+                    endM > m.startMinutes,
+                );
+                if (ownConflict) {
+                  toast.error("You already have a room booked for this time", {
+                    description: `${ownConflict.roomName} · ${minutesToLabel(ownConflict.startMinutes)} – ${minutesToLabel(ownConflict.endMinutes)}`,
+                  });
+                  return;
+                }
+
+                const meeting: RoomMeeting = {
+                  id: `${Date.now()}`,
+                  roomId: wizardRoom.id,
+                  roomName: wizardRoom.name,
+                  date: dateKey,
+                  startMinutes: startM,
+                  endMinutes: endM,
+                  title: roomWizard.title.trim() || `${wizardRoom.name} meeting`,
+                  organizerId: currentUser.email,
+                  organizerName: currentUser.displayName ?? currentUser.email,
+                  attendeeIds: [],
+                  attendeeNames: [],
+                  createdAt: Date.now(),
+                };
+                setRoomMeetings((prev) => [meeting, ...prev]);
+
+                const newBooking: ConfirmedBooking = {
+                  id: meeting.id,
+                  kind: "room",
+                  floor: wizardRoom.floor,
+                  area: `Floor ${wizardRoom.floor}`,
+                  spot: wizardRoom.id,
+                  time: `${minutesToLabel(startM)} – ${minutesToLabel(endM)}`,
+                  shift: `${minutesToLabel(startM)} – ${minutesToLabel(endM)}`,
+                  shiftKey: "day",
+                  shiftRange: `${minutesToLabel(startM)} – ${minutesToLabel(endM)}`,
+                  date: dateKey,
+                  endsAt: new Date(`${dateKey}T${roomWizard.endTime}:00`).getTime(),
+                  released: false,
+                };
+                setConfirmedBookings((cur) => [newBooking, ...cur].slice(0, 12));
+
+                toast.success(`${wizardRoom.name} booked`, {
+                  description: `${dateKey} · ${minutesToLabel(startM)} – ${minutesToLabel(endM)}`,
+                });
+                setRoomWizard((p) => ({ ...p, open: false, step: "slot", title: "" }));
+              };
+
+              return (
+                <>
+                  <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                      <DoorOpen className="h-5 w-5 text-primary" />
+                      Book {wizardRoom.name} ({wizardRoom.id})
+                    </DialogTitle>
+                    <DialogDescription>
+                      Floor {wizardRoom.floor} · Seats {wizardRoom.capacity} · {format(bookingDate, "EEE, MMM d")}
+                    </DialogDescription>
+                  </DialogHeader>
+
+                  {/* Stepper */}
+                  <div className="grid grid-cols-2 rounded-2xl bg-muted p-1 text-[11px] font-extrabold uppercase">
+                    {[
+                      { id: "slot" as const, label: "1 · Time slot" },
+                      { id: "review" as const, label: "2 · Review & confirm" },
+                    ].map((s) => (
+                      <div
+                        key={s.id}
+                        className={cn(
+                          "rounded-xl px-2 py-1.5 text-center transition",
+                          roomWizard.step === s.id ? "bg-primary text-primary-foreground shadow-glow" : "text-muted-foreground",
+                        )}
+                      >
+                        {s.label}
+                      </div>
+                    ))}
+                  </div>
+
+                  {roomWizard.step === "slot" ? (
+                    <div className="space-y-4">
+                      <Input
+                        placeholder="Meeting title (optional)"
+                        value={roomWizard.title}
+                        onChange={(e) => setRoomWizard((p) => ({ ...p, title: e.target.value }))}
+                        maxLength={120}
+                      />
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+                            <Clock className="h-3 w-3" /> Start
+                          </label>
+                          <Select
+                            value={roomWizard.startTime}
+                            onValueChange={(v) => {
+                              const sM = parseTimeToMinutes(v) ?? 0;
+                              setRoomWizard((p) => {
+                                const eM = parseTimeToMinutes(p.endTime) ?? 0;
+                                const newEnd = eM <= sM ? Math.min(sM + 15, 23 * 60 + 45) : eM;
+                                const hh = String(Math.floor(newEnd / 60)).padStart(2, "0");
+                                const mm = String(newEnd % 60).padStart(2, "0");
+                                return { ...p, startTime: v, endTime: `${hh}:${mm}` };
+                              });
+                            }}
+                          >
+                            <SelectTrigger className="mt-1 rounded-xl">
+                              <SelectValue placeholder="--:--" />
+                            </SelectTrigger>
+                            <SelectContent className="max-h-72">
+                              {CLOCK_SLOTS_15.map((s) => (
+                                <SelectItem key={`ws-${s.value}`} value={s.value}>{s.label}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <label className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+                            <Clock className="h-3 w-3" /> End
+                          </label>
+                          <Select
+                            value={roomWizard.endTime}
+                            onValueChange={(v) => setRoomWizard((p) => ({ ...p, endTime: v }))}
+                          >
+                            <SelectTrigger className="mt-1 rounded-xl">
+                              <SelectValue placeholder="--:--" />
+                            </SelectTrigger>
+                            <SelectContent className="max-h-72">
+                              {CLOCK_SLOTS_15.filter((s) => (startM === null ? true : s.minutes >= startM + 15)).map((s) => (
+                                <SelectItem key={`we-${s.value}`} value={s.value}>{s.label}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <p className="text-[11px] font-semibold text-muted-foreground">
+                        Round-the-clock 15-minute slots. Room auto-releases when the slot ends.
+                      </p>
+
+                      <div>
+                        <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+                          Already booked for {wizardRoom.name}
+                        </p>
+                        {busyForRoom.length === 0 ? (
+                          <p className="mt-1 rounded-xl bg-surface-muted p-2 text-xs font-semibold text-muted-foreground">
+                            No bookings yet — fully available.
+                          </p>
+                        ) : (
+                          <ul className="mt-1 max-h-32 space-y-1 overflow-y-auto">
+                            {busyForRoom.map((b) => (
+                              <li
+                                key={b.id}
+                                className="flex items-center justify-between rounded-xl bg-surface-muted px-3 py-1.5 text-[11px] font-bold"
+                              >
+                                <span>{minutesToLabel(b.startMinutes)} – {minutesToLabel(b.endMinutes)}</span>
+                                <span className="text-muted-foreground">{b.organizerName}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+
+                      {startM !== null && endM !== null && overlapsBusy(startM, endM) && (
+                        <p className="rounded-xl bg-destructive/10 px-3 py-2 text-[11px] font-extrabold text-destructive">
+                          Selected window overlaps an existing booking. Pick a different slot.
+                        </p>
+                      )}
+
+                      <div className="flex justify-end gap-2 pt-2">
+                        <Button
+                          variant="ghost"
+                          onClick={() => setRoomWizard((p) => ({ ...p, open: false }))}
+                        >
+                          Cancel
+                        </Button>
+                        <Button onClick={goReview} disabled={!validWindow}>
+                          Next: Review
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <div className="rounded-2xl border border-border bg-surface-muted p-4">
+                        <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Review your booking</p>
+                        <dl className="mt-3 grid grid-cols-3 gap-y-2 text-sm">
+                          <dt className="font-bold text-muted-foreground">Room</dt>
+                          <dd className="col-span-2 font-extrabold">{wizardRoom.name} · {wizardRoom.id}</dd>
+                          <dt className="font-bold text-muted-foreground">Floor</dt>
+                          <dd className="col-span-2 font-extrabold">{wizardRoom.floor} · Seats {wizardRoom.capacity}</dd>
+                          <dt className="font-bold text-muted-foreground">Date</dt>
+                          <dd className="col-span-2 font-extrabold">{format(bookingDate, "EEE, MMM d, yyyy")}</dd>
+                          <dt className="font-bold text-muted-foreground">Time</dt>
+                          <dd className="col-span-2 font-extrabold">
+                            {startM !== null && endM !== null
+                              ? `${minutesToLabel(startM)} – ${minutesToLabel(endM)} (${endM - startM} min)`
+                              : "—"}
+                          </dd>
+                          <dt className="font-bold text-muted-foreground">Title</dt>
+                          <dd className="col-span-2 font-extrabold">
+                            {roomWizard.title.trim() || `${wizardRoom.name} meeting`}
+                          </dd>
+                          <dt className="font-bold text-muted-foreground">Organizer</dt>
+                          <dd className="col-span-2 font-extrabold">
+                            {currentUser?.displayName ?? currentUser?.email ?? "—"}
+                          </dd>
+                        </dl>
+                      </div>
+                      <p className="text-[11px] font-semibold text-muted-foreground">
+                        Once confirmed, this room is reserved for the selected window. It auto-releases when the slot ends.
+                      </p>
+                      <div className="flex justify-between gap-2 pt-2">
+                        <Button variant="ghost" onClick={() => setRoomWizard((p) => ({ ...p, step: "slot" }))}>
+                          Back
+                        </Button>
+                        <Button onClick={confirmBooking}>
+                          <CalendarCheck className="h-4 w-4" /> Confirm booking
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
+          </DialogContent>
+        </Dialog>
       </div>
     );
   };
+
 
   // ============== ATTENDANCE HELPERS & RENDER ==============
   const todayKey = format(new Date(nowTs), "yyyy-MM-dd");
