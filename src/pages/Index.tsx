@@ -354,6 +354,14 @@ const Index = () => {
   const [selectedHourlySlot, setSelectedHourlySlot] = useState<string>("06:00 AM");
   const [bookingDate, setBookingDate] = useState<Date>(() => new Date());
   const [confirmedBookings, setConfirmedBookings] = useState<ConfirmedBooking[]>([]);
+  const [roomWizard, setRoomWizard] = useState<{
+    open: boolean;
+    roomId: string;
+    startTime: string;
+    endTime: string;
+    step: "slot" | "review";
+    title: string;
+  }>({ open: false, roomId: "M01", startTime: "09:00", endTime: "09:30", step: "slot", title: "" });
 
   // Timezone — committed once, then locked forever (per device)
   const [userTimezone, setUserTimezone] = useState<string | null>(() => {
