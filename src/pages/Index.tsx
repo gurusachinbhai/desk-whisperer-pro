@@ -3805,9 +3805,21 @@ const Index = () => {
                               <SelectValue placeholder="--:--" />
                             </SelectTrigger>
                             <SelectContent className="max-h-72">
-                              {CLOCK_SLOTS_15.map((s) => (
-                                <SelectItem key={`ws-${s.value}`} value={s.value}>{s.label}</SelectItem>
-                              ))}
+                              {CLOCK_SLOTS_15.map((s) => {
+                                const busy = busyForRoom.some(
+                                  (b) => s.minutes >= b.startMinutes && s.minutes < b.endMinutes,
+                                );
+                                return (
+                                  <SelectItem
+                                    key={`ws-${s.value}`}
+                                    value={s.value}
+                                    disabled={busy}
+                                    className={busy ? "text-destructive" : undefined}
+                                  >
+                                    {s.label}{busy ? " · booked" : ""}
+                                  </SelectItem>
+                                );
+                              })}
                             </SelectContent>
                           </Select>
                         </div>
@@ -3823,11 +3835,25 @@ const Index = () => {
                               <SelectValue placeholder="--:--" />
                             </SelectTrigger>
                             <SelectContent className="max-h-72">
-                              {CLOCK_SLOTS_15.filter((s) => (startM === null ? true : s.minutes >= startM + 15)).map((s) => (
-                                <SelectItem key={`we-${s.value}`} value={s.value}>{s.label}</SelectItem>
-                              ))}
+                              {CLOCK_SLOTS_15.filter((s) => (startM === null ? true : s.minutes >= startM + 15)).map((s) => {
+                                // End time `s` is invalid if [startM, s.minutes) overlaps any busy block
+                                const wouldOverlap =
+                                  startM !== null &&
+                                  busyForRoom.some((b) => startM < b.endMinutes && s.minutes > b.startMinutes);
+                                return (
+                                  <SelectItem
+                                    key={`we-${s.value}`}
+                                    value={s.value}
+                                    disabled={wouldOverlap}
+                                    className={wouldOverlap ? "text-destructive" : undefined}
+                                  >
+                                    {s.label}{wouldOverlap ? " · conflict" : ""}
+                                  </SelectItem>
+                                );
+                              })}
                             </SelectContent>
                           </Select>
+
                         </div>
                       </div>
                       <p className="text-[11px] font-semibold text-muted-foreground">
