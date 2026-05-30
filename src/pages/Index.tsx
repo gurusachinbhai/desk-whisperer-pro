@@ -3654,6 +3654,52 @@ const Index = () => {
                 !hasOverlap &&
                 !myOwnConflict;
 
+              // ---- Auto-skip to next available 15-min window ----
+              const myMeetingsToday = currentUser
+                ? roomMeetings.filter(
+                    (m) =>
+                      m.organizerId === currentUser.email &&
+                      m.date === dateKey &&
+                      !(dateKey === todayKeyW && m.endMinutes <= nowMinW),
+                  )
+                : [];
+              const findNextAvailable = (durationMin: number, fromMin: number) => {
+                const dur = Math.max(15, Math.round(durationMin / 15) * 15);
+                const dayEnd = 24 * 60;
+                const minStart = dateKey === todayKeyW ? Math.max(fromMin, Math.ceil(nowMinW / 15) * 15) : Math.max(0, fromMin);
+                for (let s = minStart; s + dur <= dayEnd; s += 15) {
+                  const e = s + dur;
+                  const roomBusy = busyForRoom.some((b) => s < b.endMinutes && e > b.startMinutes);
+                  if (roomBusy) continue;
+                  const ownBusy = myMeetingsToday.some((m) => s < m.endMinutes && e > m.startMinutes);
+                  if (ownBusy) continue;
+                  return { start: s, end: e };
+                }
+                return null;
+              };
+              const jumpToNextAvailable = () => {
+                const dur =
+                  startM !== null && endM !== null && endM > startM ? endM - startM : 15;
+                const from = startM !== null ? startM + 15 : 0;
+                const slot = findNextAvailable(dur, from);
+                if (!slot) {
+                  toast.error("No free slot of that length left today");
+                  return;
+                }
+                const hh = (n: number) => String(Math.floor(n / 60)).padStart(2, "0");
+                const mm = (n: number) => String(n % 60).padStart(2, "0");
+                setRoomWizard((p) => ({
+                  ...p,
+                  startTime: `${hh(slot.start)}:${mm(slot.start)}`,
+                  endTime: `${hh(slot.end)}:${mm(slot.end)}`,
+                }));
+                toast.success("Moved to next available slot", {
+                  description: `${minutesToLabel(slot.start)} – ${minutesToLabel(slot.end)}`,
+                });
+              };
+
+
+
               const goReview = () => {
                 if (startM === null || endM === null || endM < startM + 15) {
                   toast.error("Pick a valid 15-minute window");
