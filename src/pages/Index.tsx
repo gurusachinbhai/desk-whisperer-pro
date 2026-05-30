@@ -3688,20 +3688,6 @@ const Index = () => {
                 }
 
 
-                // Own conflict — one room per overlapping window
-                const ownConflict = roomMeetings.find(
-                  (m) =>
-                    m.organizerId === currentUser.email &&
-                    m.date === dateKey &&
-                    startM < m.endMinutes &&
-                    endM > m.startMinutes,
-                );
-                if (ownConflict) {
-                  toast.error("You already have a room booked for this time", {
-                    description: `${ownConflict.roomName} · ${minutesToLabel(ownConflict.startMinutes)} – ${minutesToLabel(ownConflict.endMinutes)}`,
-                  });
-                  return;
-                }
 
                 const meeting: RoomMeeting = {
                   id: `${Date.now()}`,
