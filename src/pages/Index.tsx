@@ -3623,8 +3623,13 @@ const Index = () => {
                 .filter((m) => !(dateKey === todayKeyW && m.endMinutes <= nowMinW))
                 .sort((a, b) => a.startMinutes - b.startMinutes);
 
+              const conflictingBookings =
+                startM !== null && endM !== null
+                  ? busyForRoom.filter((b) => startM < b.endMinutes && endM > b.startMinutes)
+                  : [];
               const overlapsBusy = (s: number, e: number) =>
                 busyForRoom.some((b) => s < b.endMinutes && e > b.startMinutes);
+
 
               // Cross-room: any of my own meetings on this date that overlap
               const myOwnConflict =
