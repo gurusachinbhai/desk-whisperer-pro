@@ -4108,7 +4108,7 @@ const Index = () => {
                           type="button"
                           variant="secondary"
                           size="sm"
-                          onClick={jumpToNextAvailable}
+                          onClick={() => jumpToNextAvailable()}
                           className="w-full"
                         >
                           Auto-skip to next available slot
