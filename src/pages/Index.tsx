@@ -3314,8 +3314,9 @@ const Index = () => {
           </div>
         </div>
 
-        {/* Date + Shift — primary controls */}
-        <div className="grid gap-3 sm:grid-cols-2">
+        {/* Date + Shift — primary controls (Shift hidden for room bookings) */}
+        <div className={cn("grid gap-3", bookingKind === "desk" && "sm:grid-cols-2")}>
+
           {/* Date */}
           <div className="rounded-2xl bg-surface-raised p-4 shadow-card">
             <div className="flex items-center justify-between">
