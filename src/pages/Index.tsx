@@ -3623,8 +3623,13 @@ const Index = () => {
                 .filter((m) => !(dateKey === todayKeyW && m.endMinutes <= nowMinW))
                 .sort((a, b) => a.startMinutes - b.startMinutes);
 
+              const conflictingBookings =
+                startM !== null && endM !== null
+                  ? busyForRoom.filter((b) => startM < b.endMinutes && endM > b.startMinutes)
+                  : [];
               const overlapsBusy = (s: number, e: number) =>
                 busyForRoom.some((b) => s < b.endMinutes && e > b.startMinutes);
+
 
               // Cross-room: any of my own meetings on this date that overlap
               const myOwnConflict =
@@ -3655,9 +3660,15 @@ const Index = () => {
                   return;
                 }
                 if (hasOverlap) {
-                  toast.error("This room is already booked for that time");
+                  const c = conflictingBookings[0];
+                  toast.error(`${wizardRoom.name} is already booked at that time`, {
+                    description: c
+                      ? `${minutesToLabel(c.startMinutes)} – ${minutesToLabel(c.endMinutes)} · ${c.organizerName}${c.title ? ` (${c.title})` : ""}`
+                      : undefined,
+                  });
                   return;
                 }
+
                 if (myOwnConflict) {
                   toast.error("You already have a meeting at that time", {
                     description: `${myOwnConflict.roomName} · ${minutesToLabel(myOwnConflict.startMinutes)} – ${minutesToLabel(myOwnConflict.endMinutes)}`,
@@ -3677,9 +3688,15 @@ const Index = () => {
                   return;
                 }
                 if (hasOverlap) {
-                  toast.error("This room is already booked for that time");
+                  const c = conflictingBookings[0];
+                  toast.error(`${wizardRoom.name} is already booked at that time`, {
+                    description: c
+                      ? `${minutesToLabel(c.startMinutes)} – ${minutesToLabel(c.endMinutes)} · ${c.organizerName}${c.title ? ` (${c.title})` : ""}`
+                      : undefined,
+                  });
                   return;
                 }
+
                 if (myOwnConflict) {
                   toast.error("You already have a meeting at that time", {
                     description: `${myOwnConflict.roomName} · ${minutesToLabel(myOwnConflict.startMinutes)} – ${minutesToLabel(myOwnConflict.endMinutes)}`,
@@ -3840,17 +3857,32 @@ const Index = () => {
                         )}
                       </div>
 
-                      {startM !== null && endM !== null && overlapsBusy(startM, endM) && (
-                        <p className="rounded-xl bg-destructive/10 px-3 py-2 text-[11px] font-extrabold text-destructive">
-                          This room is already booked for the selected window. Pick a different slot.
-                        </p>
+                      {conflictingBookings.length > 0 && (
+                        <div className="rounded-xl bg-destructive/10 px-3 py-2 text-[11px] font-extrabold text-destructive">
+                          <p>
+                            {wizardRoom.name} is already booked for the selected window. Pick a different slot.
+                          </p>
+                          <ul className="mt-1 space-y-0.5 font-bold">
+                            {conflictingBookings.map((c) => (
+                              <li key={c.id}>
+                                • {minutesToLabel(c.startMinutes)} – {minutesToLabel(c.endMinutes)} · {c.organizerName}
+                                {c.title ? ` (${c.title})` : ""}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
                       )}
 
                       {myOwnConflict && (
-                        <p className="rounded-xl bg-destructive/10 px-3 py-2 text-[11px] font-extrabold text-destructive">
-                          You already have a meeting at this time in {myOwnConflict.roomName} ({minutesToLabel(myOwnConflict.startMinutes)} – {minutesToLabel(myOwnConflict.endMinutes)}).
-                        </p>
+                        <div className="rounded-xl bg-destructive/10 px-3 py-2 text-[11px] font-extrabold text-destructive">
+                          You already have a meeting at this time:
+                          <div className="mt-1 font-bold">
+                            • {myOwnConflict.roomName} · {minutesToLabel(myOwnConflict.startMinutes)} – {minutesToLabel(myOwnConflict.endMinutes)}
+                            {myOwnConflict.title ? ` (${myOwnConflict.title})` : ""}
+                          </div>
+                        </div>
                       )}
+
 
 
                       <div className="flex justify-end gap-2 pt-2">
