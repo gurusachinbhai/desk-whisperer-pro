@@ -3857,17 +3857,32 @@ const Index = () => {
                         )}
                       </div>
 
-                      {startM !== null && endM !== null && overlapsBusy(startM, endM) && (
-                        <p className="rounded-xl bg-destructive/10 px-3 py-2 text-[11px] font-extrabold text-destructive">
-                          This room is already booked for the selected window. Pick a different slot.
-                        </p>
+                      {conflictingBookings.length > 0 && (
+                        <div className="rounded-xl bg-destructive/10 px-3 py-2 text-[11px] font-extrabold text-destructive">
+                          <p>
+                            {wizardRoom.name} is already booked for the selected window. Pick a different slot.
+                          </p>
+                          <ul className="mt-1 space-y-0.5 font-bold">
+                            {conflictingBookings.map((c) => (
+                              <li key={c.id}>
+                                • {minutesToLabel(c.startMinutes)} – {minutesToLabel(c.endMinutes)} · {c.organizerName}
+                                {c.title ? ` (${c.title})` : ""}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
                       )}
 
                       {myOwnConflict && (
-                        <p className="rounded-xl bg-destructive/10 px-3 py-2 text-[11px] font-extrabold text-destructive">
-                          You already have a meeting at this time in {myOwnConflict.roomName} ({minutesToLabel(myOwnConflict.startMinutes)} – {minutesToLabel(myOwnConflict.endMinutes)}).
-                        </p>
+                        <div className="rounded-xl bg-destructive/10 px-3 py-2 text-[11px] font-extrabold text-destructive">
+                          You already have a meeting at this time:
+                          <div className="mt-1 font-bold">
+                            • {myOwnConflict.roomName} · {minutesToLabel(myOwnConflict.startMinutes)} – {minutesToLabel(myOwnConflict.endMinutes)}
+                            {myOwnConflict.title ? ` (${myOwnConflict.title})` : ""}
+                          </div>
+                        </div>
                       )}
+
 
 
                       <div className="flex justify-end gap-2 pt-2">
