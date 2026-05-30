@@ -3495,24 +3495,36 @@ const Index = () => {
         ) : (
           <div className="rounded-2xl bg-surface-raised p-4 shadow-card">
             <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Meeting room</p>
+            <p className="mt-1 text-[11px] font-semibold text-muted-foreground">
+              Pick a room to choose a 15-minute time slot, then review and confirm.
+            </p>
             <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-5">
-              {meetingRooms.map((room) => (
+              {meetingRoomCatalog.map((room) => (
                 <button
-                  key={room}
+                  key={room.id}
                   type="button"
                   onClick={() => {
-                    setSelectedRoom(room);
-                    setTimeout(() => handleConfirmBooking(room, "room"), 0);
+                    setSelectedRoom(room.id);
+                    setRoomWizard({
+                      open: true,
+                      roomId: room.id,
+                      startTime: "09:00",
+                      endTime: "09:30",
+                      step: "slot",
+                      title: "",
+                    });
                   }}
                   className={cn(
                     "focus-premium flex flex-col items-center gap-1 rounded-2xl border-2 p-3 text-xs font-extrabold transition-all",
-                    selectedRoom === room
+                    selectedRoom === room.id
                       ? "border-primary bg-primary text-primary-foreground shadow-glow"
                       : "border-border bg-background hover:border-primary/40",
                   )}
                 >
                   <DoorOpen className="h-4 w-4" />
-                  {room}
+                  {room.id}
+                  <span className="text-[10px] font-semibold opacity-80">{room.name}</span>
+                  <span className="text-[10px] font-semibold opacity-70">Seats {room.capacity}</span>
                 </button>
               ))}
             </div>
