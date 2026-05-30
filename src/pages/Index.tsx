@@ -3860,6 +3860,74 @@ const Index = () => {
                         Round-the-clock 15-minute slots. Room auto-releases when the slot ends.
                       </p>
 
+                      {/* 24h × 15-min slot strip */}
+                      <div>
+                        <div className="flex items-center justify-between">
+                          <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+                            Day at a glance · 15-min slots
+                          </p>
+                          <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground">
+                            <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-sm bg-surface-muted ring-1 ring-border" />Free</span>
+                            <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-sm bg-primary" />Selected</span>
+                            <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-sm bg-destructive/70" />Booked</span>
+                          </div>
+                        </div>
+                        <div className="mt-1 grid grid-cols-24 gap-[2px] rounded-xl bg-surface-muted p-2">
+                          {Array.from({ length: 24 }).map((_, hour) => (
+                            <div key={`hr-${hour}`} className="flex flex-col items-center gap-[2px]">
+                              <div className="grid grid-cols-1 gap-[2px]">
+                                {[0, 15, 30, 45].map((mm) => {
+                                  const slotStart = hour * 60 + mm;
+                                  const slotEnd = slotStart + 15;
+                                  const conflict = busyForRoom.find(
+                                    (b) => slotStart < b.endMinutes && slotEnd > b.startMinutes,
+                                  );
+                                  const inSelection =
+                                    startM !== null && endM !== null && slotStart >= startM && slotEnd <= endM;
+                                  const past = dateKey === todayKeyW && slotEnd <= nowMinW;
+                                  const cls = past
+                                    ? "bg-muted/40"
+                                    : conflict
+                                      ? "bg-destructive/70 hover:bg-destructive"
+                                      : inSelection
+                                        ? "bg-primary"
+                                        : "bg-background ring-1 ring-border hover:bg-primary/20";
+                                  const title = conflict
+                                    ? `${minutesToLabel(conflict.startMinutes)} – ${minutesToLabel(conflict.endMinutes)} · ${conflict.organizerName}${conflict.title ? ` (${conflict.title})` : ""}`
+                                    : `${minutesToLabel(slotStart)} – ${minutesToLabel(slotEnd)}${past ? " · past" : conflict ? "" : inSelection ? " · selected" : " · free"}`;
+                                  return (
+                                    <button
+                                      key={`sl-${slotStart}`}
+                                      type="button"
+                                      title={title}
+                                      disabled={past || Boolean(conflict)}
+                                      onClick={() => {
+                                        const hh = String(Math.floor(slotStart / 60)).padStart(2, "0");
+                                        const mmS = String(slotStart % 60).padStart(2, "0");
+                                        const eh = String(Math.floor(slotEnd / 60)).padStart(2, "0");
+                                        const em = String(slotEnd % 60).padStart(2, "0");
+                                        setRoomWizard((p) => ({
+                                          ...p,
+                                          startTime: `${hh}:${mmS}`,
+                                          endTime: `${eh}:${em}`,
+                                        }));
+                                      }}
+                                      className={cn("h-2 w-3 rounded-[2px] transition disabled:cursor-not-allowed", cls)}
+                                      aria-label={title}
+                                    />
+                                  );
+                                })}
+                              </div>
+                              <span className="text-[8px] font-bold text-muted-foreground">{String(hour).padStart(2, "0")}</span>
+                            </div>
+                          ))}
+                        </div>
+                        <p className="mt-1 text-[10px] font-semibold text-muted-foreground">
+                          Hover a slot for details. Click any free slot to set a 15-min window — then extend the end time above.
+                        </p>
+                      </div>
+
+
                       <div>
                         <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
                           Already booked for {wizardRoom.name}
