@@ -4022,7 +4022,17 @@ const Index = () => {
                           </div>
                         </div>
                       )}
-
+                      {(hasOverlap || myOwnConflict) && (
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          onClick={jumpToNextAvailable}
+                          className="w-full"
+                        >
+                          Auto-skip to next available slot
+                        </Button>
+                      )}
 
 
                       <div className="flex justify-end gap-2 pt-2">
