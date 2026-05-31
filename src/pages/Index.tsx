@@ -386,6 +386,9 @@ const Index = () => {
   const autoSkipHydratedRef = useRef(false);
   const lastAutoSkipJsonRef = useRef<string>("");
 
+  type SyncStatus = "idle" | "loading" | "synced" | "error";
+  const [autoSkipSyncStatus, setAutoSkipSyncStatus] = useState<SyncStatus>("idle");
+
   // Load auto-skip prefs from the user's profile (cross-device) on sign-in
   useEffect(() => {
     let cancelled = false;
