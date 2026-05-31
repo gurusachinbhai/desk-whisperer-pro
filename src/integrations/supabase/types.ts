@@ -2013,6 +2013,27 @@ export type Database = {
           },
         ]
       }
+      user_preferences: {
+        Row: {
+          auto_skip_prefs: Json
+          created_at: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          auto_skip_prefs?: Json
+          created_at?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          auto_skip_prefs?: Json
+          created_at?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           company_id: string | null
