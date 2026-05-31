@@ -14,7 +14,10 @@ import {
   LogIn,
   Camera,
   Check,
+  Cloud,
+  CloudOff,
   Copy,
+  Loader2,
   Sparkles,
   DoorOpen,
   Download,
@@ -383,34 +386,46 @@ const Index = () => {
   const autoSkipHydratedRef = useRef(false);
   const lastAutoSkipJsonRef = useRef<string>("");
 
+  type SyncStatus = "idle" | "loading" | "synced" | "error";
+  const [autoSkipSyncStatus, setAutoSkipSyncStatus] = useState<SyncStatus>("idle");
+
   // Load auto-skip prefs from the user's profile (cross-device) on sign-in
   useEffect(() => {
     let cancelled = false;
     if (!authUserId) {
       autoSkipHydratedRef.current = true;
+      setAutoSkipSyncStatus("idle");
       return;
     }
     autoSkipHydratedRef.current = false;
+    setAutoSkipSyncStatus("loading");
     (async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("user_preferences")
         .select("auto_skip_prefs")
         .eq("user_id", authUserId)
         .maybeSingle();
       if (cancelled) return;
+      if (error) {
+        setAutoSkipSyncStatus("error");
+        autoSkipHydratedRef.current = true;
+        return;
+      }
       const remote = (data?.auto_skip_prefs ?? null) as AutoSkipPrefs | null;
       if (remote && Array.isArray(remote.avoid) && typeof remote.maxSkips === "number") {
         lastAutoSkipJsonRef.current = JSON.stringify(remote);
         setAutoSkipPrefs(remote);
+        setAutoSkipSyncStatus("synced");
       } else {
         // No remote row yet — seed it from current (localStorage-backed) state
         lastAutoSkipJsonRef.current = JSON.stringify(autoSkipPrefs);
-        await supabase
+        const { error: upsertError } = await supabase
           .from("user_preferences")
           .upsert(
             { user_id: authUserId, auto_skip_prefs: autoSkipPrefs as any },
             { onConflict: "user_id" },
           );
+        setAutoSkipSyncStatus(upsertError ? "error" : "synced");
       }
       autoSkipHydratedRef.current = true;
     })();
@@ -431,6 +446,7 @@ const Index = () => {
     const json = JSON.stringify(autoSkipPrefs);
     if (json === lastAutoSkipJsonRef.current) return;
     lastAutoSkipJsonRef.current = json;
+    setAutoSkipSyncStatus("loading");
     const t = window.setTimeout(() => {
       supabase
         .from("user_preferences")
@@ -438,7 +454,9 @@ const Index = () => {
           { user_id: authUserId, auto_skip_prefs: autoSkipPrefs as any },
           { onConflict: "user_id" },
         )
-        .then(() => {});
+        .then(({ error }) => {
+          setAutoSkipSyncStatus(error ? "error" : "synced");
+        });
     }, 400);
     return () => window.clearTimeout(t);
   }, [autoSkipPrefs, authUserId]);
@@ -4147,9 +4165,37 @@ const Index = () => {
                           </span>
                         </button>
                         {!showAutoSkipSettings && (
-                          <p className="mt-1 text-[10px] font-semibold text-muted-foreground">
-                            Avoiding {autoSkipPrefs.avoid.length} window{autoSkipPrefs.avoid.length === 1 ? "" : "s"} · prompts after {autoSkipPrefs.maxSkips} skips
-                          </p>
+                          <div className="mt-1 flex items-center justify-between">
+                            <p className="text-[10px] font-semibold text-muted-foreground">
+                              Avoiding {autoSkipPrefs.avoid.length} window{autoSkipPrefs.avoid.length === 1 ? "" : "s"} · prompts after {autoSkipPrefs.maxSkips} skips
+                            </p>
+                            <span className="flex items-center gap-1 text-[10px] font-bold">
+                              {autoSkipSyncStatus === "loading" && (
+                                <>
+                                  <Loader2 className="h-3 w-3 animate-spin text-primary" />
+                                  <span className="text-primary">Syncing…</span>
+                                </>
+                              )}
+                              {autoSkipSyncStatus === "synced" && (
+                                <>
+                                  <Cloud className="h-3 w-3 text-emerald-500" />
+                                  <span className="text-emerald-500">Saved</span>
+                                </>
+                              )}
+                              {autoSkipSyncStatus === "error" && (
+                                <>
+                                  <CloudOff className="h-3 w-3 text-destructive" />
+                                  <span className="text-destructive">Sync failed</span>
+                                </>
+                              )}
+                              {autoSkipSyncStatus === "idle" && authUserId && (
+                                <>
+                                  <Cloud className="h-3 w-3 text-muted-foreground" />
+                                  <span className="text-muted-foreground">Local only</span>
+                                </>
+                              )}
+                            </span>
+                          </div>
                         )}
                         {showAutoSkipSettings && (
                           <div className="mt-2 space-y-2">
