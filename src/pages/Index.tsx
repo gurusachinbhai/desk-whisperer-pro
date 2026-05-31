@@ -380,13 +380,69 @@ const Index = () => {
     return { avoid: [{ id: "lunch", start: "12:00", end: "13:00", label: "Lunch" }], maxSkips: 5 };
   });
   const [showAutoSkipSettings, setShowAutoSkipSettings] = useState(false);
+  const autoSkipHydratedRef = useRef(false);
+  const lastAutoSkipJsonRef = useRef<string>("");
+
+  // Load auto-skip prefs from the user's profile (cross-device) on sign-in
+  useEffect(() => {
+    let cancelled = false;
+    if (!authUserId) {
+      autoSkipHydratedRef.current = true;
+      return;
+    }
+    autoSkipHydratedRef.current = false;
+    (async () => {
+      const { data } = await supabase
+        .from("user_preferences")
+        .select("auto_skip_prefs")
+        .eq("user_id", authUserId)
+        .maybeSingle();
+      if (cancelled) return;
+      const remote = (data?.auto_skip_prefs ?? null) as AutoSkipPrefs | null;
+      if (remote && Array.isArray(remote.avoid) && typeof remote.maxSkips === "number") {
+        lastAutoSkipJsonRef.current = JSON.stringify(remote);
+        setAutoSkipPrefs(remote);
+      } else {
+        // No remote row yet — seed it from current (localStorage-backed) state
+        lastAutoSkipJsonRef.current = JSON.stringify(autoSkipPrefs);
+        await supabase
+          .from("user_preferences")
+          .upsert(
+            { user_id: authUserId, auto_skip_prefs: autoSkipPrefs as any },
+            { onConflict: "user_id" },
+          );
+      }
+      autoSkipHydratedRef.current = true;
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authUserId]);
+
+  // Persist to localStorage (offline fallback) + user profile (cross-device)
   useEffect(() => {
     try {
       window.localStorage.setItem(AUTO_SKIP_KEY, JSON.stringify(autoSkipPrefs));
     } catch {
       /* ignore */
     }
-  }, [autoSkipPrefs]);
+    if (!authUserId || !autoSkipHydratedRef.current) return;
+    const json = JSON.stringify(autoSkipPrefs);
+    if (json === lastAutoSkipJsonRef.current) return;
+    lastAutoSkipJsonRef.current = json;
+    const t = window.setTimeout(() => {
+      supabase
+        .from("user_preferences")
+        .upsert(
+          { user_id: authUserId, auto_skip_prefs: autoSkipPrefs as any },
+          { onConflict: "user_id" },
+        )
+        .then(() => {});
+    }, 400);
+    return () => window.clearTimeout(t);
+  }, [autoSkipPrefs, authUserId]);
+
   // Remembers where to resume the search after a "prompt to keep going"
   const autoSkipResumeRef = useRef<number | null>(null);
 
