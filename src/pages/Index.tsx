@@ -394,29 +394,38 @@ const Index = () => {
     let cancelled = false;
     if (!authUserId) {
       autoSkipHydratedRef.current = true;
+      setAutoSkipSyncStatus("idle");
       return;
     }
     autoSkipHydratedRef.current = false;
+    setAutoSkipSyncStatus("loading");
     (async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("user_preferences")
         .select("auto_skip_prefs")
         .eq("user_id", authUserId)
         .maybeSingle();
       if (cancelled) return;
+      if (error) {
+        setAutoSkipSyncStatus("error");
+        autoSkipHydratedRef.current = true;
+        return;
+      }
       const remote = (data?.auto_skip_prefs ?? null) as AutoSkipPrefs | null;
       if (remote && Array.isArray(remote.avoid) && typeof remote.maxSkips === "number") {
         lastAutoSkipJsonRef.current = JSON.stringify(remote);
         setAutoSkipPrefs(remote);
+        setAutoSkipSyncStatus("synced");
       } else {
         // No remote row yet — seed it from current (localStorage-backed) state
         lastAutoSkipJsonRef.current = JSON.stringify(autoSkipPrefs);
-        await supabase
+        const { error: upsertError } = await supabase
           .from("user_preferences")
           .upsert(
             { user_id: authUserId, auto_skip_prefs: autoSkipPrefs as any },
             { onConflict: "user_id" },
           );
+        setAutoSkipSyncStatus(upsertError ? "error" : "synced");
       }
       autoSkipHydratedRef.current = true;
     })();
@@ -437,6 +446,7 @@ const Index = () => {
     const json = JSON.stringify(autoSkipPrefs);
     if (json === lastAutoSkipJsonRef.current) return;
     lastAutoSkipJsonRef.current = json;
+    setAutoSkipSyncStatus("loading");
     const t = window.setTimeout(() => {
       supabase
         .from("user_preferences")
@@ -444,7 +454,9 @@ const Index = () => {
           { user_id: authUserId, auto_skip_prefs: autoSkipPrefs as any },
           { onConflict: "user_id" },
         )
-        .then(() => {});
+        .then(({ error }) => {
+          setAutoSkipSyncStatus(error ? "error" : "synced");
+        });
     }, 400);
     return () => window.clearTimeout(t);
   }, [autoSkipPrefs, authUserId]);
