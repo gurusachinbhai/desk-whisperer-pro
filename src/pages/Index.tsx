@@ -4165,9 +4165,37 @@ const Index = () => {
                           </span>
                         </button>
                         {!showAutoSkipSettings && (
-                          <p className="mt-1 text-[10px] font-semibold text-muted-foreground">
-                            Avoiding {autoSkipPrefs.avoid.length} window{autoSkipPrefs.avoid.length === 1 ? "" : "s"} · prompts after {autoSkipPrefs.maxSkips} skips
-                          </p>
+                          <div className="mt-1 flex items-center justify-between">
+                            <p className="text-[10px] font-semibold text-muted-foreground">
+                              Avoiding {autoSkipPrefs.avoid.length} window{autoSkipPrefs.avoid.length === 1 ? "" : "s"} · prompts after {autoSkipPrefs.maxSkips} skips
+                            </p>
+                            <span className="flex items-center gap-1 text-[10px] font-bold">
+                              {autoSkipSyncStatus === "loading" && (
+                                <>
+                                  <Loader2 className="h-3 w-3 animate-spin text-primary" />
+                                  <span className="text-primary">Syncing…</span>
+                                </>
+                              )}
+                              {autoSkipSyncStatus === "synced" && (
+                                <>
+                                  <Cloud className="h-3 w-3 text-emerald-500" />
+                                  <span className="text-emerald-500">Saved</span>
+                                </>
+                              )}
+                              {autoSkipSyncStatus === "error" && (
+                                <>
+                                  <CloudOff className="h-3 w-3 text-destructive" />
+                                  <span className="text-destructive">Sync failed</span>
+                                </>
+                              )}
+                              {autoSkipSyncStatus === "idle" && authUserId && (
+                                <>
+                                  <Cloud className="h-3 w-3 text-muted-foreground" />
+                                  <span className="text-muted-foreground">Local only</span>
+                                </>
+                              )}
+                            </span>
+                          </div>
                         )}
                         {showAutoSkipSettings && (
                           <div className="mt-2 space-y-2">
