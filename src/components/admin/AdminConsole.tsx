@@ -1,7 +1,9 @@
 import { useState, ReactNode } from "react";
 import {
-  LayoutDashboard, UserPlus, LogOut, Search, Building2, FileText, Armchair, Bell, BarChart3, CreditCard, Menu, X, GraduationCap, ClipboardList, FolderArchive, MapPin, Laptop, Calculator, Sparkles, ShieldAlert,
+  LayoutDashboard, UserPlus, LogOut, Search, Building2, FileText, Armchair, Bell, BarChart3, CreditCard, Menu, X, GraduationCap, ClipboardList, FolderArchive, MapPin, Laptop, Calculator, Sparkles, ShieldAlert, Users, Package,
 } from "lucide-react";
+import AdminCRMPanel from "./AdminCRMPanel";
+import AdminInventoryPanel from "./AdminInventoryPanel";
 import AdminAssistantLogsPanel from "./AdminAssistantLogsPanel";
 import AdminITEscalationsPanel from "./AdminITEscalationsPanel";
 import AdminOnboardingPanel from "./AdminOnboardingPanel";
@@ -19,7 +21,7 @@ import AppraisalPanel from "@/components/AppraisalPanel";
 
 type Section =
   | "dashboard" | "onboarding" | "resignation" | "search"
-  | "departments" | "documents" | "training" | "appraisal" | "resumes" | "seats" | "attendance" | "itassets" | "accounting" | "assistantlogs" | "itescalations" | "announcements" | "reports" | "billing";
+  | "departments" | "documents" | "training" | "appraisal" | "resumes" | "seats" | "attendance" | "itassets" | "accounting" | "crm" | "inventory" | "assistantlogs" | "itescalations" | "announcements" | "reports" | "billing";
 
 type Props = {
   companyId: string;
@@ -46,6 +48,8 @@ const NAV: { id: Section; label: string; icon: any; group: string }[] = [
   { id: "attendance", label: "Attendance & Geo", icon: MapPin, group: "Workspace" },
   { id: "itassets", label: "IT Asset Management", icon: Laptop, group: "Workspace" },
   { id: "accounting", label: "Accounting", icon: Calculator, group: "Workspace" },
+  { id: "crm", label: "CRM", icon: Users, group: "Workspace" },
+  { id: "inventory", label: "Inventory", icon: Package, group: "Workspace" },
   { id: "announcements", label: "Announcements", icon: Bell, group: "Comms" },
   { id: "assistantlogs", label: "AI Assistant Logs", icon: Sparkles, group: "Comms" },
   { id: "itescalations", label: "IT Security Escalations", icon: ShieldAlert, group: "Comms" },
@@ -76,6 +80,8 @@ export default function AdminConsole({
       case "attendance": return <AdminAttendancePanel companyId={companyId} />;
       case "itassets": return <AdminITAssetPanel companyId={companyId} uploaderName={uploaderName} meUserId={meUserId} />;
       case "accounting": return <AdminAccountingPanel companyId={companyId} uploaderName={uploaderName} meUserId={meUserId} />;
+      case "crm": return <AdminCRMPanel companyId={companyId} uploaderName={uploaderName} />;
+      case "inventory": return <AdminInventoryPanel companyId={companyId} uploaderName={uploaderName} />;
       case "announcements": return renderAnnouncements?.() ?? <Empty label="Announcements" />;
       case "assistantlogs": return <AdminAssistantLogsPanel companyId={companyId} />;
       case "itescalations": return <AdminITEscalationsPanel companyId={companyId} />;
