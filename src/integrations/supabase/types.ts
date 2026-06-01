@@ -1944,6 +1944,63 @@ export type Database = {
         }
         Relationships: []
       }
+      sales_entries: {
+        Row: {
+          amount: number
+          buyer_contact: string | null
+          buyer_name: string
+          company_id: string
+          created_at: string
+          created_by: string | null
+          created_by_name: string | null
+          currency: string
+          entry_type: string
+          id: string
+          notes: string | null
+          product_name: string
+          sale_date: string
+          seller_name: string
+          seller_user_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          buyer_contact?: string | null
+          buyer_name: string
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          created_by_name?: string | null
+          currency?: string
+          entry_type?: string
+          id?: string
+          notes?: string | null
+          product_name: string
+          sale_date?: string
+          seller_name: string
+          seller_user_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          buyer_contact?: string | null
+          buyer_name?: string
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          created_by_name?: string | null
+          currency?: string
+          entry_type?: string
+          id?: string
+          notes?: string | null
+          product_name?: string
+          sale_date?: string
+          seller_name?: string
+          seller_user_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       support_ticket_comments: {
         Row: {
           attachments: string[]
@@ -2535,6 +2592,7 @@ export type Database = {
       }
       is_company_manager: { Args: { _company_id: string }; Returns: boolean }
       is_company_member: { Args: { _company_id: string }; Returns: boolean }
+      is_sales_member: { Args: { _company_id: string }; Returns: boolean }
       is_super_admin: { Args: never; Returns: boolean }
       join_company_profile: {
         Args: {
