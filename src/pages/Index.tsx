@@ -55,11 +55,12 @@ import { useRecordsPersistence } from "@/hooks/use-records-persistence";
 import hrgreatlyLogo from "@/assets/hrgreatly-logo.png";
 import DocumentsPanel from "@/components/DocumentsPanel";
 import TrainingPanel from "@/components/TrainingPanel";
+import SalesTeamPanel from "@/components/SalesTeamPanel";
 import AppraisalPanel from "@/components/AppraisalPanel";
 import AssistantPanel from "@/components/AssistantPanel";
 import AttendanceMap from "@/components/AttendanceMap";
 import BiometricCheckIn from "@/components/BiometricCheckIn";
-import { GraduationCap, ClipboardList } from "lucide-react";
+import { GraduationCap, ClipboardList, TrendingUp } from "lucide-react";
 import AdminDocumentsPanel from "@/components/AdminDocumentsPanel";
 import AdminDepartmentsPanel from "@/components/AdminDepartmentsPanel";
 import AdminConsole from "@/components/admin/AdminConsole";
@@ -124,7 +125,7 @@ type EmployeeInvite = {
 };
 
 type AppMode = "signup" | "login";
-type ActiveTab = "home" | "book" | "attendance" | "leave" | "payroll" | "documents" | "training" | "appraisal" | "assistant" | "billing" | "reports" | "map" | "rooms" | "directory" | "admin" | "team";
+type ActiveTab = "home" | "book" | "attendance" | "leave" | "payroll" | "documents" | "training" | "appraisal" | "assistant" | "billing" | "reports" | "map" | "rooms" | "directory" | "admin" | "team" | "sales";
 type LoginStep = "form" | "otp";
 type LoginIdentifier = "email" | "phone";
 
@@ -243,6 +244,7 @@ const bottomTabs: { id: ActiveTab; icon: typeof CalendarCheck; label: string }[]
   { id: "documents", icon: FileText, label: "Documents" },
   { id: "training", icon: GraduationCap, label: "Training" },
   { id: "appraisal", icon: ClipboardList, label: "Appraisal" },
+  { id: "sales", icon: TrendingUp, label: "Sales" },
   { id: "assistant", icon: Sparkles, label: "AI Assistant" },
   { id: "admin", icon: BarChart3, label: "Admin" },
 ];
@@ -7007,6 +7009,13 @@ const Index = () => {
                   meEmployeeId={myEmployeeId}
                   meName={currentUser?.displayName ?? null}
                   isAdmin={!!isAdmin}
+                />
+              )}
+              {activeTab === "sales" && (
+                <SalesTeamPanel
+                  companyId={companyProfile?.id ?? null}
+                  meUserId={authUserId}
+                  meName={currentUser?.displayName ?? null}
                 />
               )}
               {activeTab === "assistant" && (
