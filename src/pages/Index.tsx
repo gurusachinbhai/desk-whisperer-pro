@@ -55,6 +55,7 @@ import { useRecordsPersistence } from "@/hooks/use-records-persistence";
 import hrgreatlyLogo from "@/assets/hrgreatly-logo.png";
 import DocumentsPanel from "@/components/DocumentsPanel";
 import TrainingPanel from "@/components/TrainingPanel";
+import SalesTeamPanel from "@/components/SalesTeamPanel";
 import AppraisalPanel from "@/components/AppraisalPanel";
 import AssistantPanel from "@/components/AssistantPanel";
 import AttendanceMap from "@/components/AttendanceMap";
