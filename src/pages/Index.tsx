@@ -7011,6 +7011,13 @@ const Index = () => {
                   isAdmin={!!isAdmin}
                 />
               )}
+              {activeTab === "sales" && (
+                <SalesTeamPanel
+                  companyId={companyProfile?.id ?? null}
+                  meUserId={authUserId}
+                  meName={currentUser?.displayName ?? null}
+                />
+              )}
               {activeTab === "assistant" && (
                 <AssistantPanel userName={currentUser?.displayName ?? null} />
               )}
