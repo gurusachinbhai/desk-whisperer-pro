@@ -151,7 +151,7 @@ export default function AdminSalarySlipPanel({ companyId, uploaderName }: Props)
       ["Tax Regime", profile.tax_regime.toUpperCase()],
     ];
     autoTable(doc, {
-      startY: 115,
+      startY: 122,
       head: [["Field", "Value"]],
       body: empRows,
       theme: "grid",
