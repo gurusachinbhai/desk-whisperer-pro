@@ -22,7 +22,7 @@ import AppraisalPanel from "@/components/AppraisalPanel";
 
 type Section =
   | "dashboard" | "onboarding" | "resignation" | "search"
-  | "departments" | "documents" | "training" | "appraisal" | "resumes" | "seats" | "attendance" | "itassets" | "accounting" | "crm" | "inventory" | "assistantlogs" | "itescalations" | "announcements" | "reports" | "billing";
+  | "departments" | "documents" | "salaryslip" | "training" | "appraisal" | "resumes" | "seats" | "attendance" | "itassets" | "accounting" | "crm" | "inventory" | "assistantlogs" | "itescalations" | "announcements" | "reports" | "billing";
 
 type Props = {
   companyId: string;
