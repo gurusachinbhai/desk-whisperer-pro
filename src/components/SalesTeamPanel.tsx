@@ -48,6 +48,7 @@ export default function SalesTeamPanel({ companyId, meUserId, meName }: Props) {
   const [saleDate, setSaleDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [teamUserIds, setTeamUserIds] = useState<Set<string>>(new Set());
 
   // Determine if current user is part of Sales department
   useEffect(() => {
