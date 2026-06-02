@@ -152,6 +152,19 @@ export default function SalesTeamPanel({ companyId, meUserId, meName }: Props) {
     fetchRows();
   };
 
+  const canModify = (r: SalesRow) =>
+    (!!meUserId && r.created_by === meUserId) ||
+    (!!r.seller_user_id && teamUserIds.has(r.seller_user_id));
+
+  const handleDelete = async (r: SalesRow) => {
+    if (!canModify(r)) return;
+    if (!confirm(`Delete this ${r.entry_type} for ${r.buyer_name}?`)) return;
+    const { error } = await supabase.from("sales_entries").delete().eq("id", r.id);
+    if (error) { toast.error(error.message || "Could not delete"); return; }
+    toast.success("Entry deleted");
+    setRows((prev) => prev.filter((x) => x.id !== r.id));
+  };
+
   const stats = useMemo(() => {
     const totals = new Map<string, { name: string; sales: number; returns: number; net: number }>();
     let totalSales = 0, totalReturns = 0;
