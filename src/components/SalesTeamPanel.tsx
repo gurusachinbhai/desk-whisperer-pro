@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, FormEvent } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { TrendingUp, TrendingDown, DollarSign, Trophy, Plus, RotateCcw, Loader2, ShieldAlert } from "lucide-react";
+import { TrendingUp, TrendingDown, DollarSign, Trophy, Plus, RotateCcw, Loader2, ShieldAlert, Trash2 } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Cell,
 } from "recharts";
@@ -48,6 +48,7 @@ export default function SalesTeamPanel({ companyId, meUserId, meName }: Props) {
   const [saleDate, setSaleDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [teamUserIds, setTeamUserIds] = useState<Set<string>>(new Set());
 
   // Determine if current user is part of Sales department
   useEffect(() => {
@@ -69,6 +70,32 @@ export default function SalesTeamPanel({ companyId, meUserId, meName }: Props) {
     })();
     return () => { alive = false; };
   }, [companyId, meUserId]);
+
+  // Load direct reports (team) for manager-scoped edit/delete
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      if (!companyId || !meUserId) return;
+      const { data: meRow } = await supabase
+        .from("employee_profiles")
+        .select("id")
+        .eq("user_id", meUserId)
+        .eq("company_id", companyId)
+        .maybeSingle();
+      const myEmpId = (meRow as any)?.id;
+      if (!myEmpId) { if (alive) setTeamUserIds(new Set()); return; }
+      const { data: reports } = await supabase
+        .from("employee_profiles")
+        .select("user_id")
+        .eq("company_id", companyId)
+        .eq("manager_id", myEmpId);
+      if (!alive) return;
+      setTeamUserIds(new Set((reports ?? []).map((r: any) => r.user_id).filter(Boolean)));
+    })();
+    return () => { alive = false; };
+  }, [companyId, meUserId]);
+
+
 
   const fetchRows = async () => {
     if (!companyId) return;
@@ -123,6 +150,19 @@ export default function SalesTeamPanel({ companyId, meUserId, meName }: Props) {
     toast.success(entryType === "sale" ? "Sale recorded" : "Return recorded");
     setProduct(""); setBuyer(""); setBuyerContact(""); setAmount(""); setNotes("");
     fetchRows();
+  };
+
+  const canModify = (r: SalesRow) =>
+    (!!meUserId && r.created_by === meUserId) ||
+    (!!r.seller_user_id && teamUserIds.has(r.seller_user_id));
+
+  const handleDelete = async (r: SalesRow) => {
+    if (!canModify(r)) return;
+    if (!confirm(`Delete this ${r.entry_type} for ${r.buyer_name}?`)) return;
+    const { error } = await supabase.from("sales_entries").delete().eq("id", r.id);
+    if (error) { toast.error(error.message || "Could not delete"); return; }
+    toast.success("Entry deleted");
+    setRows((prev) => prev.filter((x) => x.id !== r.id));
   };
 
   const stats = useMemo(() => {
@@ -272,7 +312,7 @@ export default function SalesTeamPanel({ companyId, meUserId, meName }: Props) {
               <thead className="bg-muted/40 text-left text-xs uppercase text-muted-foreground">
                 <tr>
                   <th className="p-3">Date</th><th className="p-3">Product</th><th className="p-3">Seller</th>
-                  <th className="p-3">Buyer</th><th className="p-3">Type</th><th className="p-3 text-right">Amount</th>
+                  <th className="p-3">Buyer</th><th className="p-3">Type</th><th className="p-3 text-right">Amount</th><th className="p-3"></th>
                 </tr>
               </thead>
               <tbody>
@@ -288,6 +328,17 @@ export default function SalesTeamPanel({ companyId, meUserId, meName }: Props) {
                       </span>
                     </td>
                     <td className="p-3 text-right font-mono font-bold">{r.currency} {Number(r.amount).toLocaleString()}</td>
+                    <td className="p-3 text-right">
+                      {canModify(r) && (
+                        <button
+                          onClick={() => handleDelete(r)}
+                          title="Delete entry"
+                          className="rounded-lg border border-border p-1.5 text-destructive hover:bg-destructive/10"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>

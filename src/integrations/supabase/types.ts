@@ -2592,6 +2592,10 @@ export type Database = {
       }
       is_company_manager: { Args: { _company_id: string }; Returns: boolean }
       is_company_member: { Args: { _company_id: string }; Returns: boolean }
+      is_manager_of_user: {
+        Args: { _company_id: string; _seller_user_id: string }
+        Returns: boolean
+      }
       is_sales_member: { Args: { _company_id: string }; Returns: boolean }
       is_super_admin: { Args: never; Returns: boolean }
       join_company_profile: {
