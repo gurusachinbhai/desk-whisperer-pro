@@ -8,7 +8,8 @@ import { toast } from "sonner";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { computeAnnualTax, computeMonthlySalary, formatINR, type SalaryProfile, type TaxRegime } from "@/lib/tax-calc";
-import { FileText, CheckCircle2, Eye, Upload, Download } from "lucide-react";
+import { FileText, CheckCircle2, Eye, Upload, Download, Image as ImageIcon, X } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 
 type Props = { companyId: string; uploaderName: string };
 
