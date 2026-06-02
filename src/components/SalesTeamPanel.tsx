@@ -312,7 +312,7 @@ export default function SalesTeamPanel({ companyId, meUserId, meName }: Props) {
               <thead className="bg-muted/40 text-left text-xs uppercase text-muted-foreground">
                 <tr>
                   <th className="p-3">Date</th><th className="p-3">Product</th><th className="p-3">Seller</th>
-                  <th className="p-3">Buyer</th><th className="p-3">Type</th><th className="p-3 text-right">Amount</th>
+                  <th className="p-3">Buyer</th><th className="p-3">Type</th><th className="p-3 text-right">Amount</th><th className="p-3"></th>
                 </tr>
               </thead>
               <tbody>
@@ -328,6 +328,17 @@ export default function SalesTeamPanel({ companyId, meUserId, meName }: Props) {
                       </span>
                     </td>
                     <td className="p-3 text-right font-mono font-bold">{r.currency} {Number(r.amount).toLocaleString()}</td>
+                    <td className="p-3 text-right">
+                      {canModify(r) && (
+                        <button
+                          onClick={() => handleDelete(r)}
+                          title="Delete entry"
+                          className="rounded-lg border border-border p-1.5 text-destructive hover:bg-destructive/10"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
