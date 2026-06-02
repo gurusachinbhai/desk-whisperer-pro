@@ -361,6 +361,60 @@ export default function AdminSalarySlipPanel({ companyId, uploaderName }: Props)
             </div>
           </div>
 
+          <div className="rounded-lg border border-dashed border-border bg-muted/30 p-3 space-y-3">
+            <div className="flex items-center justify-between">
+              <h4 className="text-sm font-semibold">Branding & template</h4>
+              <span className="text-xs text-muted-foreground">Edit before generating the preview</span>
+            </div>
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              <div>
+                <label className="mb-1 block text-xs font-bold text-muted-foreground">Company name (header)</label>
+                <Input value={brandName} onChange={(e) => setBrandName(e.target.value)} placeholder="Company name on slip" />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-bold text-muted-foreground">Header title</label>
+                <Input value={headerSubtitle} onChange={(e) => setHeaderSubtitle(e.target.value)} placeholder="Salary Slip" />
+              </div>
+              <div className="md:col-span-2">
+                <label className="mb-1 block text-xs font-bold text-muted-foreground">Company address</label>
+                <Textarea rows={2} value={brandAddress} onChange={(e) => setBrandAddress(e.target.value)} placeholder="Street, City, State, Postal code, Country" />
+              </div>
+              <div className="md:col-span-2">
+                <label className="mb-1 block text-xs font-bold text-muted-foreground">Header contact line</label>
+                <Input value={brandContact} onChange={(e) => setBrandContact(e.target.value)} placeholder="email@company.com | +91 99999 99999" />
+              </div>
+              <div className="md:col-span-2">
+                <label className="mb-1 block text-xs font-bold text-muted-foreground">Footer text</label>
+                <Textarea rows={2} value={footerText} onChange={(e) => setFooterText(e.target.value)} placeholder="Footer (up to 2 lines)" />
+              </div>
+              <div className="md:col-span-2">
+                <label className="mb-1 block text-xs font-bold text-muted-foreground">Logo (PNG/JPEG, optional)</label>
+                <div className="flex items-center gap-3">
+                  <label className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-md border border-input bg-background px-3 text-sm hover:bg-muted">
+                    <ImageIcon className="h-4 w-4" />
+                    <span>{logoDataUrl ? "Change logo" : "Upload logo"}</span>
+                    <input type="file" accept="image/png,image/jpeg" className="hidden"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0]; if (!f) return;
+                        if (f.size > 2 * 1024 * 1024) { toast.error("Logo must be under 2MB"); return; }
+                        const reader = new FileReader();
+                        reader.onload = () => { setLogoDataUrl(String(reader.result || "")); setLogoMime(f.type); };
+                        reader.readAsDataURL(f);
+                      }} />
+                  </label>
+                  {logoDataUrl && (
+                    <>
+                      <img src={logoDataUrl} alt="Logo preview" className="h-10 w-10 rounded border object-contain bg-white" />
+                      <Button type="button" variant="ghost" size="sm" onClick={() => { setLogoDataUrl(""); setLogoMime(""); }}>
+                        <X className="h-4 w-4" /> Remove
+                      </Button>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div className="flex flex-wrap items-center gap-3">
             <Button onClick={handlePreview} disabled={busy || !empId}>
               <Eye className="h-4 w-4" />
