@@ -31,6 +31,13 @@ export default function AdminSalarySlipPanel({ companyId, uploaderName }: Props)
   const [month, setMonth] = useState<number>(now.getMonth() + 1);
   const [year, setYear] = useState<number>(now.getFullYear());
   const [directorName, setDirectorName] = useState("");
+  const [brandName, setBrandName] = useState("");
+  const [headerSubtitle, setHeaderSubtitle] = useState("Salary Slip");
+  const [brandAddress, setBrandAddress] = useState("");
+  const [brandContact, setBrandContact] = useState("");
+  const [footerText, setFooterText] = useState("");
+  const [logoDataUrl, setLogoDataUrl] = useState<string>("");
+  const [logoMime, setLogoMime] = useState<string>("");
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [lastConfirm, setLastConfirm] = useState<string>("");
