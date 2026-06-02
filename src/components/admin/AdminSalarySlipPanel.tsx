@@ -8,7 +8,8 @@ import { toast } from "sonner";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { computeAnnualTax, computeMonthlySalary, formatINR, type SalaryProfile, type TaxRegime } from "@/lib/tax-calc";
-import { FileText, CheckCircle2, Eye, Upload, Download } from "lucide-react";
+import { FileText, CheckCircle2, Eye, Upload, Download, Image as ImageIcon, X } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 
 type Props = { companyId: string; uploaderName: string };
 
@@ -30,6 +31,13 @@ export default function AdminSalarySlipPanel({ companyId, uploaderName }: Props)
   const [month, setMonth] = useState<number>(now.getMonth() + 1);
   const [year, setYear] = useState<number>(now.getFullYear());
   const [directorName, setDirectorName] = useState("");
+  const [brandName, setBrandName] = useState("");
+  const [headerSubtitle, setHeaderSubtitle] = useState("Salary Slip");
+  const [brandAddress, setBrandAddress] = useState("");
+  const [brandContact, setBrandContact] = useState("");
+  const [footerText, setFooterText] = useState("");
+  const [logoDataUrl, setLogoDataUrl] = useState<string>("");
+  const [logoMime, setLogoMime] = useState<string>("");
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [lastConfirm, setLastConfirm] = useState<string>("");
@@ -55,7 +63,15 @@ export default function AdminSalarySlipPanel({ companyId, uploaderName }: Props)
           .eq("id", companyId).maybeSingle(),
       ]);
       setEmployees((empRes.data ?? []) as Emp[]);
-      setCompany((coRes.data ?? null) as Company | null);
+      const co = (coRes.data ?? null) as Company | null;
+      setCompany(co);
+      if (co) {
+        setBrandName((prev) => prev || co.name || "");
+        const addr = [co.address_line1, co.address_line2, [co.city, co.state, co.postal_code].filter(Boolean).join(", "), co.country].filter(Boolean).join(" • ");
+        setBrandAddress((prev) => prev || addr);
+        setBrandContact((prev) => prev || [co.contact_email, co.contact_phone].filter(Boolean).join(" | "));
+        setFooterText((prev) => prev || `${co.name || ""}${addr ? " • " + addr : ""}`);
+      }
     })();
   }, [companyId]);
 
@@ -103,19 +119,27 @@ export default function AdminSalarySlipPanel({ companyId, uploaderName }: Props)
     const H = doc.internal.pageSize.getHeight();
 
     doc.setFillColor(20, 33, 61);
-    doc.rect(0, 0, W, 70, "F");
+    doc.rect(0, 0, W, 80, "F");
+
+    let textLeft = 40;
+    if (logoDataUrl) {
+      try {
+        const fmt = logoMime.includes("png") ? "PNG" : logoMime.includes("jpeg") || logoMime.includes("jpg") ? "JPEG" : "PNG";
+        doc.addImage(logoDataUrl, fmt, 40, 14, 52, 52);
+        textLeft = 110;
+      } catch { /* ignore bad image */ }
+    }
+
     doc.setTextColor(255, 255, 255);
     doc.setFont("helvetica", "bold"); doc.setFontSize(18);
-    doc.text(company?.name || "Company", 40, 32);
+    doc.text(brandName || company?.name || "Company", textLeft, 32);
     doc.setFont("helvetica", "normal"); doc.setFontSize(9);
-    doc.text(addrLine || "", 40, 50, { maxWidth: W - 80 });
-    if (company?.contact_email || company?.contact_phone) {
-      doc.text([company?.contact_email, company?.contact_phone].filter(Boolean).join(" | "), 40, 62);
-    }
+    if (brandAddress) doc.text(brandAddress, textLeft, 50, { maxWidth: W - textLeft - 40 });
+    if (brandContact) doc.text(brandContact, textLeft, 62, { maxWidth: W - textLeft - 40 });
 
     doc.setTextColor(20, 33, 61);
     doc.setFont("helvetica", "bold"); doc.setFontSize(14);
-    doc.text(`Salary Slip — ${MONTHS[month - 1]} ${year}`, 40, 100);
+    doc.text(`${headerSubtitle || "Salary Slip"} — ${MONTHS[month - 1]} ${year}`, 40, 108);
 
     doc.setTextColor(40);
     doc.setFont("helvetica", "normal"); doc.setFontSize(10);
@@ -127,7 +151,7 @@ export default function AdminSalarySlipPanel({ companyId, uploaderName }: Props)
       ["Tax Regime", profile.tax_regime.toUpperCase()],
     ];
     autoTable(doc, {
-      startY: 115,
+      startY: 122,
       head: [["Field", "Value"]],
       body: empRows,
       theme: "grid",
@@ -199,12 +223,12 @@ export default function AdminSalarySlipPanel({ companyId, uploaderName }: Props)
     doc.setFontSize(8); doc.setTextColor(110);
     doc.text("This is a system-generated salary slip. Figures are computed from the latest salary profile on record.", 40, sigY + 14, { maxWidth: W - 280 });
 
+    const footLines = (footerText || `${brandName || company?.name || ""}${brandAddress ? " • " + brandAddress : ""}`).split("\n").slice(0, 2);
     doc.setFillColor(240, 243, 250);
-    doc.rect(0, H - 38, W, 38, "F");
+    doc.rect(0, H - 42, W, 42, "F");
     doc.setTextColor(60);
     doc.setFont("helvetica", "normal"); doc.setFontSize(8);
-    doc.text(company?.name || "", 40, H - 22);
-    doc.text(addrLine || "", 40, H - 10, { maxWidth: W - 200 });
+    footLines.forEach((ln, i) => doc.text(ln, 40, H - 26 + i * 11, { maxWidth: W - 220 }));
     doc.text(`Generated ${new Date().toLocaleString()}`, W - 40, H - 14, { align: "right" });
 
     const fileName = `${sanitize(selectedEmp.display_name)}_${sanitize(selectedEmp.employee_code || selectedEmp.id.slice(0, 8))}_${MONTHS[month - 1]}_${year}_SalarySlip.pdf`;
@@ -334,6 +358,60 @@ export default function AdminSalarySlipPanel({ companyId, uploaderName }: Props)
               <label className="mb-1 block text-xs font-bold text-muted-foreground">Director / Authorised Signatory Name</label>
               <Input value={directorName} onChange={(e) => setDirectorName(e.target.value)}
                 placeholder="e.g. Jane Doe (signed on the slip)" />
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-dashed border-border bg-muted/30 p-3 space-y-3">
+            <div className="flex items-center justify-between">
+              <h4 className="text-sm font-semibold">Branding & template</h4>
+              <span className="text-xs text-muted-foreground">Edit before generating the preview</span>
+            </div>
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              <div>
+                <label className="mb-1 block text-xs font-bold text-muted-foreground">Company name (header)</label>
+                <Input value={brandName} onChange={(e) => setBrandName(e.target.value)} placeholder="Company name on slip" />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-bold text-muted-foreground">Header title</label>
+                <Input value={headerSubtitle} onChange={(e) => setHeaderSubtitle(e.target.value)} placeholder="Salary Slip" />
+              </div>
+              <div className="md:col-span-2">
+                <label className="mb-1 block text-xs font-bold text-muted-foreground">Company address</label>
+                <Textarea rows={2} value={brandAddress} onChange={(e) => setBrandAddress(e.target.value)} placeholder="Street, City, State, Postal code, Country" />
+              </div>
+              <div className="md:col-span-2">
+                <label className="mb-1 block text-xs font-bold text-muted-foreground">Header contact line</label>
+                <Input value={brandContact} onChange={(e) => setBrandContact(e.target.value)} placeholder="email@company.com | +91 99999 99999" />
+              </div>
+              <div className="md:col-span-2">
+                <label className="mb-1 block text-xs font-bold text-muted-foreground">Footer text</label>
+                <Textarea rows={2} value={footerText} onChange={(e) => setFooterText(e.target.value)} placeholder="Footer (up to 2 lines)" />
+              </div>
+              <div className="md:col-span-2">
+                <label className="mb-1 block text-xs font-bold text-muted-foreground">Logo (PNG/JPEG, optional)</label>
+                <div className="flex items-center gap-3">
+                  <label className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-md border border-input bg-background px-3 text-sm hover:bg-muted">
+                    <ImageIcon className="h-4 w-4" />
+                    <span>{logoDataUrl ? "Change logo" : "Upload logo"}</span>
+                    <input type="file" accept="image/png,image/jpeg" className="hidden"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0]; if (!f) return;
+                        if (f.size > 2 * 1024 * 1024) { toast.error("Logo must be under 2MB"); return; }
+                        const reader = new FileReader();
+                        reader.onload = () => { setLogoDataUrl(String(reader.result || "")); setLogoMime(f.type); };
+                        reader.readAsDataURL(f);
+                      }} />
+                  </label>
+                  {logoDataUrl && (
+                    <>
+                      <img src={logoDataUrl} alt="Logo preview" className="h-10 w-10 rounded border object-contain bg-white" />
+                      <Button type="button" variant="ghost" size="sm" onClick={() => { setLogoDataUrl(""); setLogoMime(""); }}>
+                        <X className="h-4 w-4" /> Remove
+                      </Button>
+                    </>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
 
