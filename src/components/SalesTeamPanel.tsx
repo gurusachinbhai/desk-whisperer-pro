@@ -71,6 +71,29 @@ export default function SalesTeamPanel({ companyId, meUserId, meName }: Props) {
     return () => { alive = false; };
   }, [companyId, meUserId]);
 
+  // Load direct reports (team) for manager-scoped edit/delete
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      if (!companyId || !meUserId) return;
+      const { data: meRow } = await supabase
+        .from("employee_profiles")
+        .select("id")
+        .eq("user_id", meUserId)
+        .eq("company_id", companyId)
+        .maybeSingle();
+      const myEmpId = (meRow as any)?.id;
+      if (!myEmpId) { if (alive) setTeamUserIds(new Set()); return; }
+      const { data: reports } = await supabase
+        .from("employee_profiles")
+        .select("user_id")
+        .eq("company_id", companyId)
+        .eq("manager_id", myEmpId);
+      if (!alive) return;
+      setTeamUserIds(new Set((reports ?? []).map((r: any) => r.user_id).filter(Boolean)));
+    })();
+    return () => { alive = false; };
+
   const fetchRows = async () => {
     if (!companyId) return;
     setLoading(true);
