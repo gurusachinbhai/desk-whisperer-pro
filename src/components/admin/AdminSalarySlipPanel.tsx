@@ -1,13 +1,14 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { computeAnnualTax, computeMonthlySalary, formatINR, type SalaryProfile, type TaxRegime } from "@/lib/tax-calc";
-import { FileText, CheckCircle2 } from "lucide-react";
+import { FileText, CheckCircle2, Eye, Upload, Download } from "lucide-react";
 
 type Props = { companyId: string; uploaderName: string };
 
@@ -30,7 +31,17 @@ export default function AdminSalarySlipPanel({ companyId, uploaderName }: Props)
   const [year, setYear] = useState<number>(now.getFullYear());
   const [directorName, setDirectorName] = useState("");
   const [busy, setBusy] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [lastConfirm, setLastConfirm] = useState<string>("");
+
+  // Preview state
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string>("");
+  const previewBlobRef = useRef<Blob | null>(null);
+  const previewFileNameRef = useRef<string>("");
+  const previewEmpRef = useRef<Emp | null>(null);
+  const previewMonthRef = useRef<number>(month);
+  const previewYearRef = useRef<number>(year);
 
   useEffect(() => {
     (async () => {
@@ -48,6 +59,11 @@ export default function AdminSalarySlipPanel({ companyId, uploaderName }: Props)
     })();
   }, [companyId]);
 
+  // Clean up object URLs
+  useEffect(() => {
+    return () => { if (previewUrl) URL.revokeObjectURL(previewUrl); };
+  }, [previewUrl]);
+
   const selectedEmp = useMemo(() => employees.find((e) => e.id === empId) || null, [empId, employees]);
 
   const addrLine = useMemo(() => {
@@ -58,153 +74,175 @@ export default function AdminSalarySlipPanel({ companyId, uploaderName }: Props)
 
   const sanitize = (s: string) => s.replace(/[^a-zA-Z0-9._-]/g, "_");
 
-  const handleGenerate = async () => {
-    if (!selectedEmp) { toast.error("Select an employee"); return; }
-    if (!selectedEmp.user_id) { toast.error("Employee must have a linked login before salary slips can be issued."); return; }
+  const buildPdf = async (): Promise<{ blob: Blob; fileName: string; emp: Emp } | null> => {
+    if (!selectedEmp) { toast.error("Select an employee"); return null; }
+    if (!selectedEmp.user_id) { toast.error("Employee must have a linked login before salary slips can be issued."); return null; }
 
+    const { data: sp, error: spErr } = await (supabase as any).from("salary_profiles")
+      .select("*").eq("company_id", companyId).eq("employee_id", selectedEmp.id)
+      .order("effective_from", { ascending: false }).limit(1).maybeSingle();
+    if (spErr) throw spErr;
+    if (!sp) { toast.error("No salary profile for this employee. Add one under Documents & Payroll first."); return null; }
+
+    const profile: SalaryProfile = {
+      annual_ctc: Number(sp.annual_ctc) || 0,
+      basic: Number(sp.basic) || 0,
+      hra: Number(sp.hra) || 0,
+      special_allowance: Number(sp.special_allowance) || 0,
+      other_allowance: Number(sp.other_allowance) || 0,
+      pf_deduction: Number(sp.pf_deduction) || 0,
+      professional_tax: Number(sp.professional_tax) || 0,
+      other_deduction: Number(sp.other_deduction) || 0,
+      tax_regime: (sp.tax_regime as TaxRegime) || "new",
+    };
+    const tax = computeAnnualTax(profile.basic + profile.hra + profile.special_allowance + profile.other_allowance, profile.tax_regime);
+    const m = computeMonthlySalary(profile, tax);
+
+    const doc = new jsPDF({ unit: "pt", format: "a4" });
+    const W = doc.internal.pageSize.getWidth();
+    const H = doc.internal.pageSize.getHeight();
+
+    doc.setFillColor(20, 33, 61);
+    doc.rect(0, 0, W, 70, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFont("helvetica", "bold"); doc.setFontSize(18);
+    doc.text(company?.name || "Company", 40, 32);
+    doc.setFont("helvetica", "normal"); doc.setFontSize(9);
+    doc.text(addrLine || "", 40, 50, { maxWidth: W - 80 });
+    if (company?.contact_email || company?.contact_phone) {
+      doc.text([company?.contact_email, company?.contact_phone].filter(Boolean).join(" | "), 40, 62);
+    }
+
+    doc.setTextColor(20, 33, 61);
+    doc.setFont("helvetica", "bold"); doc.setFontSize(14);
+    doc.text(`Salary Slip — ${MONTHS[month - 1]} ${year}`, 40, 100);
+
+    doc.setTextColor(40);
+    doc.setFont("helvetica", "normal"); doc.setFontSize(10);
+    const empRows: [string, string][] = [
+      ["Employee Name", selectedEmp.display_name],
+      ["Employee ID", selectedEmp.employee_code || "—"],
+      ["Email", selectedEmp.email || "—"],
+      ["Pay Period", `${MONTHS[month - 1]} ${year}`],
+      ["Tax Regime", profile.tax_regime.toUpperCase()],
+    ];
+    autoTable(doc, {
+      startY: 115,
+      head: [["Field", "Value"]],
+      body: empRows,
+      theme: "grid",
+      headStyles: { fillColor: [230, 235, 245], textColor: 20 },
+      styles: { fontSize: 9, cellPadding: 5 },
+      margin: { left: 40, right: 40 },
+    });
+
+    const afterEmp = (doc as any).lastAutoTable.finalY + 16;
+
+    const earnings: [string, string][] = [
+      ["Basic", formatINR(m.basicMonthly)],
+      ["HRA", formatINR(m.hraMonthly)],
+      ["Special Allowance", formatINR(m.specialMonthly)],
+      ["Other Allowance", formatINR(m.otherMonthly)],
+      ["Gross Earnings", formatINR(m.grossMonthly)],
+    ];
+    const deductions: [string, string][] = [
+      ["Provident Fund", formatINR(m.pfMonthly)],
+      ["Professional Tax", formatINR(m.professionalTaxMonthly)],
+      ["TDS (Income Tax)", formatINR(m.taxMonthly)],
+      ["Other Deductions", formatINR(m.otherDeductionMonthly)],
+      ["Total Deductions", formatINR(m.pfMonthly + m.professionalTaxMonthly + m.taxMonthly + m.otherDeductionMonthly)],
+    ];
+
+    autoTable(doc, {
+      startY: afterEmp,
+      head: [["Earnings", "Amount"]],
+      body: earnings,
+      theme: "striped",
+      headStyles: { fillColor: [20, 120, 80], textColor: 255 },
+      styles: { fontSize: 10, cellPadding: 6 },
+      margin: { left: 40, right: W / 2 + 10 },
+      tableWidth: W / 2 - 50,
+    });
+    autoTable(doc, {
+      startY: afterEmp,
+      head: [["Deductions", "Amount"]],
+      body: deductions,
+      theme: "striped",
+      headStyles: { fillColor: [160, 50, 50], textColor: 255 },
+      styles: { fontSize: 10, cellPadding: 6 },
+      margin: { left: W / 2 + 10, right: 40 },
+      tableWidth: W / 2 - 50,
+    });
+
+    const afterTables = Math.max(
+      (doc as any).lastAutoTable.finalY,
+      afterEmp + earnings.length * 22 + 30,
+    ) + 16;
+
+    doc.setFillColor(20, 33, 61);
+    doc.rect(40, afterTables, W - 80, 36, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFont("helvetica", "bold"); doc.setFontSize(12);
+    doc.text("Net Pay (Take Home)", 52, afterTables + 23);
+    doc.text(formatINR(m.netMonthly), W - 52, afterTables + 23, { align: "right" });
+
+    const sigY = afterTables + 110;
+    doc.setDrawColor(80);
+    doc.line(W - 220, sigY, W - 50, sigY);
+    doc.setTextColor(40);
+    doc.setFont("helvetica", "italic"); doc.setFontSize(11);
+    const sigName = directorName.trim() || company?.name ? `${directorName.trim() || "Authorised Signatory"}` : "Director";
+    doc.text(sigName, W - 135, sigY - 6, { align: "center" });
+    doc.setFont("helvetica", "normal"); doc.setFontSize(9);
+    doc.text("Director — Authorised Signatory", W - 135, sigY + 14, { align: "center" });
+
+    doc.setFontSize(8); doc.setTextColor(110);
+    doc.text("This is a system-generated salary slip. Figures are computed from the latest salary profile on record.", 40, sigY + 14, { maxWidth: W - 280 });
+
+    doc.setFillColor(240, 243, 250);
+    doc.rect(0, H - 38, W, 38, "F");
+    doc.setTextColor(60);
+    doc.setFont("helvetica", "normal"); doc.setFontSize(8);
+    doc.text(company?.name || "", 40, H - 22);
+    doc.text(addrLine || "", 40, H - 10, { maxWidth: W - 200 });
+    doc.text(`Generated ${new Date().toLocaleString()}`, W - 40, H - 14, { align: "right" });
+
+    const fileName = `${sanitize(selectedEmp.display_name)}_${sanitize(selectedEmp.employee_code || selectedEmp.id.slice(0, 8))}_${MONTHS[month - 1]}_${year}_SalarySlip.pdf`;
+    const blob = doc.output("blob");
+    return { blob, fileName, emp: selectedEmp };
+  };
+
+  const handlePreview = async () => {
     setBusy(true);
     try {
-      const { data: sp, error: spErr } = await (supabase as any).from("salary_profiles")
-        .select("*").eq("company_id", companyId).eq("employee_id", selectedEmp.id)
-        .order("effective_from", { ascending: false }).limit(1).maybeSingle();
-      if (spErr) throw spErr;
-      if (!sp) { toast.error("No salary profile for this employee. Add one under Documents & Payroll first."); return; }
+      const built = await buildPdf();
+      if (!built) return;
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      const url = URL.createObjectURL(built.blob);
+      previewBlobRef.current = built.blob;
+      previewFileNameRef.current = built.fileName;
+      previewEmpRef.current = built.emp;
+      previewMonthRef.current = month;
+      previewYearRef.current = year;
+      setPreviewUrl(url);
+      setPreviewOpen(true);
+    } catch (err: any) {
+      toast.error("Could not build preview", { description: err?.message ?? "Try again" });
+    } finally {
+      setBusy(false);
+    }
+  };
 
-      const profile: SalaryProfile = {
-        annual_ctc: Number(sp.annual_ctc) || 0,
-        basic: Number(sp.basic) || 0,
-        hra: Number(sp.hra) || 0,
-        special_allowance: Number(sp.special_allowance) || 0,
-        other_allowance: Number(sp.other_allowance) || 0,
-        pf_deduction: Number(sp.pf_deduction) || 0,
-        professional_tax: Number(sp.professional_tax) || 0,
-        other_deduction: Number(sp.other_deduction) || 0,
-        tax_regime: (sp.tax_regime as TaxRegime) || "new",
-      };
-      const tax = computeAnnualTax(profile.basic + profile.hra + profile.special_allowance + profile.other_allowance, profile.tax_regime);
-      const m = computeMonthlySalary(profile, tax);
-
-      // ===== PDF =====
-      const doc = new jsPDF({ unit: "pt", format: "a4" });
-      const W = doc.internal.pageSize.getWidth();
-      const H = doc.internal.pageSize.getHeight();
-
-      // Header band
-      doc.setFillColor(20, 33, 61);
-      doc.rect(0, 0, W, 70, "F");
-      doc.setTextColor(255, 255, 255);
-      doc.setFont("helvetica", "bold"); doc.setFontSize(18);
-      doc.text(company?.name || "Company", 40, 32);
-      doc.setFont("helvetica", "normal"); doc.setFontSize(9);
-      doc.text(addrLine || "", 40, 50, { maxWidth: W - 80 });
-      if (company?.contact_email || company?.contact_phone) {
-        doc.text([company?.contact_email, company?.contact_phone].filter(Boolean).join(" | "), 40, 62);
-      }
-
-      // Title
-      doc.setTextColor(20, 33, 61);
-      doc.setFont("helvetica", "bold"); doc.setFontSize(14);
-      doc.text(`Salary Slip — ${MONTHS[month - 1]} ${year}`, 40, 100);
-
-      // Employee block
-      doc.setTextColor(40);
-      doc.setFont("helvetica", "normal"); doc.setFontSize(10);
-      const empRows: [string, string][] = [
-        ["Employee Name", selectedEmp.display_name],
-        ["Employee ID", selectedEmp.employee_code || "—"],
-        ["Email", selectedEmp.email || "—"],
-        ["Pay Period", `${MONTHS[month - 1]} ${year}`],
-        ["Tax Regime", profile.tax_regime.toUpperCase()],
-      ];
-      autoTable(doc, {
-        startY: 115,
-        head: [["Field", "Value"]],
-        body: empRows,
-        theme: "grid",
-        headStyles: { fillColor: [230, 235, 245], textColor: 20 },
-        styles: { fontSize: 9, cellPadding: 5 },
-        margin: { left: 40, right: 40 },
-      });
-
-      const afterEmp = (doc as any).lastAutoTable.finalY + 16;
-
-      // Earnings & deductions
-      const earnings: [string, string][] = [
-        ["Basic", formatINR(m.basicMonthly)],
-        ["HRA", formatINR(m.hraMonthly)],
-        ["Special Allowance", formatINR(m.specialMonthly)],
-        ["Other Allowance", formatINR(m.otherMonthly)],
-        ["Gross Earnings", formatINR(m.grossMonthly)],
-      ];
-      const deductions: [string, string][] = [
-        ["Provident Fund", formatINR(m.pfMonthly)],
-        ["Professional Tax", formatINR(m.professionalTaxMonthly)],
-        ["TDS (Income Tax)", formatINR(m.taxMonthly)],
-        ["Other Deductions", formatINR(m.otherDeductionMonthly)],
-        ["Total Deductions", formatINR(m.pfMonthly + m.professionalTaxMonthly + m.taxMonthly + m.otherDeductionMonthly)],
-      ];
-
-      autoTable(doc, {
-        startY: afterEmp,
-        head: [["Earnings", "Amount"]],
-        body: earnings,
-        theme: "striped",
-        headStyles: { fillColor: [20, 120, 80], textColor: 255 },
-        styles: { fontSize: 10, cellPadding: 6 },
-        margin: { left: 40, right: W / 2 + 10 },
-        tableWidth: W / 2 - 50,
-      });
-      autoTable(doc, {
-        startY: afterEmp,
-        head: [["Deductions", "Amount"]],
-        body: deductions,
-        theme: "striped",
-        headStyles: { fillColor: [160, 50, 50], textColor: 255 },
-        styles: { fontSize: 10, cellPadding: 6 },
-        margin: { left: W / 2 + 10, right: 40 },
-        tableWidth: W / 2 - 50,
-      });
-
-      const afterTables = Math.max(
-        (doc as any).lastAutoTable.finalY,
-        afterEmp + earnings.length * 22 + 30,
-      ) + 16;
-
-      // Net pay box
-      doc.setFillColor(20, 33, 61);
-      doc.rect(40, afterTables, W - 80, 36, "F");
-      doc.setTextColor(255, 255, 255);
-      doc.setFont("helvetica", "bold"); doc.setFontSize(12);
-      doc.text("Net Pay (Take Home)", 52, afterTables + 23);
-      doc.text(formatINR(m.netMonthly), W - 52, afterTables + 23, { align: "right" });
-
-      // Signature
-      const sigY = afterTables + 110;
-      doc.setDrawColor(80);
-      doc.line(W - 220, sigY, W - 50, sigY);
-      doc.setTextColor(40);
-      doc.setFont("helvetica", "italic"); doc.setFontSize(11);
-      const sigName = directorName.trim() || company?.name ? `${directorName.trim() || "Authorised Signatory"}` : "Director";
-      doc.text(sigName, W - 135, sigY - 6, { align: "center" });
-      doc.setFont("helvetica", "normal"); doc.setFontSize(9);
-      doc.text("Director — Authorised Signatory", W - 135, sigY + 14, { align: "center" });
-
-      doc.setFontSize(8); doc.setTextColor(110);
-      doc.text("This is a system-generated salary slip. Figures are computed from the latest salary profile on record.", 40, sigY + 14, { maxWidth: W - 280 });
-
-      // Footer
-      doc.setFillColor(240, 243, 250);
-      doc.rect(0, H - 38, W, 38, "F");
-      doc.setTextColor(60);
-      doc.setFont("helvetica", "normal"); doc.setFontSize(8);
-      doc.text(company?.name || "", 40, H - 22);
-      doc.text(addrLine || "", 40, H - 10, { maxWidth: W - 200 });
-      doc.text(`Generated ${new Date().toLocaleString()}`, W - 40, H - 14, { align: "right" });
-
-      const fileName = `${sanitize(selectedEmp.display_name)}_${sanitize(selectedEmp.employee_code || selectedEmp.id.slice(0, 8))}_${MONTHS[month - 1]}_${year}_SalarySlip.pdf`;
-      const blob = doc.output("blob");
-
-      const path = `${companyId}/${selectedEmp.user_id}/payslip/${Date.now()}-${fileName}`;
+  const handleConfirmUpload = async () => {
+    const blob = previewBlobRef.current;
+    const fileName = previewFileNameRef.current;
+    const emp = previewEmpRef.current;
+    const m = previewMonthRef.current;
+    const y = previewYearRef.current;
+    if (!blob || !emp || !emp.user_id) { toast.error("Preview not ready"); return; }
+    setUploading(true);
+    try {
+      const path = `${companyId}/${emp.user_id}/payslip/${Date.now()}-${fileName}`;
       const up = await supabase.storage.from("employee-documents")
         .upload(path, blob, { contentType: "application/pdf", upsert: false });
       if (up.error) throw up.error;
@@ -212,12 +250,12 @@ export default function AdminSalarySlipPanel({ companyId, uploaderName }: Props)
       const me = (await supabase.auth.getUser()).data.user?.id;
       const ins = await (supabase as any).from("employee_documents").insert({
         company_id: companyId,
-        employee_id: selectedEmp.id,
-        user_id: selectedEmp.user_id,
+        employee_id: emp.id,
+        user_id: emp.user_id,
         doc_type: "payslip",
-        doc_year: year,
-        doc_month: month,
-        title: `Salary Slip — ${MONTHS[month - 1]} ${year}`,
+        doc_year: y,
+        doc_month: m,
+        title: `Salary Slip — ${MONTHS[m - 1]} ${y}`,
         file_path: path,
         file_name: fileName,
         file_size: blob.size,
@@ -230,18 +268,31 @@ export default function AdminSalarySlipPanel({ companyId, uploaderName }: Props)
         throw ins.error;
       }
 
-      // Also offer immediate download
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a"); a.href = url; a.download = fileName; a.click(); URL.revokeObjectURL(url);
+      // Download a local copy as well
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = fileName; a.click();
+      URL.revokeObjectURL(a.href);
 
-      const msg = `Monthly salary creation confirmed for employee: ${selectedEmp.display_name} (${selectedEmp.employee_code || "—"}) for ${MONTHS[month - 1]} ${year}.`;
+      const msg = `Monthly salary creation confirmed for employee: ${emp.display_name} (${emp.employee_code || "—"}) for ${MONTHS[m - 1]} ${y}.`;
       setLastConfirm(msg);
       toast.success(msg);
+      setPreviewOpen(false);
     } catch (err: any) {
-      toast.error("Could not generate salary slip", { description: err?.message ?? "Try again" });
+      toast.error("Could not upload salary slip", { description: err?.message ?? "Try again" });
     } finally {
-      setBusy(false);
+      setUploading(false);
     }
+  };
+
+  const handleDownloadPreview = () => {
+    const blob = previewBlobRef.current;
+    if (!blob) return;
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = previewFileNameRef.current || "salary-slip.pdf";
+    a.click();
+    URL.revokeObjectURL(a.href);
   };
 
   return (
@@ -287,12 +338,12 @@ export default function AdminSalarySlipPanel({ companyId, uploaderName }: Props)
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            <Button onClick={handleGenerate} disabled={busy || !empId}>
-              {busy ? "Generating…" : "Generate & upload salary slip"}
+            <Button onClick={handlePreview} disabled={busy || !empId}>
+              <Eye className="h-4 w-4" />
+              {busy ? "Preparing preview…" : "Preview salary slip"}
             </Button>
             <p className="text-xs text-muted-foreground">
-              File saved to the employee's documents (Payslips) with name
-              <code className="ml-1">{`<name>_<empId>_<Month>_<Year>_SalarySlip.pdf`}</code>.
+              Review the PDF first. Upload to the employee's documents happens only after you confirm.
             </p>
           </div>
 
@@ -304,6 +355,38 @@ export default function AdminSalarySlipPanel({ companyId, uploaderName }: Props)
           )}
         </CardContent>
       </Card>
+
+      <Dialog open={previewOpen} onOpenChange={(o) => { if (!uploading) setPreviewOpen(o); }}>
+        <DialogContent className="max-w-5xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Eye className="h-4 w-4" /> Salary slip preview
+            </DialogTitle>
+            <DialogDescription>
+              {previewEmpRef.current
+                ? `${previewEmpRef.current.display_name} • ${MONTHS[previewMonthRef.current - 1]} ${previewYearRef.current} • ${previewFileNameRef.current}`
+                : "Review before uploading"}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="h-[70vh] w-full overflow-hidden rounded-md border bg-muted">
+            {previewUrl && (
+              <iframe src={previewUrl} title="Salary slip preview" className="h-full w-full" />
+            )}
+          </div>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button variant="outline" onClick={handleDownloadPreview} disabled={uploading}>
+              <Download className="h-4 w-4" /> Download
+            </Button>
+            <Button variant="ghost" onClick={() => setPreviewOpen(false)} disabled={uploading}>
+              Cancel
+            </Button>
+            <Button onClick={handleConfirmUpload} disabled={uploading}>
+              <Upload className="h-4 w-4" />
+              {uploading ? "Uploading…" : "Confirm & upload to employee"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
