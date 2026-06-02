@@ -299,8 +299,18 @@ export default function SalesTeamPanel({ companyId, meUserId, meName }: Props) {
       </div>
 
       <div className="rounded-2xl border border-border bg-card">
-        <div className="border-b border-border p-4">
-          <p className="font-display text-lg font-extrabold">Recent entries</p>
+        <div className="border-b border-border p-4 flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <p className="font-display text-lg font-extrabold">Recent entries</p>
+            <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
+              <Info className="h-3 w-3" />
+              {canAdd
+                ? "You can edit or delete your own entries. Managers can also manage their team's entries."
+                : teamUserIds.size > 0
+                  ? "Manager view: you can edit or delete your direct reports' entries. Your own entries are also editable."
+                  : "View-only: you can see all entries but only edit your own or your team's."}
+            </p>
+          </div>
         </div>
         {loading ? (
           <div className="p-6 text-sm text-muted-foreground">Loading…</div>
