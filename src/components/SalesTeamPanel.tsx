@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, FormEvent } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { TrendingUp, TrendingDown, DollarSign, Trophy, Plus, RotateCcw, Loader2, ShieldAlert, Trash2 } from "lucide-react";
+import { TrendingUp, TrendingDown, DollarSign, Trophy, Plus, RotateCcw, Loader2, ShieldAlert, Trash2, Lock, Info } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Cell,
 } from "recharts";
@@ -299,8 +299,18 @@ export default function SalesTeamPanel({ companyId, meUserId, meName }: Props) {
       </div>
 
       <div className="rounded-2xl border border-border bg-card">
-        <div className="border-b border-border p-4">
-          <p className="font-display text-lg font-extrabold">Recent entries</p>
+        <div className="border-b border-border p-4 flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <p className="font-display text-lg font-extrabold">Recent entries</p>
+            <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
+              <Info className="h-3 w-3" />
+              {canAdd
+                ? "You can edit or delete your own entries. Managers can also manage their team's entries."
+                : teamUserIds.size > 0
+                  ? "Manager view: you can edit or delete your direct reports' entries. Your own entries are also editable."
+                  : "View-only: you can see all entries but only edit your own or your team's."}
+            </p>
+          </div>
         </div>
         {loading ? (
           <div className="p-6 text-sm text-muted-foreground">Loading…</div>
@@ -329,7 +339,7 @@ export default function SalesTeamPanel({ companyId, meUserId, meName }: Props) {
                     </td>
                     <td className="p-3 text-right font-mono font-bold">{r.currency} {Number(r.amount).toLocaleString()}</td>
                     <td className="p-3 text-right">
-                      {canModify(r) && (
+                      {canModify(r) ? (
                         <button
                           onClick={() => handleDelete(r)}
                           title="Delete entry"
@@ -337,6 +347,13 @@ export default function SalesTeamPanel({ companyId, meUserId, meName }: Props) {
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
+                      ) : (
+                        <span
+                          title="You can only edit or delete your own entries or your direct reports' entries"
+                          className="inline-flex items-center gap-1 rounded-lg border border-border bg-muted/40 px-2 py-1 text-xs text-muted-foreground"
+                        >
+                          <Lock className="h-3 w-3" /> Read-only
+                        </span>
                       )}
                     </td>
                   </tr>
