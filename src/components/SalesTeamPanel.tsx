@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, FormEvent } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { TrendingUp, TrendingDown, DollarSign, Trophy, Plus, RotateCcw, Loader2, ShieldAlert, Trash2 } from "lucide-react";
+import { TrendingUp, TrendingDown, DollarSign, Trophy, Plus, RotateCcw, Loader2, ShieldAlert, Trash2, Lock, Info } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Cell,
 } from "recharts";
