@@ -119,19 +119,27 @@ export default function AdminSalarySlipPanel({ companyId, uploaderName }: Props)
     const H = doc.internal.pageSize.getHeight();
 
     doc.setFillColor(20, 33, 61);
-    doc.rect(0, 0, W, 70, "F");
+    doc.rect(0, 0, W, 80, "F");
+
+    let textLeft = 40;
+    if (logoDataUrl) {
+      try {
+        const fmt = logoMime.includes("png") ? "PNG" : logoMime.includes("jpeg") || logoMime.includes("jpg") ? "JPEG" : "PNG";
+        doc.addImage(logoDataUrl, fmt, 40, 14, 52, 52);
+        textLeft = 110;
+      } catch { /* ignore bad image */ }
+    }
+
     doc.setTextColor(255, 255, 255);
     doc.setFont("helvetica", "bold"); doc.setFontSize(18);
-    doc.text(company?.name || "Company", 40, 32);
+    doc.text(brandName || company?.name || "Company", textLeft, 32);
     doc.setFont("helvetica", "normal"); doc.setFontSize(9);
-    doc.text(addrLine || "", 40, 50, { maxWidth: W - 80 });
-    if (company?.contact_email || company?.contact_phone) {
-      doc.text([company?.contact_email, company?.contact_phone].filter(Boolean).join(" | "), 40, 62);
-    }
+    if (brandAddress) doc.text(brandAddress, textLeft, 50, { maxWidth: W - textLeft - 40 });
+    if (brandContact) doc.text(brandContact, textLeft, 62, { maxWidth: W - textLeft - 40 });
 
     doc.setTextColor(20, 33, 61);
     doc.setFont("helvetica", "bold"); doc.setFontSize(14);
-    doc.text(`Salary Slip — ${MONTHS[month - 1]} ${year}`, 40, 100);
+    doc.text(`${headerSubtitle || "Salary Slip"} — ${MONTHS[month - 1]} ${year}`, 40, 108);
 
     doc.setTextColor(40);
     doc.setFont("helvetica", "normal"); doc.setFontSize(10);
