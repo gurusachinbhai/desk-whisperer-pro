@@ -1,9 +1,10 @@
 import { useState, ReactNode } from "react";
 import {
-  LayoutDashboard, UserPlus, LogOut, Search, Building2, FileText, Armchair, Bell, BarChart3, CreditCard, Menu, X, GraduationCap, ClipboardList, FolderArchive, MapPin, Laptop, Calculator, Sparkles, ShieldAlert, Users, Package,
+  LayoutDashboard, UserPlus, LogOut, Search, Building2, FileText, Armchair, Bell, BarChart3, CreditCard, Menu, X, GraduationCap, ClipboardList, FolderArchive, MapPin, Laptop, Calculator, Sparkles, ShieldAlert, Users, Package, Receipt,
 } from "lucide-react";
 import AdminCRMPanel from "./AdminCRMPanel";
 import AdminInventoryPanel from "./AdminInventoryPanel";
+import AdminSalarySlipPanel from "./AdminSalarySlipPanel";
 import AdminAssistantLogsPanel from "./AdminAssistantLogsPanel";
 import AdminITEscalationsPanel from "./AdminITEscalationsPanel";
 import AdminOnboardingPanel from "./AdminOnboardingPanel";
@@ -21,7 +22,7 @@ import AppraisalPanel from "@/components/AppraisalPanel";
 
 type Section =
   | "dashboard" | "onboarding" | "resignation" | "search"
-  | "departments" | "documents" | "training" | "appraisal" | "resumes" | "seats" | "attendance" | "itassets" | "accounting" | "crm" | "inventory" | "assistantlogs" | "itescalations" | "announcements" | "reports" | "billing";
+  | "departments" | "documents" | "salaryslip" | "training" | "appraisal" | "resumes" | "seats" | "attendance" | "itassets" | "accounting" | "crm" | "inventory" | "assistantlogs" | "itescalations" | "announcements" | "reports" | "billing";
 
 type Props = {
   companyId: string;
@@ -41,6 +42,7 @@ const NAV: { id: Section; label: string; icon: any; group: string }[] = [
   { id: "search", label: "Employee Search", icon: Search, group: "People" },
   { id: "departments", label: "Departments & KYC", icon: Building2, group: "Org" },
   { id: "documents", label: "Documents & Payroll", icon: FileText, group: "Org" },
+  { id: "salaryslip", label: "Salary Slip — Monthly", icon: Receipt, group: "Org" },
   { id: "training", label: "Training & Skills", icon: GraduationCap, group: "Org" },
   { id: "appraisal", label: "Appraisals", icon: ClipboardList, group: "Org" },
   { id: "resumes", label: "Resume Bank", icon: FolderArchive, group: "Org" },
@@ -73,6 +75,7 @@ export default function AdminConsole({
       case "search": return <AdminEmployeeSearchPanel companyId={companyId} />;
       case "departments": return <AdminDepartmentsPanel companyId={companyId} />;
       case "documents": return <AdminDocumentsPanel companyId={companyId} uploaderName={uploaderName} />;
+      case "salaryslip": return <AdminSalarySlipPanel companyId={companyId} uploaderName={uploaderName} />;
       case "training": return <TrainingPanel companyId={companyId} meUserId={meUserId ?? null} meName={uploaderName} canManage={true} />;
       case "appraisal": return <AppraisalPanel companyId={companyId} meUserId={meUserId ?? null} meEmployeeId={meEmployeeId ?? null} meName={uploaderName} isAdmin={true} />;
       case "resumes": return <AdminResumeBankPanel companyId={companyId} uploaderName={uploaderName} />;
