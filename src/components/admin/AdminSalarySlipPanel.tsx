@@ -223,12 +223,12 @@ export default function AdminSalarySlipPanel({ companyId, uploaderName }: Props)
     doc.setFontSize(8); doc.setTextColor(110);
     doc.text("This is a system-generated salary slip. Figures are computed from the latest salary profile on record.", 40, sigY + 14, { maxWidth: W - 280 });
 
+    const footLines = (footerText || `${brandName || company?.name || ""}${brandAddress ? " • " + brandAddress : ""}`).split("\n").slice(0, 2);
     doc.setFillColor(240, 243, 250);
-    doc.rect(0, H - 38, W, 38, "F");
+    doc.rect(0, H - 42, W, 42, "F");
     doc.setTextColor(60);
     doc.setFont("helvetica", "normal"); doc.setFontSize(8);
-    doc.text(company?.name || "", 40, H - 22);
-    doc.text(addrLine || "", 40, H - 10, { maxWidth: W - 200 });
+    footLines.forEach((ln, i) => doc.text(ln, 40, H - 26 + i * 11, { maxWidth: W - 220 }));
     doc.text(`Generated ${new Date().toLocaleString()}`, W - 40, H - 14, { align: "right" });
 
     const fileName = `${sanitize(selectedEmp.display_name)}_${sanitize(selectedEmp.employee_code || selectedEmp.id.slice(0, 8))}_${MONTHS[month - 1]}_${year}_SalarySlip.pdf`;
