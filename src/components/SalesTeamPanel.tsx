@@ -339,7 +339,7 @@ export default function SalesTeamPanel({ companyId, meUserId, meName }: Props) {
                     </td>
                     <td className="p-3 text-right font-mono font-bold">{r.currency} {Number(r.amount).toLocaleString()}</td>
                     <td className="p-3 text-right">
-                      {canModify(r) && (
+                      {canModify(r) ? (
                         <button
                           onClick={() => handleDelete(r)}
                           title="Delete entry"
@@ -347,6 +347,13 @@ export default function SalesTeamPanel({ companyId, meUserId, meName }: Props) {
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
+                      ) : (
+                        <span
+                          title="You can only edit or delete your own entries or your direct reports' entries"
+                          className="inline-flex items-center gap-1 rounded-lg border border-border bg-muted/40 px-2 py-1 text-xs text-muted-foreground"
+                        >
+                          <Lock className="h-3 w-3" /> Read-only
+                        </span>
                       )}
                     </td>
                   </tr>
