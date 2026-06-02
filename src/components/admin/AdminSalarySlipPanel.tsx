@@ -63,7 +63,15 @@ export default function AdminSalarySlipPanel({ companyId, uploaderName }: Props)
           .eq("id", companyId).maybeSingle(),
       ]);
       setEmployees((empRes.data ?? []) as Emp[]);
-      setCompany((coRes.data ?? null) as Company | null);
+      const co = (coRes.data ?? null) as Company | null;
+      setCompany(co);
+      if (co) {
+        setBrandName((prev) => prev || co.name || "");
+        const addr = [co.address_line1, co.address_line2, [co.city, co.state, co.postal_code].filter(Boolean).join(", "), co.country].filter(Boolean).join(" • ");
+        setBrandAddress((prev) => prev || addr);
+        setBrandContact((prev) => prev || [co.contact_email, co.contact_phone].filter(Boolean).join(" | "));
+        setFooterText((prev) => prev || `${co.name || ""}${addr ? " • " + addr : ""}`);
+      }
     })();
   }, [companyId]);
 
