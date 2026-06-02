@@ -93,6 +93,9 @@ export default function SalesTeamPanel({ companyId, meUserId, meName }: Props) {
       setTeamUserIds(new Set((reports ?? []).map((r: any) => r.user_id).filter(Boolean)));
     })();
     return () => { alive = false; };
+  }, [companyId, meUserId]);
+
+
 
   const fetchRows = async () => {
     if (!companyId) return;
