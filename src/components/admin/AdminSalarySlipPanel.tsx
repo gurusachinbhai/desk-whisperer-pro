@@ -38,6 +38,8 @@ export default function AdminSalarySlipPanel({ companyId, uploaderName }: Props)
   const [footerText, setFooterText] = useState("");
   const [logoDataUrl, setLogoDataUrl] = useState<string>("");
   const [logoMime, setLogoMime] = useState<string>("");
+  const [signatureDataUrl, setSignatureDataUrl] = useState<string>("");
+  const [signatureMime, setSignatureMime] = useState<string>("");
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [lastConfirm, setLastConfirm] = useState<string>("");
@@ -212,13 +214,21 @@ export default function AdminSalarySlipPanel({ companyId, uploaderName }: Props)
 
     const sigY = afterTables + 110;
     doc.setDrawColor(80);
+    // Signature image (if provided), placed above the line
+    if (signatureDataUrl) {
+      try {
+        const fmt = signatureMime.includes("png") ? "PNG" : signatureMime.includes("jpeg") || signatureMime.includes("jpg") ? "JPEG" : "PNG";
+        // Box: x=W-220..W-50 (170 wide), draw centered above line
+        doc.addImage(signatureDataUrl, fmt, W - 210, sigY - 46, 150, 42);
+      } catch { /* ignore bad image */ }
+    }
     doc.line(W - 220, sigY, W - 50, sigY);
     doc.setTextColor(40);
     doc.setFont("helvetica", "italic"); doc.setFontSize(11);
     const sigName = directorName.trim() || company?.name ? `${directorName.trim() || "Authorised Signatory"}` : "Director";
-    doc.text(sigName, W - 135, sigY - 6, { align: "center" });
+    doc.text(sigName, W - 135, sigY + (signatureDataUrl ? 14 : -6), { align: "center" });
     doc.setFont("helvetica", "normal"); doc.setFontSize(9);
-    doc.text("Director — Authorised Signatory", W - 135, sigY + 14, { align: "center" });
+    doc.text("Director — Authorised Signatory", W - 135, sigY + (signatureDataUrl ? 28 : 14), { align: "center" });
 
     doc.setFontSize(8); doc.setTextColor(110);
     doc.text("This is a system-generated salary slip. Figures are computed from the latest salary profile on record.", 40, sigY + 14, { maxWidth: W - 280 });
@@ -406,6 +416,32 @@ export default function AdminSalarySlipPanel({ companyId, uploaderName }: Props)
                     <>
                       <img src={logoDataUrl} alt="Logo preview" className="h-10 w-10 rounded border object-contain bg-white" />
                       <Button type="button" variant="ghost" size="sm" onClick={() => { setLogoDataUrl(""); setLogoMime(""); }}>
+                        <X className="h-4 w-4" /> Remove
+                      </Button>
+                    </>
+                  )}
+                </div>
+              </div>
+              <div className="md:col-span-2">
+                <label className="mb-1 block text-xs font-bold text-muted-foreground">Director signature image (PNG/JPEG, optional)</label>
+                <p className="mb-2 text-xs text-muted-foreground">If omitted, the director name above is printed as the signature.</p>
+                <div className="flex items-center gap-3">
+                  <label className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-md border border-input bg-background px-3 text-sm hover:bg-muted">
+                    <ImageIcon className="h-4 w-4" />
+                    <span>{signatureDataUrl ? "Change signature" : "Upload signature"}</span>
+                    <input type="file" accept="image/png,image/jpeg" className="hidden"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0]; if (!f) return;
+                        if (f.size > 2 * 1024 * 1024) { toast.error("Signature must be under 2MB"); return; }
+                        const reader = new FileReader();
+                        reader.onload = () => { setSignatureDataUrl(String(reader.result || "")); setSignatureMime(f.type); };
+                        reader.readAsDataURL(f);
+                      }} />
+                  </label>
+                  {signatureDataUrl && (
+                    <>
+                      <img src={signatureDataUrl} alt="Signature preview" className="h-10 w-24 rounded border object-contain bg-white" />
+                      <Button type="button" variant="ghost" size="sm" onClick={() => { setSignatureDataUrl(""); setSignatureMime(""); }}>
                         <X className="h-4 w-4" /> Remove
                       </Button>
                     </>
