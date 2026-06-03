@@ -422,6 +422,32 @@ export default function AdminSalarySlipPanel({ companyId, uploaderName }: Props)
                   )}
                 </div>
               </div>
+              <div className="md:col-span-2">
+                <label className="mb-1 block text-xs font-bold text-muted-foreground">Director signature image (PNG/JPEG, optional)</label>
+                <p className="mb-2 text-xs text-muted-foreground">If omitted, the director name above is printed as the signature.</p>
+                <div className="flex items-center gap-3">
+                  <label className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-md border border-input bg-background px-3 text-sm hover:bg-muted">
+                    <ImageIcon className="h-4 w-4" />
+                    <span>{signatureDataUrl ? "Change signature" : "Upload signature"}</span>
+                    <input type="file" accept="image/png,image/jpeg" className="hidden"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0]; if (!f) return;
+                        if (f.size > 2 * 1024 * 1024) { toast.error("Signature must be under 2MB"); return; }
+                        const reader = new FileReader();
+                        reader.onload = () => { setSignatureDataUrl(String(reader.result || "")); setSignatureMime(f.type); };
+                        reader.readAsDataURL(f);
+                      }} />
+                  </label>
+                  {signatureDataUrl && (
+                    <>
+                      <img src={signatureDataUrl} alt="Signature preview" className="h-10 w-24 rounded border object-contain bg-white" />
+                      <Button type="button" variant="ghost" size="sm" onClick={() => { setSignatureDataUrl(""); setSignatureMime(""); }}>
+                        <X className="h-4 w-4" /> Remove
+                      </Button>
+                    </>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
 
