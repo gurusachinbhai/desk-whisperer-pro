@@ -214,13 +214,21 @@ export default function AdminSalarySlipPanel({ companyId, uploaderName }: Props)
 
     const sigY = afterTables + 110;
     doc.setDrawColor(80);
+    // Signature image (if provided), placed above the line
+    if (signatureDataUrl) {
+      try {
+        const fmt = signatureMime.includes("png") ? "PNG" : signatureMime.includes("jpeg") || signatureMime.includes("jpg") ? "JPEG" : "PNG";
+        // Box: x=W-220..W-50 (170 wide), draw centered above line
+        doc.addImage(signatureDataUrl, fmt, W - 210, sigY - 46, 150, 42);
+      } catch { /* ignore bad image */ }
+    }
     doc.line(W - 220, sigY, W - 50, sigY);
     doc.setTextColor(40);
     doc.setFont("helvetica", "italic"); doc.setFontSize(11);
     const sigName = directorName.trim() || company?.name ? `${directorName.trim() || "Authorised Signatory"}` : "Director";
-    doc.text(sigName, W - 135, sigY - 6, { align: "center" });
+    doc.text(sigName, W - 135, sigY + (signatureDataUrl ? 14 : -6), { align: "center" });
     doc.setFont("helvetica", "normal"); doc.setFontSize(9);
-    doc.text("Director — Authorised Signatory", W - 135, sigY + 14, { align: "center" });
+    doc.text("Director — Authorised Signatory", W - 135, sigY + (signatureDataUrl ? 28 : 14), { align: "center" });
 
     doc.setFontSize(8); doc.setTextColor(110);
     doc.text("This is a system-generated salary slip. Figures are computed from the latest salary profile on record.", 40, sigY + 14, { maxWidth: W - 280 });
