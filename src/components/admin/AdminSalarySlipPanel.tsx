@@ -38,6 +38,8 @@ export default function AdminSalarySlipPanel({ companyId, uploaderName }: Props)
   const [footerText, setFooterText] = useState("");
   const [logoDataUrl, setLogoDataUrl] = useState<string>("");
   const [logoMime, setLogoMime] = useState<string>("");
+  const [signatureDataUrl, setSignatureDataUrl] = useState<string>("");
+  const [signatureMime, setSignatureMime] = useState<string>("");
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [lastConfirm, setLastConfirm] = useState<string>("");
