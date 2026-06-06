@@ -42,6 +42,7 @@ const NAV: { id: Section; label: string; icon: any; group: string }[] = [
   { id: "onboarding", label: "Employee Onboarding", icon: UserPlus, group: "People" },
   { id: "resignation", label: "Resignation Sign-off", icon: LogOut, group: "People" },
   { id: "search", label: "Employee Search", icon: Search, group: "People" },
+  { id: "hrassistance", label: "HR Assistance", icon: HeartHandshake, group: "HR Assistance" },
   { id: "departments", label: "Departments & KYC", icon: Building2, group: "Org" },
   { id: "documents", label: "Documents & Payroll", icon: FileText, group: "Org" },
   { id: "salaryslip", label: "Salary Slip — Monthly", icon: Receipt, group: "Org" },
