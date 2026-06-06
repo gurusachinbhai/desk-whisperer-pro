@@ -47,6 +47,7 @@ const NAV: { id: Section; label: string; icon: any; group: string }[] = [
   { id: "training", label: "Training & Skills", icon: GraduationCap, group: "Org" },
   { id: "appraisal", label: "Appraisals", icon: ClipboardList, group: "Org" },
   { id: "resumes", label: "Resume Bank", icon: FolderArchive, group: "Org" },
+  { id: "resumesearch", label: "Resume Search · AI", icon: Search, group: "Org" },
   { id: "seats", label: "Open Desk · Seats", icon: Armchair, group: "Workspace" },
   { id: "attendance", label: "Attendance & Geo", icon: MapPin, group: "Workspace" },
   { id: "itassets", label: "IT Asset Management", icon: Laptop, group: "Workspace" },
