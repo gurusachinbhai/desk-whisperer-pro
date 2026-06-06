@@ -60,7 +60,7 @@ import AppraisalPanel from "@/components/AppraisalPanel";
 import AssistantPanel from "@/components/AssistantPanel";
 import AttendanceMap from "@/components/AttendanceMap";
 import BiometricCheckIn from "@/components/BiometricCheckIn";
-import { GraduationCap, ClipboardList, TrendingUp } from "lucide-react";
+import { GraduationCap, ClipboardList, TrendingUp, ScanFace } from "lucide-react";
 import AdminDocumentsPanel from "@/components/AdminDocumentsPanel";
 import AdminDepartmentsPanel from "@/components/AdminDepartmentsPanel";
 import AdminConsole from "@/components/admin/AdminConsole";
