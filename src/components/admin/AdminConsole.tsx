@@ -3,6 +3,7 @@ import {
   LayoutDashboard, UserPlus, LogOut, Search, Building2, FileText, Armchair, Bell, BarChart3, CreditCard, Menu, X, GraduationCap, ClipboardList, FolderArchive, MapPin, Laptop, Calculator, Sparkles, ShieldAlert, Users, Package, Receipt,
 } from "lucide-react";
 import AdminCRMPanel from "./AdminCRMPanel";
+import AdminResumeSearchPanel from "./AdminResumeSearchPanel";
 import AdminInventoryPanel from "./AdminInventoryPanel";
 import AdminSalarySlipPanel from "./AdminSalarySlipPanel";
 import AdminAssistantLogsPanel from "./AdminAssistantLogsPanel";
