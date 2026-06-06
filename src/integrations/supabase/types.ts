@@ -523,6 +523,42 @@ export type Database = {
         }
         Relationships: []
       }
+      biometric_enrollments: {
+        Row: {
+          company_id: string
+          created_at: string
+          face_enrolled_at: string | null
+          face_image_path: string | null
+          id: string
+          thumb_enrolled_at: string | null
+          updated_at: string
+          user_id: string
+          webauthn_credential_id: string | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          face_enrolled_at?: string | null
+          face_image_path?: string | null
+          id?: string
+          thumb_enrolled_at?: string | null
+          updated_at?: string
+          user_id: string
+          webauthn_credential_id?: string | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          face_enrolled_at?: string | null
+          face_image_path?: string | null
+          id?: string
+          thumb_enrolled_at?: string | null
+          updated_at?: string
+          user_id?: string
+          webauthn_credential_id?: string | null
+        }
+        Relationships: []
+      }
       company_profiles: {
         Row: {
           address_line1: string | null
