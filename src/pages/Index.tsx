@@ -4705,14 +4705,6 @@ const Index = () => {
           onVerified={(method) => handleSignIn(method)}
         />
 
-        <a
-          href="/office-kiosk"
-          className="mt-3 flex items-center justify-center gap-2 rounded-2xl border border-primary/30 bg-primary/5 px-4 py-3 text-sm font-extrabold text-primary transition hover:bg-primary/10"
-        >
-          <ScanFace className="h-4 w-4" />
-          Open Office Kiosk · Face + Thumb Login
-        </a>
-
         <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-background/50 px-3 py-2 text-xs">
           <div className="flex items-center gap-2 text-muted-foreground">
             <MapPin className="h-3.5 w-3.5 text-primary" />
