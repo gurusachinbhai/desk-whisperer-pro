@@ -1,1 +1,4 @@
 project_id = "nmakxtphlaqzuimgxqgo"
+
+[functions.resume-search-ai]
+verify_jwt = false
