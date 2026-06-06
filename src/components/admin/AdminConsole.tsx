@@ -1,6 +1,6 @@
 import { useState, ReactNode } from "react";
 import {
-  LayoutDashboard, UserPlus, LogOut, Search, Building2, FileText, Armchair, Bell, BarChart3, CreditCard, Menu, X, GraduationCap, ClipboardList, FolderArchive, MapPin, Laptop, Calculator, Sparkles, ShieldAlert, Users, Package, Receipt,
+  LayoutDashboard, UserPlus, LogOut, Search, Building2, FileText, Armchair, Bell, BarChart3, CreditCard, Menu, X, GraduationCap, ClipboardList, FolderArchive, MapPin, Laptop, Calculator, Sparkles, ShieldAlert, Users, Package, Receipt, HeartHandshake,
 } from "lucide-react";
 import AdminCRMPanel from "./AdminCRMPanel";
 import AdminResumeSearchPanel from "./AdminResumeSearchPanel";
@@ -20,10 +20,11 @@ import AdminDepartmentsPanel from "@/components/AdminDepartmentsPanel";
 import AdminDocumentsPanel from "@/components/AdminDocumentsPanel";
 import TrainingPanel from "@/components/TrainingPanel";
 import AppraisalPanel from "@/components/AppraisalPanel";
+import AdminHRAssistancePanel from "./AdminHRAssistancePanel";
 
 type Section =
   | "dashboard" | "onboarding" | "resignation" | "search"
-  | "departments" | "documents" | "salaryslip" | "training" | "appraisal" | "resumes" | "resumesearch" | "seats" | "attendance" | "itassets" | "accounting" | "crm" | "inventory" | "assistantlogs" | "itescalations" | "announcements" | "reports" | "billing";
+  | "departments" | "documents" | "salaryslip" | "training" | "appraisal" | "resumes" | "resumesearch" | "seats" | "attendance" | "itassets" | "accounting" | "crm" | "inventory" | "assistantlogs" | "itescalations" | "announcements" | "reports" | "billing" | "hrassistance";
 
 type Props = {
   companyId: string;
@@ -41,6 +42,7 @@ const NAV: { id: Section; label: string; icon: any; group: string }[] = [
   { id: "onboarding", label: "Employee Onboarding", icon: UserPlus, group: "People" },
   { id: "resignation", label: "Resignation Sign-off", icon: LogOut, group: "People" },
   { id: "search", label: "Employee Search", icon: Search, group: "People" },
+  { id: "hrassistance", label: "HR Assistance", icon: HeartHandshake, group: "HR Assistance" },
   { id: "departments", label: "Departments & KYC", icon: Building2, group: "Org" },
   { id: "documents", label: "Documents & Payroll", icon: FileText, group: "Org" },
   { id: "salaryslip", label: "Salary Slip — Monthly", icon: Receipt, group: "Org" },
@@ -75,6 +77,7 @@ export default function AdminConsole({
       case "onboarding": return <AdminOnboardingPanel companyId={companyId} uploaderName={uploaderName} />;
       case "resignation": return <AdminResignationsPanel companyId={companyId} />;
       case "search": return <AdminEmployeeSearchPanel companyId={companyId} />;
+      case "hrassistance": return <AdminHRAssistancePanel companyId={companyId} />;
       case "departments": return <AdminDepartmentsPanel companyId={companyId} />;
       case "documents": return <AdminDocumentsPanel companyId={companyId} uploaderName={uploaderName} />;
       case "salaryslip": return <AdminSalarySlipPanel companyId={companyId} uploaderName={uploaderName} />;
