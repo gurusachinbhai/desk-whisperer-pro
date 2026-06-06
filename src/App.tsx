@@ -28,6 +28,7 @@ import CRM from "./pages/CRM.tsx";
 import Help from "./pages/Help.tsx";
 import Tickets from "./pages/Tickets.tsx";
 import NotFound from "./pages/NotFound.tsx";
+import OfficeKiosk from "./pages/OfficeKiosk.tsx";
 import DeviceShell from "./components/DeviceShell";
 import SeoHead from "./components/SeoHead";
 
