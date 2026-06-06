@@ -28,6 +28,7 @@ import CRM from "./pages/CRM.tsx";
 import Help from "./pages/Help.tsx";
 import Tickets from "./pages/Tickets.tsx";
 import NotFound from "./pages/NotFound.tsx";
+import OfficeKiosk from "./pages/OfficeKiosk.tsx";
 import DeviceShell from "./components/DeviceShell";
 import SeoHead from "./components/SeoHead";
 
@@ -66,6 +67,7 @@ const App = () => (
             <Route path="/product/crm" element={<CRM />} />
             <Route path="/help" element={<Help />} />
             <Route path="/tickets" element={<Tickets />} />
+            <Route path="/office-kiosk" element={<OfficeKiosk />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes></main>
