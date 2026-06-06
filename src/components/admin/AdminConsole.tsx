@@ -20,6 +20,7 @@ import AdminDepartmentsPanel from "@/components/AdminDepartmentsPanel";
 import AdminDocumentsPanel from "@/components/AdminDocumentsPanel";
 import TrainingPanel from "@/components/TrainingPanel";
 import AppraisalPanel from "@/components/AppraisalPanel";
+import AdminHRAssistancePanel from "./AdminHRAssistancePanel";
 
 type Section =
   | "dashboard" | "onboarding" | "resignation" | "search"
