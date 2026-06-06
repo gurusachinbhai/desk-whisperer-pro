@@ -3,6 +3,7 @@ import {
   LayoutDashboard, UserPlus, LogOut, Search, Building2, FileText, Armchair, Bell, BarChart3, CreditCard, Menu, X, GraduationCap, ClipboardList, FolderArchive, MapPin, Laptop, Calculator, Sparkles, ShieldAlert, Users, Package, Receipt,
 } from "lucide-react";
 import AdminCRMPanel from "./AdminCRMPanel";
+import AdminResumeSearchPanel from "./AdminResumeSearchPanel";
 import AdminInventoryPanel from "./AdminInventoryPanel";
 import AdminSalarySlipPanel from "./AdminSalarySlipPanel";
 import AdminAssistantLogsPanel from "./AdminAssistantLogsPanel";
@@ -22,7 +23,7 @@ import AppraisalPanel from "@/components/AppraisalPanel";
 
 type Section =
   | "dashboard" | "onboarding" | "resignation" | "search"
-  | "departments" | "documents" | "salaryslip" | "training" | "appraisal" | "resumes" | "seats" | "attendance" | "itassets" | "accounting" | "crm" | "inventory" | "assistantlogs" | "itescalations" | "announcements" | "reports" | "billing";
+  | "departments" | "documents" | "salaryslip" | "training" | "appraisal" | "resumes" | "resumesearch" | "seats" | "attendance" | "itassets" | "accounting" | "crm" | "inventory" | "assistantlogs" | "itescalations" | "announcements" | "reports" | "billing";
 
 type Props = {
   companyId: string;
@@ -46,6 +47,7 @@ const NAV: { id: Section; label: string; icon: any; group: string }[] = [
   { id: "training", label: "Training & Skills", icon: GraduationCap, group: "Org" },
   { id: "appraisal", label: "Appraisals", icon: ClipboardList, group: "Org" },
   { id: "resumes", label: "Resume Bank", icon: FolderArchive, group: "Org" },
+  { id: "resumesearch", label: "Resume Search · AI", icon: Search, group: "Org" },
   { id: "seats", label: "Open Desk · Seats", icon: Armchair, group: "Workspace" },
   { id: "attendance", label: "Attendance & Geo", icon: MapPin, group: "Workspace" },
   { id: "itassets", label: "IT Asset Management", icon: Laptop, group: "Workspace" },
@@ -79,6 +81,7 @@ export default function AdminConsole({
       case "training": return <TrainingPanel companyId={companyId} meUserId={meUserId ?? null} meName={uploaderName} canManage={true} />;
       case "appraisal": return <AppraisalPanel companyId={companyId} meUserId={meUserId ?? null} meEmployeeId={meEmployeeId ?? null} meName={uploaderName} isAdmin={true} />;
       case "resumes": return <AdminResumeBankPanel companyId={companyId} uploaderName={uploaderName} />;
+      case "resumesearch": return <AdminResumeSearchPanel companyId={companyId} uploaderName={uploaderName} />;
       case "seats": return <AdminSeatMasterPanel companyId={companyId} />;
       case "attendance": return <AdminAttendancePanel companyId={companyId} />;
       case "itassets": return <AdminITAssetPanel companyId={companyId} uploaderName={uploaderName} meUserId={meUserId} />;
