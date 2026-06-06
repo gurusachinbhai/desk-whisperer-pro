@@ -81,6 +81,7 @@ export default function AdminConsole({
       case "training": return <TrainingPanel companyId={companyId} meUserId={meUserId ?? null} meName={uploaderName} canManage={true} />;
       case "appraisal": return <AppraisalPanel companyId={companyId} meUserId={meUserId ?? null} meEmployeeId={meEmployeeId ?? null} meName={uploaderName} isAdmin={true} />;
       case "resumes": return <AdminResumeBankPanel companyId={companyId} uploaderName={uploaderName} />;
+      case "resumesearch": return <AdminResumeSearchPanel companyId={companyId} uploaderName={uploaderName} />;
       case "seats": return <AdminSeatMasterPanel companyId={companyId} />;
       case "attendance": return <AdminAttendancePanel companyId={companyId} />;
       case "itassets": return <AdminITAssetPanel companyId={companyId} uploaderName={uploaderName} meUserId={meUserId} />;
