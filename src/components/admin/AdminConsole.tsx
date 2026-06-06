@@ -77,6 +77,7 @@ export default function AdminConsole({
       case "onboarding": return <AdminOnboardingPanel companyId={companyId} uploaderName={uploaderName} />;
       case "resignation": return <AdminResignationsPanel companyId={companyId} />;
       case "search": return <AdminEmployeeSearchPanel companyId={companyId} />;
+      case "hrassistance": return <AdminHRAssistancePanel companyId={companyId} />;
       case "departments": return <AdminDepartmentsPanel companyId={companyId} />;
       case "documents": return <AdminDocumentsPanel companyId={companyId} uploaderName={uploaderName} />;
       case "salaryslip": return <AdminSalarySlipPanel companyId={companyId} uploaderName={uploaderName} />;
