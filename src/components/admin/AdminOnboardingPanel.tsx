@@ -382,6 +382,8 @@ function EmployeeEditor({ companyId, uploaderName, employee, onSaved }: {
   const [email, setEmail] = useState(employee.email ?? "");
   const [phone, setPhone] = useState(employee.phone ?? "");
   const [uan, setUan] = useState(employee.uan_number ?? "");
+  const [employeeCode, setEmployeeCode] = useState(employee.employee_code ?? "");
+  const hadCode = !!employee.employee_code;
   const [kyc, setKyc] = useState<KycRow | null>(null);
   const [pan, setPan] = useState("");
   const [aadhar, setAadhar] = useState("");
