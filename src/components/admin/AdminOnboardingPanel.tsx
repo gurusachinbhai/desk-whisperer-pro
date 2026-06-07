@@ -409,6 +409,10 @@ function EmployeeEditor({ companyId, uploaderName, employee, onSaved }: {
       .select("id,employee_id,doc_type,title,file_path,file_name,file_size,created_at")
       .eq("employee_id", employee.id).eq("doc_type", "kyc").order("created_at", { ascending: false });
     setDocs((d ?? []) as DocRow[]);
+    const { data: a } = await supabase.from("employee_profile_audit")
+      .select("id,changed_by_name,changed_by_email,changes,created_at")
+      .eq("employee_id", employee.id).order("created_at", { ascending: false }).limit(25);
+    setAuditLog((a ?? []) as any);
   };
   useEffect(() => { loadKyc(); }, [employee.id]);
 
