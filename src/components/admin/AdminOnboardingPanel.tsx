@@ -394,6 +394,7 @@ function EmployeeEditor({ companyId, uploaderName, employee, onSaved }: {
   const [newFiles, setNewFiles] = useState<File[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
+  const [auditLog, setAuditLog] = useState<Array<{ id: string; changed_by_name: string | null; changed_by_email: string | null; changes: Record<string, { from: any; to: any }>; created_at: string }>>([]);
 
   const loadKyc = async () => {
     const { data: k } = await supabase.from("employee_kyc").select("*").eq("employee_id", employee.id).maybeSingle();
