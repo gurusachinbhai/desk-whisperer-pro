@@ -6925,7 +6925,7 @@ const Index = () => {
         {/* Primary navigation — horizontal, scrollable on small screens */}
         <nav className="mx-auto w-full max-w-7xl overflow-x-auto px-2 pb-2 sm:px-4 lg:px-6">
           <div className="flex w-max min-w-full items-center gap-1">
-            {bottomTabs.filter((t) => t.id !== "admin" || isAdmin).map((tab) => (
+            {bottomTabs.filter((t) => (t.id !== "admin" || isAdmin) && (t.id !== "globalattendance" || isAdmin)).map((tab) => (
               <button
                 key={tab.label}
                 onClick={() => setActiveTab(tab.id)}
