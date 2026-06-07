@@ -499,6 +499,51 @@ function EmployeeEditor({ companyId, uploaderName, employee, onSaved }: {
         });
       }
       setNewFiles([]);
+
+      // Build diff of changed fields and write audit log
+      const norm = (v: any) => (v === "" || v === undefined ? null : v);
+      const before: Record<string, any> = {
+        display_name: employee.display_name,
+        email: employee.email ?? null,
+        phone: employee.phone ?? null,
+        uan_number: employee.uan_number ?? null,
+        employee_code: employee.employee_code ?? null,
+        pan_number: kyc?.pan_number ?? null,
+        aadhar_number: kyc?.aadhar_number ?? null,
+        bank_account_number: kyc?.bank_account_number ?? null,
+        bank_ifsc: kyc?.bank_ifsc ?? null,
+        bank_name: kyc?.bank_name ?? null,
+      };
+      const after: Record<string, any> = {
+        display_name: displayName.trim(),
+        email: email.trim().toLowerCase(),
+        phone: norm(phone.trim()),
+        uan_number: norm(uan.replace(/\s/g, "")),
+        employee_code: norm(trimmedCode),
+        pan_number: norm(pan.toUpperCase().trim()),
+        aadhar_number: norm(aadhar.replace(/\s/g, "")),
+        bank_account_number: norm(bankAcc.replace(/\s/g, "")),
+        bank_ifsc: norm(ifsc.toUpperCase().trim()),
+        bank_name: norm(bankName.trim()),
+      };
+      const changes: Record<string, { from: any; to: any }> = {};
+      for (const k of Object.keys(after)) {
+        if ((before[k] ?? null) !== (after[k] ?? null)) {
+          changes[k] = { from: before[k] ?? null, to: after[k] ?? null };
+        }
+      }
+      if (newFiles.length) changes["documents_added"] = { from: null, to: newFiles.length };
+      if (Object.keys(changes).length) {
+        await supabase.from("employee_profile_audit").insert({
+          company_id: companyId,
+          employee_id: employee.id,
+          changed_by: userId,
+          changed_by_name: uploaderName,
+          changed_by_email: (await supabase.auth.getUser()).data.user?.email ?? null,
+          changes,
+        });
+      }
+
       toast.success("Employee updated");
       loadKyc(); onSaved();
     } catch (err: any) {
