@@ -633,6 +633,39 @@ function EmployeeEditor({ companyId, uploaderName, employee, onSaved }: {
           <Save className="h-4 w-4" /> {busy ? "Saving…" : "Save changes"}
         </button>
       </form>
+
+      <div className="mt-5 border-t border-border pt-4">
+        <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">
+          <FileText className="h-3.5 w-3.5 text-primary" /> Change history
+        </div>
+        {auditLog.length === 0 ? (
+          <p className="text-xs text-muted-foreground">No edits recorded yet.</p>
+        ) : (
+          <ul className="space-y-2 max-h-64 overflow-y-auto">
+            {auditLog.map((a) => (
+              <li key={a.id} className="rounded-lg border border-border bg-background px-3 py-2 text-xs">
+                <div className="mb-1 flex flex-wrap items-center justify-between gap-2 text-[11px]">
+                  <span className="font-bold">
+                    {a.changed_by_name ?? "Unknown"}
+                    {a.changed_by_email && <span className="ml-1 font-normal text-muted-foreground">· {a.changed_by_email}</span>}
+                  </span>
+                  <span className="text-muted-foreground">{new Date(a.created_at).toLocaleString()}</span>
+                </div>
+                <ul className="space-y-0.5">
+                  {Object.entries(a.changes ?? {}).map(([field, diff]) => (
+                    <li key={field} className="font-mono text-[11px]">
+                      <span className="font-bold">{field}:</span>{" "}
+                      <span className="text-muted-foreground line-through">{String(diff?.from ?? "—")}</span>
+                      {" → "}
+                      <span className="text-foreground">{String(diff?.to ?? "—")}</span>
+                    </li>
+                  ))}
+                </ul>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </div>
   );
 }
