@@ -394,6 +394,7 @@ function EmployeeEditor({ companyId, uploaderName, employee, onSaved }: {
   const [newFiles, setNewFiles] = useState<File[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
+  const [auditLog, setAuditLog] = useState<Array<{ id: string; changed_by_name: string | null; changed_by_email: string | null; changes: Record<string, { from: any; to: any }>; created_at: string }>>([]);
 
   const loadKyc = async () => {
     const { data: k } = await supabase.from("employee_kyc").select("*").eq("employee_id", employee.id).maybeSingle();
@@ -408,6 +409,10 @@ function EmployeeEditor({ companyId, uploaderName, employee, onSaved }: {
       .select("id,employee_id,doc_type,title,file_path,file_name,file_size,created_at")
       .eq("employee_id", employee.id).eq("doc_type", "kyc").order("created_at", { ascending: false });
     setDocs((d ?? []) as DocRow[]);
+    const { data: a } = await supabase.from("employee_profile_audit")
+      .select("id,changed_by_name,changed_by_email,changes,created_at")
+      .eq("employee_id", employee.id).order("created_at", { ascending: false }).limit(25);
+    setAuditLog((a ?? []) as any);
   };
   useEffect(() => { loadKyc(); }, [employee.id]);
 
@@ -494,6 +499,51 @@ function EmployeeEditor({ companyId, uploaderName, employee, onSaved }: {
         });
       }
       setNewFiles([]);
+
+      // Build diff of changed fields and write audit log
+      const norm = (v: any) => (v === "" || v === undefined ? null : v);
+      const before: Record<string, any> = {
+        display_name: employee.display_name,
+        email: employee.email ?? null,
+        phone: employee.phone ?? null,
+        uan_number: employee.uan_number ?? null,
+        employee_code: employee.employee_code ?? null,
+        pan_number: kyc?.pan_number ?? null,
+        aadhar_number: kyc?.aadhar_number ?? null,
+        bank_account_number: kyc?.bank_account_number ?? null,
+        bank_ifsc: kyc?.bank_ifsc ?? null,
+        bank_name: kyc?.bank_name ?? null,
+      };
+      const after: Record<string, any> = {
+        display_name: displayName.trim(),
+        email: email.trim().toLowerCase(),
+        phone: norm(phone.trim()),
+        uan_number: norm(uan.replace(/\s/g, "")),
+        employee_code: norm(trimmedCode),
+        pan_number: norm(pan.toUpperCase().trim()),
+        aadhar_number: norm(aadhar.replace(/\s/g, "")),
+        bank_account_number: norm(bankAcc.replace(/\s/g, "")),
+        bank_ifsc: norm(ifsc.toUpperCase().trim()),
+        bank_name: norm(bankName.trim()),
+      };
+      const changes: Record<string, { from: any; to: any }> = {};
+      for (const k of Object.keys(after)) {
+        if ((before[k] ?? null) !== (after[k] ?? null)) {
+          changes[k] = { from: before[k] ?? null, to: after[k] ?? null };
+        }
+      }
+      if (newFiles.length) changes["documents_added"] = { from: null, to: newFiles.length };
+      if (Object.keys(changes).length) {
+        await supabase.from("employee_profile_audit").insert({
+          company_id: companyId,
+          employee_id: employee.id,
+          changed_by: userId,
+          changed_by_name: uploaderName,
+          changed_by_email: (await supabase.auth.getUser()).data.user?.email ?? null,
+          changes,
+        });
+      }
+
       toast.success("Employee updated");
       loadKyc(); onSaved();
     } catch (err: any) {
@@ -583,6 +633,39 @@ function EmployeeEditor({ companyId, uploaderName, employee, onSaved }: {
           <Save className="h-4 w-4" /> {busy ? "Saving…" : "Save changes"}
         </button>
       </form>
+
+      <div className="mt-5 border-t border-border pt-4">
+        <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">
+          <FileText className="h-3.5 w-3.5 text-primary" /> Change history
+        </div>
+        {auditLog.length === 0 ? (
+          <p className="text-xs text-muted-foreground">No edits recorded yet.</p>
+        ) : (
+          <ul className="space-y-2 max-h-64 overflow-y-auto">
+            {auditLog.map((a) => (
+              <li key={a.id} className="rounded-lg border border-border bg-background px-3 py-2 text-xs">
+                <div className="mb-1 flex flex-wrap items-center justify-between gap-2 text-[11px]">
+                  <span className="font-bold">
+                    {a.changed_by_name ?? "Unknown"}
+                    {a.changed_by_email && <span className="ml-1 font-normal text-muted-foreground">· {a.changed_by_email}</span>}
+                  </span>
+                  <span className="text-muted-foreground">{new Date(a.created_at).toLocaleString()}</span>
+                </div>
+                <ul className="space-y-0.5">
+                  {Object.entries(a.changes ?? {}).map(([field, diff]) => (
+                    <li key={field} className="font-mono text-[11px]">
+                      <span className="font-bold">{field}:</span>{" "}
+                      <span className="text-muted-foreground line-through">{String(diff?.from ?? "—")}</span>
+                      {" → "}
+                      <span className="text-foreground">{String(diff?.to ?? "—")}</span>
+                    </li>
+                  ))}
+                </ul>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </div>
   );
 }

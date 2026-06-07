@@ -1191,6 +1191,39 @@ export type Database = {
         }
         Relationships: []
       }
+      employee_profile_audit: {
+        Row: {
+          changed_by: string | null
+          changed_by_email: string | null
+          changed_by_name: string | null
+          changes: Json
+          company_id: string
+          created_at: string
+          employee_id: string
+          id: string
+        }
+        Insert: {
+          changed_by?: string | null
+          changed_by_email?: string | null
+          changed_by_name?: string | null
+          changes?: Json
+          company_id: string
+          created_at?: string
+          employee_id: string
+          id?: string
+        }
+        Update: {
+          changed_by?: string | null
+          changed_by_email?: string | null
+          changed_by_name?: string | null
+          changes?: Json
+          company_id?: string
+          created_at?: string
+          employee_id?: string
+          id?: string
+        }
+        Relationships: []
+      }
       employee_profiles: {
         Row: {
           approved_at: string | null
