@@ -34,6 +34,13 @@ export default function AdminHRAssistancePanel({ companyId }: { companyId: strin
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<KioskStats>({ totalEnrolled: 0, todayCheckIns: 0, todayCheckOuts: 0 });
   const [recentRecords, setRecentRecords] = useState<KioskRecord[]>([]);
+  const [settings, setSettings] = useState<KioskSettings>({
+    company_id: companyId,
+    verification_mode: "either",
+    max_enrollment_attempts: 3,
+    max_verify_retries: 3,
+  });
+  const [savingSettings, setSavingSettings] = useState(false);
 
   const todayKey = format(new Date(), "yyyy-MM-dd");
 
