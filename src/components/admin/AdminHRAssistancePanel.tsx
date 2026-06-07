@@ -191,6 +191,81 @@ export default function AdminHRAssistancePanel({ companyId }: { companyId: strin
         </div>
       </section>
 
+      {/* Settings */}
+      <section className="rounded-3xl border border-border bg-card p-5">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h3 className="font-display text-base font-extrabold flex items-center gap-2">
+              <Settings2 className="h-4 w-4 text-primary" /> Kiosk Settings
+            </h3>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Control which biometrics are required and how many tries employees get.
+            </p>
+          </div>
+          <button
+            onClick={saveSettings}
+            disabled={savingSettings}
+            className="focus-premium inline-flex shrink-0 items-center gap-2 rounded-2xl bg-primary px-4 py-2 text-xs font-extrabold text-primary-foreground shadow-card transition hover:opacity-90 disabled:opacity-40"
+          >
+            {savingSettings ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            Save settings
+          </button>
+        </div>
+
+        <div className="mt-4 space-y-4">
+          <div>
+            <label className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Verification mode</label>
+            <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {(["face", "thumb", "both", "either"] as VerificationMode[]).map((m) => {
+                const active = settings.verification_mode === m;
+                const label =
+                  m === "face" ? "Face only" :
+                  m === "thumb" ? "Thumb only" :
+                  m === "both" ? "Both required" : "Either one";
+                return (
+                  <button
+                    key={m}
+                    onClick={() => setSettings((s) => ({ ...s, verification_mode: m }))}
+                    className={`rounded-2xl border px-3 py-2 text-sm font-bold transition ${
+                      active ? "border-primary bg-primary text-primary-foreground" : "border-border bg-surface-raised hover:bg-muted"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="mt-2 text-xs text-muted-foreground">
+              {settings.verification_mode === "face" && "Employees enroll and verify with face only."}
+              {settings.verification_mode === "thumb" && "Employees enroll and verify with thumb only."}
+              {settings.verification_mode === "both" && "Employees must enroll both and pass both checks to log in/out."}
+              {settings.verification_mode === "either" && "Employees enroll both; either method is enough to log in/out."}
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div>
+              <label className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Max enrollment attempts</label>
+              <input
+                type="number" min={1} max={20}
+                value={settings.max_enrollment_attempts}
+                onChange={(e) => setSettings((s) => ({ ...s, max_enrollment_attempts: Math.max(1, Math.min(20, Number(e.target.value) || 1)) }))}
+                className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Max verification retries</label>
+              <input
+                type="number" min={1} max={20}
+                value={settings.max_verify_retries}
+                onChange={(e) => setSettings((s) => ({ ...s, max_verify_retries: Math.max(1, Math.min(20, Number(e.target.value) || 1)) }))}
+                className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm"
+              />
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Quick guide */}
       <section className="rounded-3xl border border-border bg-card p-5">
         <h3 className="font-display text-sm font-extrabold uppercase tracking-wide text-muted-foreground">How it works</h3>
