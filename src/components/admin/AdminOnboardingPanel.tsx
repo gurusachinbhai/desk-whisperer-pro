@@ -382,6 +382,8 @@ function EmployeeEditor({ companyId, uploaderName, employee, onSaved }: {
   const [email, setEmail] = useState(employee.email ?? "");
   const [phone, setPhone] = useState(employee.phone ?? "");
   const [uan, setUan] = useState(employee.uan_number ?? "");
+  const [employeeCode, setEmployeeCode] = useState(employee.employee_code ?? "");
+  const hadCode = !!employee.employee_code;
   const [kyc, setKyc] = useState<KycRow | null>(null);
   const [pan, setPan] = useState("");
   const [aadhar, setAadhar] = useState("");
@@ -434,17 +436,32 @@ function EmployeeEditor({ companyId, uploaderName, employee, onSaved }: {
 
   const save = async (e: FormEvent) => {
     e.preventDefault();
-    const errs = validate({ displayName, email, uan, pan, aadhar, ifsc, bankAcc });
+    const errs = validate({ displayName, email, uan, pan, aadhar, ifsc, bankAcc, employeeCode });
     setErrors(errs);
     if (Object.keys(errs).length) { toast.error("Please fix the highlighted fields"); return; }
 
     setBusy(true);
     try {
+      const trimmedCode = employeeCode.trim().toUpperCase();
+      const codeChanged = trimmedCode !== (employee.employee_code ?? "");
+      if (trimmedCode && codeChanged) {
+        const { data: dup } = await supabase.from("employee_profiles")
+          .select("id").eq("company_id", companyId).eq("employee_code", trimmedCode)
+          .neq("id", employee.id).maybeSingle();
+        if (dup) {
+          setErrors({ employeeCode: "This Employee ID is already used in your company." });
+          toast.error("Employee ID already exists");
+          setBusy(false);
+          return;
+        }
+      }
+
       const { error: pErr } = await supabase.from("employee_profiles").update({
         display_name: displayName.trim(),
         email: email.trim().toLowerCase(),
         phone: phone.trim() || null,
         uan_number: uan.replace(/\s/g, "") || null,
+        employee_code: trimmedCode || null,
       }).eq("id", employee.id);
       if (pErr) throw pErr;
 
@@ -480,7 +497,9 @@ function EmployeeEditor({ companyId, uploaderName, employee, onSaved }: {
       toast.success("Employee updated");
       loadKyc(); onSaved();
     } catch (err: any) {
-      toast.error("Save failed", { description: err.message ?? String(err) });
+      const friendly = friendlyDbError(err);
+      if (friendly.field) setErrors({ [friendly.field]: friendly.message });
+      toast.error("Save failed", { description: friendly.message });
     } finally { setBusy(false); }
   };
 
@@ -501,6 +520,17 @@ function EmployeeEditor({ companyId, uploaderName, employee, onSaved }: {
       <form onSubmit={save} className="grid gap-3 sm:grid-cols-2">
         <Field label="Full name *" value={displayName} onChange={setDisplayName} error={errors.displayName} />
         <Field label="Work email *" value={email} onChange={setEmail} type="email" error={errors.email} />
+        <Field
+          label={hadCode ? "Employee ID" : "Assign Employee ID"}
+          value={employeeCode}
+          onChange={(v: string) => setEmployeeCode(v.toUpperCase().replace(/[^A-Z0-9_-]/g, ""))}
+          placeholder="e.g. EMP-001"
+          maxLength={20}
+          hint={hadCode
+            ? "Editable. Must remain unique within your company."
+            : "Not assigned yet. 2–20 chars, letters/numbers, hyphens or underscores in the middle."}
+          error={errors.employeeCode}
+        />
         <Field label="Phone" value={phone} onChange={setPhone} />
         <Field label="UAN number" value={uan} onChange={setUan} maxLength={14} error={errors.uan} />
 
