@@ -107,25 +107,51 @@ export default function OfficeKiosk() {
         .maybeSingle();
       if (rec) setToday(rec as TodayRow);
 
+      // Load kiosk settings for this employee's company
+      const { data: cfg } = await supabase
+        .from("hr_kiosk_settings")
+        .select("verification_mode,max_enrollment_attempts,max_verify_retries")
+        .eq("company_id", emp.company_id)
+        .maybeSingle();
+      if (cfg) setSettings(cfg as KioskSettings);
+
       setLoading(false);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const requireFace = settings.verification_mode === "face" || settings.verification_mode === "both" || settings.verification_mode === "either";
+  const requireThumb = settings.verification_mode === "thumb" || settings.verification_mode === "both" || settings.verification_mode === "either";
   const enrolledFace = !!enrollment?.face_enrolled_at;
   const enrolledThumb = !!enrollment?.thumb_enrolled_at;
-  const fullyEnrolled = enrolledFace && enrolledThumb;
+  const fullyEnrolled = (!requireFace || enrolledFace) && (!requireThumb || enrolledThumb);
 
   /* ---------------- verification ---------------- */
-  const onFaceVerified = () => {
+  const completeVerify = (method: "face" | "thumb") => {
     setMode(null);
-    setVerified({ method: "face", at: Date.now() });
-    toast.success("Face verified");
+    setVerified({ method, at: Date.now() });
+    setVerifyAttempts(0);
+    setNeedSecondFactor(null);
+    toast.success(`${method === "face" ? "Face" : "Thumb"} verified`);
+  };
+  const onFaceVerified = () => {
+    if (settings.verification_mode === "both" && !needSecondFactor) {
+      // need thumb next
+      setMode(null);
+      setNeedSecondFactor("thumb");
+      toast.success("Face verified — now scan thumb");
+      return;
+    }
+    completeVerify("face");
   };
   const onThumbVerified = () => {
-    setMode(null);
-    setVerified({ method: "thumb", at: Date.now() });
-    toast.success("Thumb verified");
+    if (settings.verification_mode === "both" && !needSecondFactor) {
+      setMode(null);
+      setNeedSecondFactor("face");
+      toast.success("Thumb verified — now scan face");
+      return;
+    }
+    completeVerify("thumb");
   };
 
   /* ---------------- attendance actions ---------------- */
