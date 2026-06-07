@@ -113,6 +113,9 @@ function friendlyDbError(err: any): { message: string; field?: string } {
   const code = err?.code ?? "";
   const msg = err?.message ?? String(err);
   if (code === "23505" || msg.includes("duplicate key value")) {
+    if (msg.includes("idx_employee_profiles_company_code") || msg.includes("company_code")) {
+      return { message: "This Employee ID is already used in your company.", field: "employeeCode" };
+    }
     if (msg.includes("idx_employee_profiles_company_email") || msg.includes("company_email")) {
       return { message: "This email is already assigned to another employee in your company.", field: "email" };
     }
