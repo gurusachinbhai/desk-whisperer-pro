@@ -42,6 +42,7 @@ const AADHAAR_RE = /^[0-9]{12}$/;
 const IFSC_RE = /^[A-Z]{4}0[A-Z0-9]{6}$/;
 const UAN_RE = /^[0-9]{12}$/;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const EMPLOYEE_CODE_RE = /^[A-Z0-9][A-Z0-9_-]{0,18}[A-Z0-9]$/;
 
 function slugifyName(name: string) {
   return name.toLowerCase().trim().replace(/[^a-z0-9]+/g, ".").replace(/^\.+|\.+$/g, "").slice(0, 40);
@@ -101,6 +102,12 @@ function validate(form: any) {
   const errs: Record<string, string> = {};
   if (!form.displayName.trim() || form.displayName.trim().length < 2) errs.displayName = "Name required (2+ chars)";
   if (!form.email.trim() || !EMAIL_RE.test(form.email.trim())) errs.email = "Valid email required";
+  const code = form.employeeCode?.trim().toUpperCase();
+  if (code) {
+    if (!EMPLOYEE_CODE_RE.test(code)) {
+      errs.employeeCode = "Employee ID must be 2–20 characters, start and end with a letter or number. Hyphens and underscores are allowed in the middle.";
+    }
+  }
   if (form.uan && !UAN_RE.test(form.uan.replace(/\s/g, ""))) errs.uan = "UAN must be 12 digits";
   if (form.pan && !PAN_RE.test(form.pan.toUpperCase())) errs.pan = "PAN format ABCDE1234F";
   if (form.aadhar && !AADHAAR_RE.test(form.aadhar.replace(/\s/g, ""))) errs.aadhar = "Aadhaar must be 12 digits";
@@ -166,7 +173,7 @@ function AddEmployeeForm({ companyId, uploaderName, companyDomain }: { companyId
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
-    const form = { displayName, email, uan, pan, aadhar, ifsc, bankAcc };
+    const form = { displayName, email, employeeCode, uan, pan, aadhar, ifsc, bankAcc };
     const errs = validate(form);
     setErrors(errs);
     if (Object.keys(errs).length) { toast.error("Please fix the highlighted fields"); return; }
@@ -255,10 +262,10 @@ function AddEmployeeForm({ companyId, uploaderName, companyDomain }: { companyId
           hint={!emailEdited ? "Auto-generated from name — editable" : undefined}
           error={errors.email} />
         <Field label="Employee ID" value={employeeCode}
-          onChange={(v: string) => setEmployeeCode(v.toUpperCase())}
+          onChange={(v: string) => setEmployeeCode(v.toUpperCase().replace(/[^A-Z0-9_-]/g, ""))}
           placeholder="e.g. EMP-001 (leave blank to auto-generate)"
-          maxLength={32}
-          hint="Must be unique within your company"
+          maxLength={20}
+          hint="2–20 characters. Letters, numbers, hyphens and underscores only. Must start and end with a letter or number."
           error={errors.employeeCode} />
         <Field label="Phone" value={phone} onChange={setPhone} placeholder="+91…" />
         <Field label="UAN number" value={uan} onChange={setUan} placeholder="12-digit UAN" maxLength={14} error={errors.uan} />
