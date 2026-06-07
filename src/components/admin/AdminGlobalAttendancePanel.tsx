@@ -217,16 +217,16 @@ export default function AdminGlobalAttendancePanel({ companyId }: { companyId: s
 
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           <div>
-            <Label className="text-[10px] font-bold uppercase">Employee</Label>
+            <Label className="text-[10px] font-bold uppercase">Employee ID</Label>
             <select
               value={selectedEmployeeId}
               onChange={(e) => { setSelectedEmployeeId(e.target.value); setVerified(null); }}
               className="mt-1 h-10 w-full rounded-xl border border-border bg-background px-3 text-sm"
             >
-              <option value="">— Select an employee —</option>
+              <option value="">— Select an Employee ID —</option>
               {employees.map((e) => (
                 <option key={e.id} value={e.id}>
-                  {e.display_name}{e.employee_code ? ` · ${e.employee_code}` : ""}
+                  {e.employee_code ?? "—"}{e.display_name ? ` · ${e.display_name}` : ""}
                 </option>
               ))}
             </select>
