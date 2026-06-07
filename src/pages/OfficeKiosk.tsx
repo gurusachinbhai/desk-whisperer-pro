@@ -360,14 +360,20 @@ export default function OfficeKiosk() {
                 : settings.verification_mode === "either"
                 ? "Pick a method below. Your biometric data never leaves this device."
                 : `Use ${settings.verification_mode} verification to continue.`}
-              {" "}You have up to {settings.max_verify_retries} retries.
             </p>
+            {isLockedOut && verifyAttempts >= settings.max_verify_retries && (
+              <div className="mt-3 flex items-center gap-2 rounded-2xl bg-destructive/10 px-4 py-3 text-sm font-bold text-destructive">
+                <Lock className="h-4 w-4" />
+                Verification locked — retry in <Clock className="h-3.5 w-3.5" /> {countdown}
+              </div>
+            )}
             <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
               {((needSecondFactor === null && (settings.verification_mode === "face" || settings.verification_mode === "both" || settings.verification_mode === "either")) ||
                 needSecondFactor === "face") && (
                 <button
                   onClick={() => setMode("face")}
-                  className="focus-premium flex items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-4 text-sm font-extrabold text-primary-foreground shadow-card transition hover:opacity-90"
+                  disabled={isLockedOut && verifyAttempts >= settings.max_verify_retries}
+                  className="focus-premium flex items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-4 text-sm font-extrabold text-primary-foreground shadow-card transition hover:opacity-90 disabled:opacity-40"
                 >
                   <ScanFace className="h-4 w-4" /> Face Attendance
                 </button>
@@ -376,17 +382,23 @@ export default function OfficeKiosk() {
                 needSecondFactor === "thumb") && (
                 <button
                   onClick={() => setMode("thumb")}
-                  className="focus-premium flex items-center justify-center gap-2 rounded-2xl border border-primary/30 bg-primary/10 px-4 py-4 text-sm font-extrabold text-primary transition hover:bg-primary/15"
+                  disabled={isLockedOut && verifyAttempts >= settings.max_verify_retries}
+                  className="focus-premium flex items-center justify-center gap-2 rounded-2xl border border-primary/30 bg-primary/10 px-4 py-4 text-sm font-extrabold text-primary transition hover:bg-primary/15 disabled:opacity-40"
                 >
                   <Fingerprint className="h-4 w-4" /> Thumb Attendance
                 </button>
               )}
             </div>
-            {verifyAttempts > 0 && (
-              <p className="mt-3 text-xs text-amber-600">
-                Failed attempts: {verifyAttempts}/{settings.max_verify_retries}
-              </p>
-            )}
+            <div className="mt-3 flex items-center gap-3 text-xs">
+              {verifyAttempts > 0 && (
+                <span className="text-amber-600">
+                  Failed attempts: {verifyAttempts}/{settings.max_verify_retries}
+                </span>
+              )}
+              <span className={`font-bold ${remainingVerify <= 1 ? "text-destructive" : "text-muted-foreground"}`}>
+                {remainingVerify} {remainingVerify === 1 ? "retry" : "retries"} remaining
+              </span>
+            </div>
           </section>
         )}
 
