@@ -497,7 +497,9 @@ function EmployeeEditor({ companyId, uploaderName, employee, onSaved }: {
       toast.success("Employee updated");
       loadKyc(); onSaved();
     } catch (err: any) {
-      toast.error("Save failed", { description: err.message ?? String(err) });
+      const friendly = friendlyDbError(err);
+      if (friendly.field) setErrors({ [friendly.field]: friendly.message });
+      toast.error("Save failed", { description: friendly.message });
     } finally { setBusy(false); }
   };
 
