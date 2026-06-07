@@ -301,32 +301,49 @@ const Tickets = () => {
     await loadComments(t.id);
   };
 
+  // Allow-list of image MIME types and extensions; sanitize before upload.
+  const ALLOWED_IMAGE_MIME = new Set([
+    "image/png",
+    "image/jpeg",
+    "image/jpg",
+    "image/webp",
+    "image/gif",
+  ]);
+  const ALLOWED_IMAGE_EXT = new Set(["png", "jpg", "jpeg", "webp", "gif"]);
+
   const uploadFiles = async (files: File[], uid: string): Promise<string[]> => {
     if (files.length === 0) return [];
-    const urls: string[] = [];
+    if (!companyId) {
+      toast.error("Missing company context; cannot upload attachments");
+      return [];
+    }
+    const paths: string[] = [];
     for (const file of files) {
-      if (!file.type.startsWith("image/")) {
-        toast.error(`Skipping ${file.name}: only images allowed`);
+      if (!ALLOWED_IMAGE_MIME.has(file.type.toLowerCase())) {
+        toast.error(`Skipping ${file.name}: only PNG/JPEG/WebP/GIF images allowed`);
         continue;
       }
       if (file.size > 5 * 1024 * 1024) {
         toast.error(`Skipping ${file.name}: max 5MB`);
         continue;
       }
-      const ext = file.name.split(".").pop() || "png";
-      const path = `${uid}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const rawExt = (file.name.split(".").pop() || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+      const ext = ALLOWED_IMAGE_EXT.has(rawExt) ? rawExt : "png";
+      // Tenant-scoped path: {company_id}/{user_id}/{ts}-{rand}.{ext}
+      const path = `${companyId}/${uid}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
       const { error: upErr } = await supabase.storage.from("ticket-attachments").upload(path, file, {
         cacheControl: "3600",
         upsert: false,
+        contentType: file.type,
       });
       if (upErr) {
         toast.error(`Upload failed: ${file.name}`, { description: upErr.message });
         continue;
       }
-      const { data: pub } = supabase.storage.from("ticket-attachments").getPublicUrl(path);
-      urls.push(pub.publicUrl);
+      // Store the object path (not a URL). Signed URLs are minted on view.
+      paths.push(path);
     }
-    return urls;
+    return paths;
   };
 
   const handleCreate = async (e: FormEvent) => {
