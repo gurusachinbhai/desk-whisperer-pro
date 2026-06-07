@@ -33,6 +33,18 @@ type TodayRow = {
 
 const BUCKET = "biometric-enrollments";
 
+type VerificationMode = "face" | "thumb" | "both" | "either";
+type KioskSettings = {
+  verification_mode: VerificationMode;
+  max_enrollment_attempts: number;
+  max_verify_retries: number;
+};
+const DEFAULT_SETTINGS: KioskSettings = {
+  verification_mode: "either",
+  max_enrollment_attempts: 3,
+  max_verify_retries: 3,
+};
+
 export default function OfficeKiosk() {
   const nav = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -43,6 +55,10 @@ export default function OfficeKiosk() {
   const [mode, setMode] = useState<null | "face" | "thumb" | "enroll-face" | "enroll-thumb">(null);
   const [verified, setVerified] = useState<null | { method: "face" | "thumb"; at: number }>(null);
   const [working, setWorking] = useState(false);
+  const [settings, setSettings] = useState<KioskSettings>(DEFAULT_SETTINGS);
+  const [verifyAttempts, setVerifyAttempts] = useState(0);
+  const [enrollAttempts, setEnrollAttempts] = useState(0);
+  const [needSecondFactor, setNeedSecondFactor] = useState<null | "face" | "thumb">(null);
 
   const todayKey = format(new Date(), "yyyy-MM-dd");
 
@@ -91,25 +107,51 @@ export default function OfficeKiosk() {
         .maybeSingle();
       if (rec) setToday(rec as TodayRow);
 
+      // Load kiosk settings for this employee's company
+      const { data: cfg } = await supabase
+        .from("hr_kiosk_settings")
+        .select("verification_mode,max_enrollment_attempts,max_verify_retries")
+        .eq("company_id", emp.company_id)
+        .maybeSingle();
+      if (cfg) setSettings(cfg as KioskSettings);
+
       setLoading(false);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const requireFace = settings.verification_mode === "face" || settings.verification_mode === "both" || settings.verification_mode === "either";
+  const requireThumb = settings.verification_mode === "thumb" || settings.verification_mode === "both" || settings.verification_mode === "either";
   const enrolledFace = !!enrollment?.face_enrolled_at;
   const enrolledThumb = !!enrollment?.thumb_enrolled_at;
-  const fullyEnrolled = enrolledFace && enrolledThumb;
+  const fullyEnrolled = (!requireFace || enrolledFace) && (!requireThumb || enrolledThumb);
 
   /* ---------------- verification ---------------- */
-  const onFaceVerified = () => {
+  const completeVerify = (method: "face" | "thumb") => {
     setMode(null);
-    setVerified({ method: "face", at: Date.now() });
-    toast.success("Face verified");
+    setVerified({ method, at: Date.now() });
+    setVerifyAttempts(0);
+    setNeedSecondFactor(null);
+    toast.success(`${method === "face" ? "Face" : "Thumb"} verified`);
+  };
+  const onFaceVerified = () => {
+    if (settings.verification_mode === "both" && !needSecondFactor) {
+      // need thumb next
+      setMode(null);
+      setNeedSecondFactor("thumb");
+      toast.success("Face verified — now scan thumb");
+      return;
+    }
+    completeVerify("face");
   };
   const onThumbVerified = () => {
-    setMode(null);
-    setVerified({ method: "thumb", at: Date.now() });
-    toast.success("Thumb verified");
+    if (settings.verification_mode === "both" && !needSecondFactor) {
+      setMode(null);
+      setNeedSecondFactor("face");
+      toast.success("Thumb verified — now scan face");
+      return;
+    }
+    completeVerify("thumb");
   };
 
   /* ---------------- attendance actions ---------------- */
@@ -219,27 +261,38 @@ export default function OfficeKiosk() {
                   This is a one-time step. Once enrolled, you can check-in or check-out on any kiosk in seconds.
                 </p>
                 <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <button
-                    onClick={() => setMode("enroll-face")}
-                    className="focus-premium flex items-center justify-center gap-2 rounded-2xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm font-extrabold text-primary"
-                  >
-                    <ScanFace className="h-4 w-4" />
-                    {enrolledFace ? "Re-enroll Face" : "Enroll Face"}
-                  </button>
-                  <button
-                    onClick={() => setMode("enroll-thumb")}
-                    className="focus-premium flex items-center justify-center gap-2 rounded-2xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm font-extrabold text-primary"
-                  >
-                    <Fingerprint className="h-4 w-4" />
-                    {enrolledThumb ? "Re-enroll Thumb" : "Enroll Thumb"}
-                  </button>
+                  {requireFace && (
+                    <button
+                      onClick={() => setMode("enroll-face")}
+                      className="focus-premium flex items-center justify-center gap-2 rounded-2xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm font-extrabold text-primary"
+                    >
+                      <ScanFace className="h-4 w-4" />
+                      {enrolledFace ? "Re-enroll Face" : "Enroll Face"}
+                    </button>
+                  )}
+                  {requireThumb && (
+                    <button
+                      onClick={() => setMode("enroll-thumb")}
+                      className="focus-premium flex items-center justify-center gap-2 rounded-2xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm font-extrabold text-primary"
+                    >
+                      <Fingerprint className="h-4 w-4" />
+                      {enrolledThumb ? "Re-enroll Thumb" : "Enroll Thumb"}
+                    </button>
+                  )}
                 </div>
                 <div className="mt-3 flex flex-wrap gap-3 text-xs">
-                  <span className={`inline-flex items-center gap-1 ${enrolledFace ? "text-emerald-600" : "text-muted-foreground"}`}>
-                    {enrolledFace ? <CheckCircle2 className="h-3.5 w-3.5" /> : <X className="h-3.5 w-3.5" />} Face enrolled
-                  </span>
-                  <span className={`inline-flex items-center gap-1 ${enrolledThumb ? "text-emerald-600" : "text-muted-foreground"}`}>
-                    {enrolledThumb ? <CheckCircle2 className="h-3.5 w-3.5" /> : <X className="h-3.5 w-3.5" />} Thumb enrolled
+                  {requireFace && (
+                    <span className={`inline-flex items-center gap-1 ${enrolledFace ? "text-emerald-600" : "text-muted-foreground"}`}>
+                      {enrolledFace ? <CheckCircle2 className="h-3.5 w-3.5" /> : <X className="h-3.5 w-3.5" />} Face enrolled
+                    </span>
+                  )}
+                  {requireThumb && (
+                    <span className={`inline-flex items-center gap-1 ${enrolledThumb ? "text-emerald-600" : "text-muted-foreground"}`}>
+                      {enrolledThumb ? <CheckCircle2 className="h-3.5 w-3.5" /> : <X className="h-3.5 w-3.5" />} Thumb enrolled
+                    </span>
+                  )}
+                  <span className="inline-flex items-center gap-1 text-muted-foreground">
+                    Mode: <strong className="text-foreground">{settings.verification_mode}</strong>
                   </span>
                 </div>
               </div>
@@ -250,24 +303,46 @@ export default function OfficeKiosk() {
         {/* Step 1 — pick a verification method */}
         {!verified && fullyEnrolled && (
           <section className="mt-4 rounded-3xl bg-surface-raised p-5 shadow-card">
-            <h2 className="font-display text-lg font-extrabold">Step 1 — Verify your identity</h2>
+            <h2 className="font-display text-lg font-extrabold">
+              {needSecondFactor
+                ? `Step 1b — Now scan your ${needSecondFactor}`
+                : settings.verification_mode === "both"
+                ? "Step 1 — Verify with both face and thumb"
+                : "Step 1 — Verify your identity"}
+            </h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Pick a method below. Your biometric data never leaves this device.
+              {settings.verification_mode === "both"
+                ? "Your company requires both face and thumb to log in/out."
+                : settings.verification_mode === "either"
+                ? "Pick a method below. Your biometric data never leaves this device."
+                : `Use ${settings.verification_mode} verification to continue.`}
+              {" "}You have up to {settings.max_verify_retries} retries.
             </p>
             <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <button
-                onClick={() => setMode("face")}
-                className="focus-premium flex items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-4 text-sm font-extrabold text-primary-foreground shadow-card transition hover:opacity-90"
-              >
-                <ScanFace className="h-4 w-4" /> Face Attendance
-              </button>
-              <button
-                onClick={() => setMode("thumb")}
-                className="focus-premium flex items-center justify-center gap-2 rounded-2xl border border-primary/30 bg-primary/10 px-4 py-4 text-sm font-extrabold text-primary transition hover:bg-primary/15"
-              >
-                <Fingerprint className="h-4 w-4" /> Thumb Attendance
-              </button>
+              {((needSecondFactor === null && (settings.verification_mode === "face" || settings.verification_mode === "both" || settings.verification_mode === "either")) ||
+                needSecondFactor === "face") && (
+                <button
+                  onClick={() => setMode("face")}
+                  className="focus-premium flex items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-4 text-sm font-extrabold text-primary-foreground shadow-card transition hover:opacity-90"
+                >
+                  <ScanFace className="h-4 w-4" /> Face Attendance
+                </button>
+              )}
+              {((needSecondFactor === null && (settings.verification_mode === "thumb" || settings.verification_mode === "both" || settings.verification_mode === "either")) ||
+                needSecondFactor === "thumb") && (
+                <button
+                  onClick={() => setMode("thumb")}
+                  className="focus-premium flex items-center justify-center gap-2 rounded-2xl border border-primary/30 bg-primary/10 px-4 py-4 text-sm font-extrabold text-primary transition hover:bg-primary/15"
+                >
+                  <Fingerprint className="h-4 w-4" /> Thumb Attendance
+                </button>
+              )}
             </div>
+            {verifyAttempts > 0 && (
+              <p className="mt-3 text-xs text-amber-600">
+                Failed attempts: {verifyAttempts}/{settings.max_verify_retries}
+              </p>
+            )}
           </section>
         )}
 
@@ -372,17 +447,46 @@ export default function OfficeKiosk() {
         <FaceDialog
           mode="verify"
           referenceUrl={enrollmentFaceUrl}
-          onClose={() => setMode(null)}
+          onClose={() => {
+            const next = verifyAttempts + 1;
+            setVerifyAttempts(next);
+            setMode(null);
+            if (next >= settings.max_verify_retries) {
+              toast.error(`Max verification retries (${settings.max_verify_retries}) reached. Please try again later.`);
+              setNeedSecondFactor(null);
+              setVerifyAttempts(0);
+            }
+          }}
           onSuccess={onFaceVerified}
         />
       )}
       {mode === "thumb" && (
-        <ThumbDialog onClose={() => setMode(null)} onSuccess={onThumbVerified} />
+        <ThumbDialog
+          onClose={() => {
+            const next = verifyAttempts + 1;
+            setVerifyAttempts(next);
+            setMode(null);
+            if (next >= settings.max_verify_retries) {
+              toast.error(`Max verification retries (${settings.max_verify_retries}) reached. Please try again later.`);
+              setNeedSecondFactor(null);
+              setVerifyAttempts(0);
+            }
+          }}
+          onSuccess={onThumbVerified}
+        />
       )}
       {mode === "enroll-face" && employee && (
         <FaceDialog
           mode="enroll"
-          onClose={() => setMode(null)}
+          onClose={() => {
+            const next = enrollAttempts + 1;
+            setEnrollAttempts(next);
+            setMode(null);
+            if (next >= settings.max_enrollment_attempts) {
+              toast.error(`Max enrollment attempts (${settings.max_enrollment_attempts}) reached. Please contact HR.`);
+              setEnrollAttempts(0);
+            }
+          }}
           onSuccess={async (snapshot) => {
             if (!snapshot) return;
             try {
@@ -421,7 +525,15 @@ export default function OfficeKiosk() {
       {mode === "enroll-thumb" && employee && (
         <ThumbDialog
           enroll
-          onClose={() => setMode(null)}
+          onClose={() => {
+            const next = enrollAttempts + 1;
+            setEnrollAttempts(next);
+            setMode(null);
+            if (next >= settings.max_enrollment_attempts) {
+              toast.error(`Max enrollment attempts (${settings.max_enrollment_attempts}) reached. Please contact HR.`);
+              setEnrollAttempts(0);
+            }
+          }}
           onSuccess={async () => {
             try {
               const credId = `kiosk-${employee.user_id}-${Date.now()}`;

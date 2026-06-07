@@ -1,9 +1,18 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ScanFace, Fingerprint, ArrowRight, Clock, Users, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
+import { ScanFace, Fingerprint, ArrowRight, Clock, Users, CheckCircle2, AlertCircle, Loader2, Settings2, Save } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
+
+type VerificationMode = "face" | "thumb" | "both" | "either";
+type KioskSettings = {
+  id?: string;
+  company_id: string;
+  verification_mode: VerificationMode;
+  max_enrollment_attempts: number;
+  max_verify_retries: number;
+};
 
 type KioskStats = {
   totalEnrolled: number;
@@ -25,6 +34,13 @@ export default function AdminHRAssistancePanel({ companyId }: { companyId: strin
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<KioskStats>({ totalEnrolled: 0, todayCheckIns: 0, todayCheckOuts: 0 });
   const [recentRecords, setRecentRecords] = useState<KioskRecord[]>([]);
+  const [settings, setSettings] = useState<KioskSettings>({
+    company_id: companyId,
+    verification_mode: "either",
+    max_enrollment_attempts: 3,
+    max_verify_retries: 3,
+  });
+  const [savingSettings, setSavingSettings] = useState(false);
 
   const todayKey = format(new Date(), "yyyy-MM-dd");
 
@@ -69,6 +85,14 @@ export default function AdminHRAssistancePanel({ companyId }: { companyId: strin
         if (e3) throw e3;
         if (e4) throw e4;
 
+        // Load settings (optional row)
+        const { data: s } = await supabase
+          .from("hr_kiosk_settings")
+          .select("id,company_id,verification_mode,max_enrollment_attempts,max_verify_retries")
+          .eq("company_id", companyId)
+          .maybeSingle();
+        if (s) setSettings(s as KioskSettings);
+
         setStats({
           totalEnrolled: enrolledCount ?? 0,
           todayCheckIns: checkInCount ?? 0,
@@ -83,6 +107,32 @@ export default function AdminHRAssistancePanel({ companyId }: { companyId: strin
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [companyId]);
+
+  const saveSettings = async () => {
+    setSavingSettings(true);
+    try {
+      const { data: auth } = await supabase.auth.getUser();
+      const payload = {
+        company_id: companyId,
+        verification_mode: settings.verification_mode,
+        max_enrollment_attempts: settings.max_enrollment_attempts,
+        max_verify_retries: settings.max_verify_retries,
+        updated_by: auth?.user?.id ?? null,
+      };
+      const { data, error } = await supabase
+        .from("hr_kiosk_settings")
+        .upsert(payload, { onConflict: "company_id" })
+        .select("id,company_id,verification_mode,max_enrollment_attempts,max_verify_retries")
+        .single();
+      if (error) throw error;
+      setSettings(data as KioskSettings);
+      toast.success("Kiosk settings saved");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Could not save settings");
+    } finally {
+      setSavingSettings(false);
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -136,6 +186,81 @@ export default function AdminHRAssistancePanel({ companyId }: { companyId: strin
             </div>
             <div className="mt-1 font-display text-2xl font-extrabold">
               {loading ? <Loader2 className="h-5 w-5 animate-spin text-primary" /> : stats.todayCheckOuts}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Settings */}
+      <section className="rounded-3xl border border-border bg-card p-5">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h3 className="font-display text-base font-extrabold flex items-center gap-2">
+              <Settings2 className="h-4 w-4 text-primary" /> Kiosk Settings
+            </h3>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Control which biometrics are required and how many tries employees get.
+            </p>
+          </div>
+          <button
+            onClick={saveSettings}
+            disabled={savingSettings}
+            className="focus-premium inline-flex shrink-0 items-center gap-2 rounded-2xl bg-primary px-4 py-2 text-xs font-extrabold text-primary-foreground shadow-card transition hover:opacity-90 disabled:opacity-40"
+          >
+            {savingSettings ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            Save settings
+          </button>
+        </div>
+
+        <div className="mt-4 space-y-4">
+          <div>
+            <label className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Verification mode</label>
+            <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {(["face", "thumb", "both", "either"] as VerificationMode[]).map((m) => {
+                const active = settings.verification_mode === m;
+                const label =
+                  m === "face" ? "Face only" :
+                  m === "thumb" ? "Thumb only" :
+                  m === "both" ? "Both required" : "Either one";
+                return (
+                  <button
+                    key={m}
+                    onClick={() => setSettings((s) => ({ ...s, verification_mode: m }))}
+                    className={`rounded-2xl border px-3 py-2 text-sm font-bold transition ${
+                      active ? "border-primary bg-primary text-primary-foreground" : "border-border bg-surface-raised hover:bg-muted"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="mt-2 text-xs text-muted-foreground">
+              {settings.verification_mode === "face" && "Employees enroll and verify with face only."}
+              {settings.verification_mode === "thumb" && "Employees enroll and verify with thumb only."}
+              {settings.verification_mode === "both" && "Employees must enroll both and pass both checks to log in/out."}
+              {settings.verification_mode === "either" && "Employees enroll both; either method is enough to log in/out."}
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div>
+              <label className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Max enrollment attempts</label>
+              <input
+                type="number" min={1} max={20}
+                value={settings.max_enrollment_attempts}
+                onChange={(e) => setSettings((s) => ({ ...s, max_enrollment_attempts: Math.max(1, Math.min(20, Number(e.target.value) || 1)) }))}
+                className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Max verification retries</label>
+              <input
+                type="number" min={1} max={20}
+                value={settings.max_verify_retries}
+                onChange={(e) => setSettings((s) => ({ ...s, max_verify_retries: Math.max(1, Math.min(20, Number(e.target.value) || 1)) }))}
+                className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm"
+              />
             </div>
           </div>
         </div>
