@@ -128,6 +128,7 @@ function AddEmployeeForm({ companyId, uploaderName, companyDomain }: { companyId
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
   const [emailEdited, setEmailEdited] = useState(false);
+  const [employeeCode, setEmployeeCode] = useState("");
   const [phone, setPhone] = useState("");
   const [uan, setUan] = useState("");
   const [pan, setPan] = useState("");
