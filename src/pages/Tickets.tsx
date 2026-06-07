@@ -1194,21 +1194,8 @@ const TicketDetail = ({
                 <p className="mt-1.5 whitespace-pre-wrap text-sm">{c.body}</p>
                 {c.attachments && c.attachments.length > 0 && (
                   <div className="mt-2 flex flex-wrap gap-2">
-                    {c.attachments.map((url) => (
-                      <a
-                        key={url}
-                        href={url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="block overflow-hidden rounded-md border border-border"
-                      >
-                        <img
-                          src={url}
-                          alt="attachment"
-                          className="h-24 w-24 object-cover sm:h-32 sm:w-32"
-                          loading="lazy"
-                        />
-                      </a>
+                    {c.attachments.map((value) => (
+                      <SignedAttachment key={value} value={value} />
                     ))}
                   </div>
                 )}
