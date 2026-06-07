@@ -21,10 +21,11 @@ import AdminDocumentsPanel from "@/components/AdminDocumentsPanel";
 import TrainingPanel from "@/components/TrainingPanel";
 import AppraisalPanel from "@/components/AppraisalPanel";
 import AdminHRAssistancePanel from "./AdminHRAssistancePanel";
+import AdminGlobalAttendancePanel from "./AdminGlobalAttendancePanel";
 
 type Section =
   | "dashboard" | "onboarding" | "resignation" | "search"
-  | "departments" | "documents" | "salaryslip" | "training" | "appraisal" | "resumes" | "resumesearch" | "seats" | "attendance" | "itassets" | "accounting" | "crm" | "inventory" | "assistantlogs" | "itescalations" | "announcements" | "reports" | "billing" | "hrassistance";
+  | "departments" | "documents" | "salaryslip" | "training" | "appraisal" | "resumes" | "resumesearch" | "seats" | "attendance" | "itassets" | "accounting" | "crm" | "inventory" | "assistantlogs" | "itescalations" | "announcements" | "reports" | "billing" | "hrassistance" | "globalattendance";
 
 type Props = {
   companyId: string;
@@ -43,6 +44,7 @@ const NAV: { id: Section; label: string; icon: any; group: string }[] = [
   { id: "resignation", label: "Resignation Sign-off", icon: LogOut, group: "People" },
   { id: "search", label: "Employee Search", icon: Search, group: "People" },
   { id: "hrassistance", label: "HR Assistance", icon: HeartHandshake, group: "HR Assistance" },
+  { id: "globalattendance", label: "Global Attendance", icon: MapPin, group: "HR Assistance" },
   { id: "departments", label: "Departments & KYC", icon: Building2, group: "Org" },
   { id: "documents", label: "Documents & Payroll", icon: FileText, group: "Org" },
   { id: "salaryslip", label: "Salary Slip — Monthly", icon: Receipt, group: "Org" },
@@ -78,6 +80,7 @@ export default function AdminConsole({
       case "resignation": return <AdminResignationsPanel companyId={companyId} />;
       case "search": return <AdminEmployeeSearchPanel companyId={companyId} />;
       case "hrassistance": return <AdminHRAssistancePanel companyId={companyId} />;
+      case "globalattendance": return <AdminGlobalAttendancePanel companyId={companyId} />;
       case "departments": return <AdminDepartmentsPanel companyId={companyId} />;
       case "documents": return <AdminDocumentsPanel companyId={companyId} uploaderName={uploaderName} />;
       case "salaryslip": return <AdminSalarySlipPanel companyId={companyId} uploaderName={uploaderName} />;
