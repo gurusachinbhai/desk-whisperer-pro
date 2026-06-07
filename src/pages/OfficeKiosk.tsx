@@ -261,27 +261,38 @@ export default function OfficeKiosk() {
                   This is a one-time step. Once enrolled, you can check-in or check-out on any kiosk in seconds.
                 </p>
                 <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <button
-                    onClick={() => setMode("enroll-face")}
-                    className="focus-premium flex items-center justify-center gap-2 rounded-2xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm font-extrabold text-primary"
-                  >
-                    <ScanFace className="h-4 w-4" />
-                    {enrolledFace ? "Re-enroll Face" : "Enroll Face"}
-                  </button>
-                  <button
-                    onClick={() => setMode("enroll-thumb")}
-                    className="focus-premium flex items-center justify-center gap-2 rounded-2xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm font-extrabold text-primary"
-                  >
-                    <Fingerprint className="h-4 w-4" />
-                    {enrolledThumb ? "Re-enroll Thumb" : "Enroll Thumb"}
-                  </button>
+                  {requireFace && (
+                    <button
+                      onClick={() => setMode("enroll-face")}
+                      className="focus-premium flex items-center justify-center gap-2 rounded-2xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm font-extrabold text-primary"
+                    >
+                      <ScanFace className="h-4 w-4" />
+                      {enrolledFace ? "Re-enroll Face" : "Enroll Face"}
+                    </button>
+                  )}
+                  {requireThumb && (
+                    <button
+                      onClick={() => setMode("enroll-thumb")}
+                      className="focus-premium flex items-center justify-center gap-2 rounded-2xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm font-extrabold text-primary"
+                    >
+                      <Fingerprint className="h-4 w-4" />
+                      {enrolledThumb ? "Re-enroll Thumb" : "Enroll Thumb"}
+                    </button>
+                  )}
                 </div>
                 <div className="mt-3 flex flex-wrap gap-3 text-xs">
-                  <span className={`inline-flex items-center gap-1 ${enrolledFace ? "text-emerald-600" : "text-muted-foreground"}`}>
-                    {enrolledFace ? <CheckCircle2 className="h-3.5 w-3.5" /> : <X className="h-3.5 w-3.5" />} Face enrolled
-                  </span>
-                  <span className={`inline-flex items-center gap-1 ${enrolledThumb ? "text-emerald-600" : "text-muted-foreground"}`}>
-                    {enrolledThumb ? <CheckCircle2 className="h-3.5 w-3.5" /> : <X className="h-3.5 w-3.5" />} Thumb enrolled
+                  {requireFace && (
+                    <span className={`inline-flex items-center gap-1 ${enrolledFace ? "text-emerald-600" : "text-muted-foreground"}`}>
+                      {enrolledFace ? <CheckCircle2 className="h-3.5 w-3.5" /> : <X className="h-3.5 w-3.5" />} Face enrolled
+                    </span>
+                  )}
+                  {requireThumb && (
+                    <span className={`inline-flex items-center gap-1 ${enrolledThumb ? "text-emerald-600" : "text-muted-foreground"}`}>
+                      {enrolledThumb ? <CheckCircle2 className="h-3.5 w-3.5" /> : <X className="h-3.5 w-3.5" />} Thumb enrolled
+                    </span>
+                  )}
+                  <span className="inline-flex items-center gap-1 text-muted-foreground">
+                    Mode: <strong className="text-foreground">{settings.verification_mode}</strong>
                   </span>
                 </div>
               </div>
