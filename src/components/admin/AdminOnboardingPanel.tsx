@@ -520,6 +520,17 @@ function EmployeeEditor({ companyId, uploaderName, employee, onSaved }: {
       <form onSubmit={save} className="grid gap-3 sm:grid-cols-2">
         <Field label="Full name *" value={displayName} onChange={setDisplayName} error={errors.displayName} />
         <Field label="Work email *" value={email} onChange={setEmail} type="email" error={errors.email} />
+        <Field
+          label={hadCode ? "Employee ID" : "Assign Employee ID"}
+          value={employeeCode}
+          onChange={(v: string) => setEmployeeCode(v.toUpperCase().replace(/[^A-Z0-9_-]/g, ""))}
+          placeholder="e.g. EMP-001"
+          maxLength={20}
+          hint={hadCode
+            ? "Editable. Must remain unique within your company."
+            : "Not assigned yet. 2–20 chars, letters/numbers, hyphens or underscores in the middle."}
+          error={errors.employeeCode}
+        />
         <Field label="Phone" value={phone} onChange={setPhone} />
         <Field label="UAN number" value={uan} onChange={setUan} maxLength={14} error={errors.uan} />
 
