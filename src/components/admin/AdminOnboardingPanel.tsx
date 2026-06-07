@@ -262,10 +262,10 @@ function AddEmployeeForm({ companyId, uploaderName, companyDomain }: { companyId
           hint={!emailEdited ? "Auto-generated from name — editable" : undefined}
           error={errors.email} />
         <Field label="Employee ID" value={employeeCode}
-          onChange={(v: string) => setEmployeeCode(v.toUpperCase())}
+          onChange={(v: string) => setEmployeeCode(v.toUpperCase().replace(/[^A-Z0-9_-]/g, ""))}
           placeholder="e.g. EMP-001 (leave blank to auto-generate)"
-          maxLength={32}
-          hint="Must be unique within your company"
+          maxLength={20}
+          hint="2–20 characters. Letters, numbers, hyphens and underscores only. Must start and end with a letter or number."
           error={errors.employeeCode} />
         <Field label="Phone" value={phone} onChange={setPhone} placeholder="+91…" />
         <Field label="UAN number" value={uan} onChange={setUan} placeholder="12-digit UAN" maxLength={14} error={errors.uan} />
