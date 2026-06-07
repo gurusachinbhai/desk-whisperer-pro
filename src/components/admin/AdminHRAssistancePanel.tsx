@@ -1,9 +1,18 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ScanFace, Fingerprint, ArrowRight, Clock, Users, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
+import { ScanFace, Fingerprint, ArrowRight, Clock, Users, CheckCircle2, AlertCircle, Loader2, Settings2, Save } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
+
+type VerificationMode = "face" | "thumb" | "both" | "either";
+type KioskSettings = {
+  id?: string;
+  company_id: string;
+  verification_mode: VerificationMode;
+  max_enrollment_attempts: number;
+  max_verify_retries: number;
+};
 
 type KioskStats = {
   totalEnrolled: number;
