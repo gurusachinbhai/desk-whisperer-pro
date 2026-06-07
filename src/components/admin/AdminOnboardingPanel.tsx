@@ -160,7 +160,7 @@ function AddEmployeeForm({ companyId, uploaderName, companyDomain }: { companyId
   };
 
   const reset = () => {
-    setDisplayName(""); setEmail(""); setEmailEdited(false); setPhone(""); setUan("");
+    setDisplayName(""); setEmail(""); setEmailEdited(false); setEmployeeCode(""); setPhone(""); setUan("");
     setPan(""); setAadhar(""); setBankAcc(""); setIfsc(""); setBankName(""); setKycFiles([]); setErrors({});
   };
 
