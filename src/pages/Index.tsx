@@ -1290,13 +1290,17 @@ const Index = () => {
     };
   }, [isAuthenticated]);
 
-  // Load current user's profile photo
+  // Load current user's profile photo + employee code
   const [profilePhotoUrl, setProfilePhotoUrl] = useState<string | null>(null);
+  const [myEmployeeCode, setMyEmployeeCode] = useState<string | null>(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   useEffect(() => {
-    if (!authUserId) { setProfilePhotoUrl(null); return; }
-    supabase.from("employee_profiles").select("photo_url").eq("user_id", authUserId).maybeSingle()
-      .then(({ data }) => setProfilePhotoUrl((data?.photo_url as string | null) ?? null));
+    if (!authUserId) { setProfilePhotoUrl(null); setMyEmployeeCode(null); return; }
+    supabase.from("employee_profiles").select("photo_url, employee_code").eq("user_id", authUserId).maybeSingle()
+      .then(({ data }) => {
+        setProfilePhotoUrl((data?.photo_url as string | null) ?? null);
+        setMyEmployeeCode((data?.employee_code as string | null) ?? null);
+      });
   }, [authUserId]);
 
   const handleProfilePhotoUpload = async (file: File) => {
