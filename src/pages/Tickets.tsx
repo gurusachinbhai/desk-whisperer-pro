@@ -177,6 +177,59 @@ const ticketSchema = z.object({
   subcategory: z.string().trim().max(40).optional(),
 });
 
+// Renders a ticket attachment by minting a short-lived signed URL for the stored
+// object path. Falls back to legacy absolute URLs that may still live in old rows.
+const SignedAttachment = ({ value }: { value: string }) => {
+  const [url, setUrl] = useState<string | null>(null);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    const isLegacyAbsolute = /^https?:\/\//i.test(value);
+    if (isLegacyAbsolute) {
+      // Legacy public-URL entries (pre-hardening). Storage RLS still gates access.
+      setUrl(value);
+      return;
+    }
+    (async () => {
+      const { data, error: err } = await supabase.storage
+        .from("ticket-attachments")
+        .createSignedUrl(value, 300); // 5-minute TTL
+      if (cancelled) return;
+      if (err || !data?.signedUrl) {
+        setError(true);
+        return;
+      }
+      setUrl(data.signedUrl);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [value]);
+
+  if (error) {
+    return (
+      <div className="flex h-24 w-24 items-center justify-center rounded-md border border-dashed border-border text-[10px] text-muted-foreground sm:h-32 sm:w-32">
+        Unavailable
+      </div>
+    );
+  }
+  if (!url) {
+    return <div className="h-24 w-24 animate-pulse rounded-md border border-border bg-muted sm:h-32 sm:w-32" />;
+  }
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noreferrer"
+      className="block overflow-hidden rounded-md border border-border"
+    >
+      <img src={url} alt="attachment" className="h-24 w-24 object-cover sm:h-32 sm:w-32" loading="lazy" />
+    </a>
+  );
+};
+
+
 const Tickets = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
