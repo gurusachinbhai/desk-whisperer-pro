@@ -131,6 +131,34 @@ export default function OfficeKiosk() {
   const enrolledThumb = !!enrollment?.thumb_enrolled_at;
   const fullyEnrolled = (!requireFace || enrolledFace) && (!requireThumb || enrolledThumb);
 
+  /* ---------------- lockout countdown ---------------- */
+  useEffect(() => {
+    if (!lockoutUntil) {
+      setCountdown("");
+      return;
+    }
+    const tick = () => {
+      const remaining = Math.max(0, Math.ceil((lockoutUntil - Date.now()) / 1000));
+      if (remaining <= 0) {
+        setLockoutUntil(null);
+        setVerifyAttempts(0);
+        setEnrollAttempts(0);
+        setCountdown("");
+        return;
+      }
+      const m = Math.floor(remaining / 60);
+      const s = remaining % 60;
+      setCountdown(`${m}:${s.toString().padStart(2, "0")}`);
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [lockoutUntil]);
+
+  const isLockedOut = !!lockoutUntil && Date.now() < lockoutUntil;
+  const remainingVerify = Math.max(0, settings.max_verify_retries - verifyAttempts);
+  const remainingEnroll = Math.max(0, settings.max_enrollment_attempts - enrollAttempts);
+
   /* ---------------- verification ---------------- */
   const completeVerify = (method: "face" | "thumb") => {
     setMode(null);
