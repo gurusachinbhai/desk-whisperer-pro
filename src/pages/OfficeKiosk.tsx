@@ -541,8 +541,9 @@ export default function OfficeKiosk() {
             setEnrollAttempts(next);
             setMode(null);
             if (next >= settings.max_enrollment_attempts) {
-              toast.error(`Max enrollment attempts (${settings.max_enrollment_attempts}) reached. Please contact HR.`);
-              setEnrollAttempts(0);
+              const until = Date.now() + LOCKOUT_MINUTES_ENROLL * 60_000;
+              setLockoutUntil(until);
+              toast.error(`Max enrollment attempts reached. Locked for ${LOCKOUT_MINUTES_ENROLL} minutes. Contact HR if you need help.`);
             }
           }}
           onSuccess={async (snapshot) => {
@@ -574,6 +575,7 @@ export default function OfficeKiosk() {
               setEnrollmentFaceUrl(signed?.signedUrl ?? null);
               toast.success("Face enrolled");
               setMode(null);
+              setEnrollAttempts(0);
             } catch (err: any) {
               toast.error(err?.message ?? "Could not save face enrollment");
             }
