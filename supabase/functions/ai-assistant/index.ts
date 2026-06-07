@@ -53,21 +53,29 @@ Deno.serve(async (req) => {
   let userEmail: string | null = null;
   let userName: string | null = null;
   let companyId: string | null = null;
-  if (userClient) {
-    const { data: ures } = await userClient.auth.getUser();
-    if (ures?.user) {
-      userId = ures.user.id;
-      userEmail = ures.user.email ?? null;
-      if (adminClient) {
-        const { data: emp } = await adminClient
-          .from("employee_profiles")
-          .select("company_id, display_name")
-          .eq("user_id", userId)
-          .maybeSingle();
-        companyId = emp?.company_id ?? null;
-        userName = emp?.display_name ?? null;
-      }
-    }
+  if (!userClient) {
+    return new Response(JSON.stringify({ error: "Server misconfigured" }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+  const { data: ures, error: authErr } = await userClient.auth.getUser();
+  if (authErr || !ures?.user) {
+    return new Response(JSON.stringify({ error: "Authentication required" }), {
+      status: 401,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+  userId = ures.user.id;
+  userEmail = ures.user.email ?? null;
+  if (adminClient) {
+    const { data: emp } = await adminClient
+      .from("employee_profiles")
+      .select("company_id, display_name")
+      .eq("user_id", userId)
+      .maybeSingle();
+    companyId = emp?.company_id ?? null;
+    userName = emp?.display_name ?? null;
   }
 
   const logEntry = async (params: {
