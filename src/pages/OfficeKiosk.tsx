@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Fingerprint, ScanFace, Camera, CheckCircle2, Loader2, LogIn, LogOut, ArrowLeft, ShieldCheck, AlertCircle, X, RefreshCcw } from "lucide-react";
+import { Fingerprint, ScanFace, Camera, CheckCircle2, Loader2, LogIn, LogOut, ArrowLeft, ShieldCheck, AlertCircle, X, RefreshCcw, Clock, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
