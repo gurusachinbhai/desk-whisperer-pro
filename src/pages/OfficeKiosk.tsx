@@ -33,6 +33,18 @@ type TodayRow = {
 
 const BUCKET = "biometric-enrollments";
 
+type VerificationMode = "face" | "thumb" | "both" | "either";
+type KioskSettings = {
+  verification_mode: VerificationMode;
+  max_enrollment_attempts: number;
+  max_verify_retries: number;
+};
+const DEFAULT_SETTINGS: KioskSettings = {
+  verification_mode: "either",
+  max_enrollment_attempts: 3,
+  max_verify_retries: 3,
+};
+
 export default function OfficeKiosk() {
   const nav = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -43,6 +55,10 @@ export default function OfficeKiosk() {
   const [mode, setMode] = useState<null | "face" | "thumb" | "enroll-face" | "enroll-thumb">(null);
   const [verified, setVerified] = useState<null | { method: "face" | "thumb"; at: number }>(null);
   const [working, setWorking] = useState(false);
+  const [settings, setSettings] = useState<KioskSettings>(DEFAULT_SETTINGS);
+  const [verifyAttempts, setVerifyAttempts] = useState(0);
+  const [enrollAttempts, setEnrollAttempts] = useState(0);
+  const [needSecondFactor, setNeedSecondFactor] = useState<null | "face" | "thumb">(null);
 
   const todayKey = format(new Date(), "yyyy-MM-dd");
 
