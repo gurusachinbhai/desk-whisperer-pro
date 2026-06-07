@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX IF NOT EXISTS idx_employee_profiles_company_code ON public.employee_profiles (company_id, employee_code) WHERE employee_code IS NOT NULL;

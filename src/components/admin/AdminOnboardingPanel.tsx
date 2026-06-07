@@ -113,6 +113,9 @@ function friendlyDbError(err: any): { message: string; field?: string } {
   const code = err?.code ?? "";
   const msg = err?.message ?? String(err);
   if (code === "23505" || msg.includes("duplicate key value")) {
+    if (msg.includes("idx_employee_profiles_company_code") || msg.includes("company_code")) {
+      return { message: "This Employee ID is already used in your company.", field: "employeeCode" };
+    }
     if (msg.includes("idx_employee_profiles_company_email") || msg.includes("company_email")) {
       return { message: "This email is already assigned to another employee in your company.", field: "email" };
     }
@@ -125,6 +128,7 @@ function AddEmployeeForm({ companyId, uploaderName, companyDomain }: { companyId
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
   const [emailEdited, setEmailEdited] = useState(false);
+  const [employeeCode, setEmployeeCode] = useState("");
   const [phone, setPhone] = useState("");
   const [uan, setUan] = useState("");
   const [pan, setPan] = useState("");
@@ -156,7 +160,7 @@ function AddEmployeeForm({ companyId, uploaderName, companyDomain }: { companyId
   };
 
   const reset = () => {
-    setDisplayName(""); setEmail(""); setEmailEdited(false); setPhone(""); setUan("");
+    setDisplayName(""); setEmail(""); setEmailEdited(false); setEmployeeCode(""); setPhone(""); setUan("");
     setPan(""); setAadhar(""); setBankAcc(""); setIfsc(""); setBankName(""); setKycFiles([]); setErrors({});
   };
 
@@ -169,16 +173,29 @@ function AddEmployeeForm({ companyId, uploaderName, companyDomain }: { companyId
 
     setBusy(true);
     try {
-      const { data: codeData, error: codeErr } = await supabase.rpc("generate_employee_code", { _company_id: companyId });
-      if (codeErr) throw codeErr;
-      const employeeCode = codeData as unknown as string;
+      let finalCode = employeeCode.trim().toUpperCase();
+      if (!finalCode) {
+        const { data: codeData, error: codeErr } = await supabase.rpc("generate_employee_code", { _company_id: companyId });
+        if (codeErr) throw codeErr;
+        finalCode = codeData as unknown as string;
+      } else {
+        // Pre-check uniqueness within company
+        const { data: dup } = await supabase.from("employee_profiles")
+          .select("id").eq("company_id", companyId).eq("employee_code", finalCode).maybeSingle();
+        if (dup) {
+          setErrors({ employeeCode: "This Employee ID is already used in your company." });
+          toast.error("Employee ID already exists");
+          setBusy(false);
+          return;
+        }
+      }
 
       const { data: emp, error: empErr } = await supabase.from("employee_profiles").insert({
         company_id: companyId,
         display_name: displayName.trim(),
         email: email.trim().toLowerCase(),
         phone: phone.trim() || null,
-        employee_code: employeeCode,
+        employee_code: finalCode,
         uan_number: uan.replace(/\s/g, "") || null,
         status: "approved",
       }).select().single();
@@ -209,11 +226,13 @@ function AddEmployeeForm({ companyId, uploaderName, companyDomain }: { companyId
         });
       }
 
-      toast.success("Employee onboarded", { description: `Code ${employeeCode}` });
-      setLastCode(employeeCode);
+      toast.success("Employee onboarded", { description: `Code ${finalCode}` });
+      setLastCode(finalCode);
       reset();
     } catch (err: any) {
-      toast.error("Onboarding failed", { description: err.message ?? String(err) });
+      const friendly = friendlyDbError(err);
+      if (friendly.field) setErrors({ [friendly.field]: friendly.message });
+      toast.error("Onboarding failed", { description: friendly.message });
     } finally { setBusy(false); }
   };
 
@@ -235,6 +254,12 @@ function AddEmployeeForm({ companyId, uploaderName, companyDomain }: { companyId
           placeholder="jane@company.com" type="email"
           hint={!emailEdited ? "Auto-generated from name — editable" : undefined}
           error={errors.email} />
+        <Field label="Employee ID" value={employeeCode}
+          onChange={(v: string) => setEmployeeCode(v.toUpperCase())}
+          placeholder="e.g. EMP-001 (leave blank to auto-generate)"
+          maxLength={32}
+          hint="Must be unique within your company"
+          error={errors.employeeCode} />
         <Field label="Phone" value={phone} onChange={setPhone} placeholder="+91…" />
         <Field label="UAN number" value={uan} onChange={setUan} placeholder="12-digit UAN" maxLength={14} error={errors.uan} />
 

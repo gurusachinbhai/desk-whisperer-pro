@@ -1290,13 +1290,17 @@ const Index = () => {
     };
   }, [isAuthenticated]);
 
-  // Load current user's profile photo
+  // Load current user's profile photo + employee code
   const [profilePhotoUrl, setProfilePhotoUrl] = useState<string | null>(null);
+  const [myEmployeeCode, setMyEmployeeCode] = useState<string | null>(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   useEffect(() => {
-    if (!authUserId) { setProfilePhotoUrl(null); return; }
-    supabase.from("employee_profiles").select("photo_url").eq("user_id", authUserId).maybeSingle()
-      .then(({ data }) => setProfilePhotoUrl((data?.photo_url as string | null) ?? null));
+    if (!authUserId) { setProfilePhotoUrl(null); setMyEmployeeCode(null); return; }
+    supabase.from("employee_profiles").select("photo_url, employee_code").eq("user_id", authUserId).maybeSingle()
+      .then(({ data }) => {
+        setProfilePhotoUrl((data?.photo_url as string | null) ?? null);
+        setMyEmployeeCode((data?.employee_code as string | null) ?? null);
+      });
   }, [authUserId]);
 
   const handleProfilePhotoUpload = async (file: File) => {
@@ -6485,6 +6489,11 @@ const Index = () => {
                   <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-primary">
                     Employee
                   </span>
+                  {myEmployeeCode && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-foreground">
+                      ID <span className="font-mono">{myEmployeeCode}</span>
+                    </span>
+                  )}
                   {isAdmin && (
                     <span className="rounded-full bg-success px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-success-foreground shadow-glow ring-2 ring-success/40">
                       Admin
