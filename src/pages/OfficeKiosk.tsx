@@ -303,24 +303,46 @@ export default function OfficeKiosk() {
         {/* Step 1 — pick a verification method */}
         {!verified && fullyEnrolled && (
           <section className="mt-4 rounded-3xl bg-surface-raised p-5 shadow-card">
-            <h2 className="font-display text-lg font-extrabold">Step 1 — Verify your identity</h2>
+            <h2 className="font-display text-lg font-extrabold">
+              {needSecondFactor
+                ? `Step 1b — Now scan your ${needSecondFactor}`
+                : settings.verification_mode === "both"
+                ? "Step 1 — Verify with both face and thumb"
+                : "Step 1 — Verify your identity"}
+            </h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Pick a method below. Your biometric data never leaves this device.
+              {settings.verification_mode === "both"
+                ? "Your company requires both face and thumb to log in/out."
+                : settings.verification_mode === "either"
+                ? "Pick a method below. Your biometric data never leaves this device."
+                : `Use ${settings.verification_mode} verification to continue.`}
+              {" "}You have up to {settings.max_verify_retries} retries.
             </p>
             <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <button
-                onClick={() => setMode("face")}
-                className="focus-premium flex items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-4 text-sm font-extrabold text-primary-foreground shadow-card transition hover:opacity-90"
-              >
-                <ScanFace className="h-4 w-4" /> Face Attendance
-              </button>
-              <button
-                onClick={() => setMode("thumb")}
-                className="focus-premium flex items-center justify-center gap-2 rounded-2xl border border-primary/30 bg-primary/10 px-4 py-4 text-sm font-extrabold text-primary transition hover:bg-primary/15"
-              >
-                <Fingerprint className="h-4 w-4" /> Thumb Attendance
-              </button>
+              {((needSecondFactor === null && (settings.verification_mode === "face" || settings.verification_mode === "both" || settings.verification_mode === "either")) ||
+                needSecondFactor === "face") && (
+                <button
+                  onClick={() => setMode("face")}
+                  className="focus-premium flex items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-4 text-sm font-extrabold text-primary-foreground shadow-card transition hover:opacity-90"
+                >
+                  <ScanFace className="h-4 w-4" /> Face Attendance
+                </button>
+              )}
+              {((needSecondFactor === null && (settings.verification_mode === "thumb" || settings.verification_mode === "both" || settings.verification_mode === "either")) ||
+                needSecondFactor === "thumb") && (
+                <button
+                  onClick={() => setMode("thumb")}
+                  className="focus-premium flex items-center justify-center gap-2 rounded-2xl border border-primary/30 bg-primary/10 px-4 py-4 text-sm font-extrabold text-primary transition hover:bg-primary/15"
+                >
+                  <Fingerprint className="h-4 w-4" /> Thumb Attendance
+                </button>
+              )}
             </div>
+            {verifyAttempts > 0 && (
+              <p className="mt-3 text-xs text-amber-600">
+                Failed attempts: {verifyAttempts}/{settings.max_verify_retries}
+              </p>
+            )}
           </section>
         )}
 
