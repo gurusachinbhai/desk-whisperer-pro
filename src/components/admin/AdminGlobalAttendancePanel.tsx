@@ -257,7 +257,8 @@ export default function AdminGlobalAttendancePanel({ companyId }: { companyId: s
                 <div>
                   <p className="text-sm font-extrabold">{verified.employee.display_name}</p>
                   <p className="text-xs text-muted-foreground">
-                    {verified.employee.employee_code ?? verified.employee.email ?? "Identity verified"} · via {verified.method === "face" ? "Face" : "Thumb"}
+                    ID: {verified.employee.employee_code ?? "—"}
+                    {verified.employee.email ? ` · ${verified.employee.email}` : ""} · via {verified.method === "face" ? "Face" : "Thumb"}
                   </p>
                 </div>
               </div>
