@@ -7029,6 +7029,9 @@ const Index = () => {
               {activeTab === "map" && renderMapPanel()}
               {activeTab === "rooms" && renderRoomsPanel()}
               {activeTab === "directory" && renderDirectoryPanel()}
+              {isAdmin && activeTab === "globalattendance" && companyProfile && (
+                <AdminGlobalAttendancePanel companyId={companyProfile.id} />
+              )}
             </section>
           </div>
         )}
