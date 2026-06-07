@@ -173,7 +173,7 @@ function AddEmployeeForm({ companyId, uploaderName, companyDomain }: { companyId
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
-    const form = { displayName, email, uan, pan, aadhar, ifsc, bankAcc };
+    const form = { displayName, email, employeeCode, uan, pan, aadhar, ifsc, bankAcc };
     const errs = validate(form);
     setErrors(errs);
     if (Object.keys(errs).length) { toast.error("Please fix the highlighted fields"); return; }
