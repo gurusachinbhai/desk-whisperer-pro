@@ -524,9 +524,10 @@ export default function OfficeKiosk() {
             setVerifyAttempts(next);
             setMode(null);
             if (next >= settings.max_verify_retries) {
-              toast.error(`Max verification retries (${settings.max_verify_retries}) reached. Please try again later.`);
+              const until = Date.now() + LOCKOUT_MINUTES_VERIFY * 60_000;
+              setLockoutUntil(until);
+              toast.error(`Max verification retries reached. Locked for ${LOCKOUT_MINUTES_VERIFY} minutes.`);
               setNeedSecondFactor(null);
-              setVerifyAttempts(0);
             }
           }}
           onSuccess={onThumbVerified}
