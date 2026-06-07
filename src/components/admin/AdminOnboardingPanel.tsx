@@ -42,6 +42,7 @@ const AADHAAR_RE = /^[0-9]{12}$/;
 const IFSC_RE = /^[A-Z]{4}0[A-Z0-9]{6}$/;
 const UAN_RE = /^[0-9]{12}$/;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const EMPLOYEE_CODE_RE = /^[A-Z0-9][A-Z0-9_-]{0,18}[A-Z0-9]$/;
 
 function slugifyName(name: string) {
   return name.toLowerCase().trim().replace(/[^a-z0-9]+/g, ".").replace(/^\.+|\.+$/g, "").slice(0, 40);
