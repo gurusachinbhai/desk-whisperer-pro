@@ -58,7 +58,12 @@ export default function OfficeKiosk() {
   const [settings, setSettings] = useState<KioskSettings>(DEFAULT_SETTINGS);
   const [verifyAttempts, setVerifyAttempts] = useState(0);
   const [enrollAttempts, setEnrollAttempts] = useState(0);
+  const [lockoutUntil, setLockoutUntil] = useState<number | null>(null);
+  const [countdown, setCountdown] = useState("");
   const [needSecondFactor, setNeedSecondFactor] = useState<null | "face" | "thumb">(null);
+
+  const LOCKOUT_MINUTES_VERIFY = 5;
+  const LOCKOUT_MINUTES_ENROLL = 10;
 
   const todayKey = format(new Date(), "yyyy-MM-dd");
 
