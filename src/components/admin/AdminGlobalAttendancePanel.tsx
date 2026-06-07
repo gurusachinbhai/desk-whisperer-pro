@@ -230,6 +230,11 @@ export default function AdminGlobalAttendancePanel({ companyId }: { companyId: s
                 </option>
               ))}
             </select>
+            {selectedEmployee && (
+              <p className="mt-1 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+                Employee ID: <span className="text-foreground">{selectedEmployee.employee_code ?? "—"}</span>
+              </p>
+            )}
           </div>
           <div className="flex flex-col justify-end">
             <Label className="text-[10px] font-bold uppercase">Verification</Label>
