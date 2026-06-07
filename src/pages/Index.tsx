@@ -6489,6 +6489,11 @@ const Index = () => {
                   <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-primary">
                     Employee
                   </span>
+                  {myEmployeeCode && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-foreground">
+                      ID <span className="font-mono">{myEmployeeCode}</span>
+                    </span>
+                  )}
                   {isAdmin && (
                     <span className="rounded-full bg-success px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-success-foreground shadow-glow ring-2 ring-success/40">
                       Admin
