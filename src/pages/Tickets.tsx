@@ -177,6 +177,59 @@ const ticketSchema = z.object({
   subcategory: z.string().trim().max(40).optional(),
 });
 
+// Renders a ticket attachment by minting a short-lived signed URL for the stored
+// object path. Falls back to legacy absolute URLs that may still live in old rows.
+const SignedAttachment = ({ value }: { value: string }) => {
+  const [url, setUrl] = useState<string | null>(null);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    const isLegacyAbsolute = /^https?:\/\//i.test(value);
+    if (isLegacyAbsolute) {
+      // Legacy public-URL entries (pre-hardening). Storage RLS still gates access.
+      setUrl(value);
+      return;
+    }
+    (async () => {
+      const { data, error: err } = await supabase.storage
+        .from("ticket-attachments")
+        .createSignedUrl(value, 300); // 5-minute TTL
+      if (cancelled) return;
+      if (err || !data?.signedUrl) {
+        setError(true);
+        return;
+      }
+      setUrl(data.signedUrl);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [value]);
+
+  if (error) {
+    return (
+      <div className="flex h-24 w-24 items-center justify-center rounded-md border border-dashed border-border text-[10px] text-muted-foreground sm:h-32 sm:w-32">
+        Unavailable
+      </div>
+    );
+  }
+  if (!url) {
+    return <div className="h-24 w-24 animate-pulse rounded-md border border-border bg-muted sm:h-32 sm:w-32" />;
+  }
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noreferrer"
+      className="block overflow-hidden rounded-md border border-border"
+    >
+      <img src={url} alt="attachment" className="h-24 w-24 object-cover sm:h-32 sm:w-32" loading="lazy" />
+    </a>
+  );
+};
+
+
 const Tickets = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -301,32 +354,49 @@ const Tickets = () => {
     await loadComments(t.id);
   };
 
+  // Allow-list of image MIME types and extensions; sanitize before upload.
+  const ALLOWED_IMAGE_MIME = new Set([
+    "image/png",
+    "image/jpeg",
+    "image/jpg",
+    "image/webp",
+    "image/gif",
+  ]);
+  const ALLOWED_IMAGE_EXT = new Set(["png", "jpg", "jpeg", "webp", "gif"]);
+
   const uploadFiles = async (files: File[], uid: string): Promise<string[]> => {
     if (files.length === 0) return [];
-    const urls: string[] = [];
+    if (!companyId) {
+      toast.error("Missing company context; cannot upload attachments");
+      return [];
+    }
+    const paths: string[] = [];
     for (const file of files) {
-      if (!file.type.startsWith("image/")) {
-        toast.error(`Skipping ${file.name}: only images allowed`);
+      if (!ALLOWED_IMAGE_MIME.has(file.type.toLowerCase())) {
+        toast.error(`Skipping ${file.name}: only PNG/JPEG/WebP/GIF images allowed`);
         continue;
       }
       if (file.size > 5 * 1024 * 1024) {
         toast.error(`Skipping ${file.name}: max 5MB`);
         continue;
       }
-      const ext = file.name.split(".").pop() || "png";
-      const path = `${uid}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const rawExt = (file.name.split(".").pop() || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+      const ext = ALLOWED_IMAGE_EXT.has(rawExt) ? rawExt : "png";
+      // Tenant-scoped path: {company_id}/{user_id}/{ts}-{rand}.{ext}
+      const path = `${companyId}/${uid}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
       const { error: upErr } = await supabase.storage.from("ticket-attachments").upload(path, file, {
         cacheControl: "3600",
         upsert: false,
+        contentType: file.type,
       });
       if (upErr) {
         toast.error(`Upload failed: ${file.name}`, { description: upErr.message });
         continue;
       }
-      const { data: pub } = supabase.storage.from("ticket-attachments").getPublicUrl(path);
-      urls.push(pub.publicUrl);
+      // Store the object path (not a URL). Signed URLs are minted on view.
+      paths.push(path);
     }
-    return urls;
+    return paths;
   };
 
   const handleCreate = async (e: FormEvent) => {
@@ -1124,21 +1194,8 @@ const TicketDetail = ({
                 <p className="mt-1.5 whitespace-pre-wrap text-sm">{c.body}</p>
                 {c.attachments && c.attachments.length > 0 && (
                   <div className="mt-2 flex flex-wrap gap-2">
-                    {c.attachments.map((url) => (
-                      <a
-                        key={url}
-                        href={url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="block overflow-hidden rounded-md border border-border"
-                      >
-                        <img
-                          src={url}
-                          alt="attachment"
-                          className="h-24 w-24 object-cover sm:h-32 sm:w-32"
-                          loading="lazy"
-                        />
-                      </a>
+                    {c.attachments.map((value) => (
+                      <SignedAttachment key={value} value={value} />
                     ))}
                   </div>
                 )}
