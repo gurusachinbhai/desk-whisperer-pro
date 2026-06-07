@@ -1292,6 +1292,39 @@ export type Database = {
           },
         ]
       }
+      hr_kiosk_settings: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: string
+          max_enrollment_attempts: number
+          max_verify_retries: number
+          updated_at: string
+          updated_by: string | null
+          verification_mode: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: string
+          max_enrollment_attempts?: number
+          max_verify_retries?: number
+          updated_at?: string
+          updated_by?: string | null
+          verification_mode?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: string
+          max_enrollment_attempts?: number
+          max_verify_retries?: number
+          updated_at?: string
+          updated_by?: string | null
+          verification_mode?: string
+        }
+        Relationships: []
+      }
       inventory_items: {
         Row: {
           category: string | null
