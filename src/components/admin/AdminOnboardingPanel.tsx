@@ -102,6 +102,12 @@ function validate(form: any) {
   const errs: Record<string, string> = {};
   if (!form.displayName.trim() || form.displayName.trim().length < 2) errs.displayName = "Name required (2+ chars)";
   if (!form.email.trim() || !EMAIL_RE.test(form.email.trim())) errs.email = "Valid email required";
+  const code = form.employeeCode?.trim().toUpperCase();
+  if (code) {
+    if (!EMPLOYEE_CODE_RE.test(code)) {
+      errs.employeeCode = "Employee ID must be 2–20 characters, start and end with a letter or number. Hyphens and underscores are allowed in the middle.";
+    }
+  }
   if (form.uan && !UAN_RE.test(form.uan.replace(/\s/g, ""))) errs.uan = "UAN must be 12 digits";
   if (form.pan && !PAN_RE.test(form.pan.toUpperCase())) errs.pan = "PAN format ABCDE1234F";
   if (form.aadhar && !AADHAAR_RE.test(form.aadhar.replace(/\s/g, ""))) errs.aadhar = "Aadhaar must be 12 digits";
