@@ -125,7 +125,7 @@ type EmployeeInvite = {
 };
 
 type AppMode = "signup" | "login";
-type ActiveTab = "home" | "book" | "attendance" | "leave" | "payroll" | "documents" | "training" | "appraisal" | "assistant" | "billing" | "reports" | "map" | "rooms" | "directory" | "admin" | "team" | "sales";
+type ActiveTab = "home" | "book" | "attendance" | "leave" | "payroll" | "documents" | "training" | "appraisal" | "assistant" | "billing" | "reports" | "map" | "rooms" | "directory" | "admin" | "team" | "sales" | "globalattendance";
 type LoginStep = "form" | "otp";
 type LoginIdentifier = "email" | "phone";
 
