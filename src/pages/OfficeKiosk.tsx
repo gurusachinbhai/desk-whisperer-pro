@@ -447,12 +447,33 @@ export default function OfficeKiosk() {
         <FaceDialog
           mode="verify"
           referenceUrl={enrollmentFaceUrl}
-          onClose={() => setMode(null)}
+          onClose={() => {
+            const next = verifyAttempts + 1;
+            setVerifyAttempts(next);
+            setMode(null);
+            if (next >= settings.max_verify_retries) {
+              toast.error(`Max verification retries (${settings.max_verify_retries}) reached. Please try again later.`);
+              setNeedSecondFactor(null);
+              setVerifyAttempts(0);
+            }
+          }}
           onSuccess={onFaceVerified}
         />
       )}
       {mode === "thumb" && (
-        <ThumbDialog onClose={() => setMode(null)} onSuccess={onThumbVerified} />
+        <ThumbDialog
+          onClose={() => {
+            const next = verifyAttempts + 1;
+            setVerifyAttempts(next);
+            setMode(null);
+            if (next >= settings.max_verify_retries) {
+              toast.error(`Max verification retries (${settings.max_verify_retries}) reached. Please try again later.`);
+              setNeedSecondFactor(null);
+              setVerifyAttempts(0);
+            }
+          }}
+          onSuccess={onThumbVerified}
+        />
       )}
       {mode === "enroll-face" && employee && (
         <FaceDialog
