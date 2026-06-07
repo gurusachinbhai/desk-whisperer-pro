@@ -525,7 +525,15 @@ export default function OfficeKiosk() {
       {mode === "enroll-thumb" && employee && (
         <ThumbDialog
           enroll
-          onClose={() => setMode(null)}
+          onClose={() => {
+            const next = enrollAttempts + 1;
+            setEnrollAttempts(next);
+            setMode(null);
+            if (next >= settings.max_enrollment_attempts) {
+              toast.error(`Max enrollment attempts (${settings.max_enrollment_attempts}) reached. Please contact HR.`);
+              setEnrollAttempts(0);
+            }
+          }}
           onSuccess={async () => {
             try {
               const credId = `kiosk-${employee.user_id}-${Date.now()}`;
