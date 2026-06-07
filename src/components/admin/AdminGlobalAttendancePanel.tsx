@@ -193,10 +193,6 @@ export default function AdminGlobalAttendancePanel({ companyId }: { companyId: s
             <Label className="text-[10px] font-bold uppercase">Date</Label>
             <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="h-9 w-44" />
           </div>
-          <div>
-            <Label className="text-[10px] font-bold uppercase">Search</Label>
-            <Input placeholder="Name, email, code" value={search} onChange={(e) => setSearch(e.target.value)} className="h-9 w-56" />
-          </div>
           <Button variant="outline" size="sm" onClick={load} disabled={loading}>
             <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} /> Refresh
           </Button>
