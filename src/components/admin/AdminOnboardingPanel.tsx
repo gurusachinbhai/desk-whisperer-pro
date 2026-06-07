@@ -436,17 +436,32 @@ function EmployeeEditor({ companyId, uploaderName, employee, onSaved }: {
 
   const save = async (e: FormEvent) => {
     e.preventDefault();
-    const errs = validate({ displayName, email, uan, pan, aadhar, ifsc, bankAcc });
+    const errs = validate({ displayName, email, uan, pan, aadhar, ifsc, bankAcc, employeeCode });
     setErrors(errs);
     if (Object.keys(errs).length) { toast.error("Please fix the highlighted fields"); return; }
 
     setBusy(true);
     try {
+      const trimmedCode = employeeCode.trim().toUpperCase();
+      const codeChanged = trimmedCode !== (employee.employee_code ?? "");
+      if (trimmedCode && codeChanged) {
+        const { data: dup } = await supabase.from("employee_profiles")
+          .select("id").eq("company_id", companyId).eq("employee_code", trimmedCode)
+          .neq("id", employee.id).maybeSingle();
+        if (dup) {
+          setErrors({ employeeCode: "This Employee ID is already used in your company." });
+          toast.error("Employee ID already exists");
+          setBusy(false);
+          return;
+        }
+      }
+
       const { error: pErr } = await supabase.from("employee_profiles").update({
         display_name: displayName.trim(),
         email: email.trim().toLowerCase(),
         phone: phone.trim() || null,
         uan_number: uan.replace(/\s/g, "") || null,
+        employee_code: trimmedCode || null,
       }).eq("id", employee.id);
       if (pErr) throw pErr;
 
