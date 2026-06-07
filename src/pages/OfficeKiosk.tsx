@@ -293,11 +293,18 @@ export default function OfficeKiosk() {
                 <p className="mt-1 text-sm text-muted-foreground">
                   This is a one-time step. Once enrolled, you can check-in or check-out on any kiosk in seconds.
                 </p>
+                {isLockedOut && enrollAttempts >= settings.max_enrollment_attempts && (
+                  <div className="mt-3 flex items-center gap-2 rounded-2xl bg-destructive/10 px-4 py-3 text-sm font-bold text-destructive">
+                    <Lock className="h-4 w-4" />
+                    Enrollment locked — retry in <Clock className="h-3.5 w-3.5" /> {countdown}
+                  </div>
+                )}
                 <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
                   {requireFace && (
                     <button
                       onClick={() => setMode("enroll-face")}
-                      className="focus-premium flex items-center justify-center gap-2 rounded-2xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm font-extrabold text-primary"
+                      disabled={isLockedOut && enrollAttempts >= settings.max_enrollment_attempts}
+                      className="focus-premium flex items-center justify-center gap-2 rounded-2xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm font-extrabold text-primary disabled:opacity-40"
                     >
                       <ScanFace className="h-4 w-4" />
                       {enrolledFace ? "Re-enroll Face" : "Enroll Face"}
@@ -306,14 +313,15 @@ export default function OfficeKiosk() {
                   {requireThumb && (
                     <button
                       onClick={() => setMode("enroll-thumb")}
-                      className="focus-premium flex items-center justify-center gap-2 rounded-2xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm font-extrabold text-primary"
+                      disabled={isLockedOut && enrollAttempts >= settings.max_enrollment_attempts}
+                      className="focus-premium flex items-center justify-center gap-2 rounded-2xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm font-extrabold text-primary disabled:opacity-40"
                     >
                       <Fingerprint className="h-4 w-4" />
                       {enrolledThumb ? "Re-enroll Thumb" : "Enroll Thumb"}
                     </button>
                   )}
                 </div>
-                <div className="mt-3 flex flex-wrap gap-3 text-xs">
+                <div className="mt-3 flex flex-wrap items-center gap-3 text-xs">
                   {requireFace && (
                     <span className={`inline-flex items-center gap-1 ${enrolledFace ? "text-emerald-600" : "text-muted-foreground"}`}>
                       {enrolledFace ? <CheckCircle2 className="h-3.5 w-3.5" /> : <X className="h-3.5 w-3.5" />} Face enrolled
@@ -326,6 +334,9 @@ export default function OfficeKiosk() {
                   )}
                   <span className="inline-flex items-center gap-1 text-muted-foreground">
                     Mode: <strong className="text-foreground">{settings.verification_mode}</strong>
+                  </span>
+                  <span className={`inline-flex items-center gap-1 font-bold ${remainingEnroll <= 1 ? "text-destructive" : "text-muted-foreground"}`}>
+                    {remainingEnroll} enrollment {remainingEnroll === 1 ? "attempt" : "attempts"} remaining
                   </span>
                 </div>
               </div>
