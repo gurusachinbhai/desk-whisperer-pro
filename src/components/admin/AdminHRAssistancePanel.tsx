@@ -85,6 +85,14 @@ export default function AdminHRAssistancePanel({ companyId }: { companyId: strin
         if (e3) throw e3;
         if (e4) throw e4;
 
+        // Load settings (optional row)
+        const { data: s } = await supabase
+          .from("hr_kiosk_settings")
+          .select("id,company_id,verification_mode,max_enrollment_attempts,max_verify_retries")
+          .eq("company_id", companyId)
+          .maybeSingle();
+        if (s) setSettings(s as KioskSettings);
+
         setStats({
           totalEnrolled: enrolledCount ?? 0,
           todayCheckIns: checkInCount ?? 0,
