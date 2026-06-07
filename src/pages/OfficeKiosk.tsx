@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Fingerprint, ScanFace, Camera, CheckCircle2, Loader2, LogIn, LogOut, ArrowLeft, ShieldCheck, AlertCircle, X, RefreshCcw } from "lucide-react";
+import { Fingerprint, ScanFace, Camera, CheckCircle2, Loader2, LogIn, LogOut, ArrowLeft, ShieldCheck, AlertCircle, X, RefreshCcw, Clock, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
@@ -58,7 +58,12 @@ export default function OfficeKiosk() {
   const [settings, setSettings] = useState<KioskSettings>(DEFAULT_SETTINGS);
   const [verifyAttempts, setVerifyAttempts] = useState(0);
   const [enrollAttempts, setEnrollAttempts] = useState(0);
+  const [lockoutUntil, setLockoutUntil] = useState<number | null>(null);
+  const [countdown, setCountdown] = useState("");
   const [needSecondFactor, setNeedSecondFactor] = useState<null | "face" | "thumb">(null);
+
+  const LOCKOUT_MINUTES_VERIFY = 5;
+  const LOCKOUT_MINUTES_ENROLL = 10;
 
   const todayKey = format(new Date(), "yyyy-MM-dd");
 
@@ -125,6 +130,34 @@ export default function OfficeKiosk() {
   const enrolledFace = !!enrollment?.face_enrolled_at;
   const enrolledThumb = !!enrollment?.thumb_enrolled_at;
   const fullyEnrolled = (!requireFace || enrolledFace) && (!requireThumb || enrolledThumb);
+
+  /* ---------------- lockout countdown ---------------- */
+  useEffect(() => {
+    if (!lockoutUntil) {
+      setCountdown("");
+      return;
+    }
+    const tick = () => {
+      const remaining = Math.max(0, Math.ceil((lockoutUntil - Date.now()) / 1000));
+      if (remaining <= 0) {
+        setLockoutUntil(null);
+        setVerifyAttempts(0);
+        setEnrollAttempts(0);
+        setCountdown("");
+        return;
+      }
+      const m = Math.floor(remaining / 60);
+      const s = remaining % 60;
+      setCountdown(`${m}:${s.toString().padStart(2, "0")}`);
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [lockoutUntil]);
+
+  const isLockedOut = !!lockoutUntil && Date.now() < lockoutUntil;
+  const remainingVerify = Math.max(0, settings.max_verify_retries - verifyAttempts);
+  const remainingEnroll = Math.max(0, settings.max_enrollment_attempts - enrollAttempts);
 
   /* ---------------- verification ---------------- */
   const completeVerify = (method: "face" | "thumb") => {
@@ -260,11 +293,18 @@ export default function OfficeKiosk() {
                 <p className="mt-1 text-sm text-muted-foreground">
                   This is a one-time step. Once enrolled, you can check-in or check-out on any kiosk in seconds.
                 </p>
+                {isLockedOut && enrollAttempts >= settings.max_enrollment_attempts && (
+                  <div className="mt-3 flex items-center gap-2 rounded-2xl bg-destructive/10 px-4 py-3 text-sm font-bold text-destructive">
+                    <Lock className="h-4 w-4" />
+                    Enrollment locked — retry in <Clock className="h-3.5 w-3.5" /> {countdown}
+                  </div>
+                )}
                 <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
                   {requireFace && (
                     <button
                       onClick={() => setMode("enroll-face")}
-                      className="focus-premium flex items-center justify-center gap-2 rounded-2xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm font-extrabold text-primary"
+                      disabled={isLockedOut && enrollAttempts >= settings.max_enrollment_attempts}
+                      className="focus-premium flex items-center justify-center gap-2 rounded-2xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm font-extrabold text-primary disabled:opacity-40"
                     >
                       <ScanFace className="h-4 w-4" />
                       {enrolledFace ? "Re-enroll Face" : "Enroll Face"}
@@ -273,14 +313,15 @@ export default function OfficeKiosk() {
                   {requireThumb && (
                     <button
                       onClick={() => setMode("enroll-thumb")}
-                      className="focus-premium flex items-center justify-center gap-2 rounded-2xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm font-extrabold text-primary"
+                      disabled={isLockedOut && enrollAttempts >= settings.max_enrollment_attempts}
+                      className="focus-premium flex items-center justify-center gap-2 rounded-2xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm font-extrabold text-primary disabled:opacity-40"
                     >
                       <Fingerprint className="h-4 w-4" />
                       {enrolledThumb ? "Re-enroll Thumb" : "Enroll Thumb"}
                     </button>
                   )}
                 </div>
-                <div className="mt-3 flex flex-wrap gap-3 text-xs">
+                <div className="mt-3 flex flex-wrap items-center gap-3 text-xs">
                   {requireFace && (
                     <span className={`inline-flex items-center gap-1 ${enrolledFace ? "text-emerald-600" : "text-muted-foreground"}`}>
                       {enrolledFace ? <CheckCircle2 className="h-3.5 w-3.5" /> : <X className="h-3.5 w-3.5" />} Face enrolled
@@ -293,6 +334,9 @@ export default function OfficeKiosk() {
                   )}
                   <span className="inline-flex items-center gap-1 text-muted-foreground">
                     Mode: <strong className="text-foreground">{settings.verification_mode}</strong>
+                  </span>
+                  <span className={`inline-flex items-center gap-1 font-bold ${remainingEnroll <= 1 ? "text-destructive" : "text-muted-foreground"}`}>
+                    {remainingEnroll} enrollment {remainingEnroll === 1 ? "attempt" : "attempts"} remaining
                   </span>
                 </div>
               </div>
@@ -316,14 +360,20 @@ export default function OfficeKiosk() {
                 : settings.verification_mode === "either"
                 ? "Pick a method below. Your biometric data never leaves this device."
                 : `Use ${settings.verification_mode} verification to continue.`}
-              {" "}You have up to {settings.max_verify_retries} retries.
             </p>
+            {isLockedOut && verifyAttempts >= settings.max_verify_retries && (
+              <div className="mt-3 flex items-center gap-2 rounded-2xl bg-destructive/10 px-4 py-3 text-sm font-bold text-destructive">
+                <Lock className="h-4 w-4" />
+                Verification locked — retry in <Clock className="h-3.5 w-3.5" /> {countdown}
+              </div>
+            )}
             <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
               {((needSecondFactor === null && (settings.verification_mode === "face" || settings.verification_mode === "both" || settings.verification_mode === "either")) ||
                 needSecondFactor === "face") && (
                 <button
                   onClick={() => setMode("face")}
-                  className="focus-premium flex items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-4 text-sm font-extrabold text-primary-foreground shadow-card transition hover:opacity-90"
+                  disabled={isLockedOut && verifyAttempts >= settings.max_verify_retries}
+                  className="focus-premium flex items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-4 text-sm font-extrabold text-primary-foreground shadow-card transition hover:opacity-90 disabled:opacity-40"
                 >
                   <ScanFace className="h-4 w-4" /> Face Attendance
                 </button>
@@ -332,17 +382,23 @@ export default function OfficeKiosk() {
                 needSecondFactor === "thumb") && (
                 <button
                   onClick={() => setMode("thumb")}
-                  className="focus-premium flex items-center justify-center gap-2 rounded-2xl border border-primary/30 bg-primary/10 px-4 py-4 text-sm font-extrabold text-primary transition hover:bg-primary/15"
+                  disabled={isLockedOut && verifyAttempts >= settings.max_verify_retries}
+                  className="focus-premium flex items-center justify-center gap-2 rounded-2xl border border-primary/30 bg-primary/10 px-4 py-4 text-sm font-extrabold text-primary transition hover:bg-primary/15 disabled:opacity-40"
                 >
                   <Fingerprint className="h-4 w-4" /> Thumb Attendance
                 </button>
               )}
             </div>
-            {verifyAttempts > 0 && (
-              <p className="mt-3 text-xs text-amber-600">
-                Failed attempts: {verifyAttempts}/{settings.max_verify_retries}
-              </p>
-            )}
+            <div className="mt-3 flex items-center gap-3 text-xs">
+              {verifyAttempts > 0 && (
+                <span className="text-amber-600">
+                  Failed attempts: {verifyAttempts}/{settings.max_verify_retries}
+                </span>
+              )}
+              <span className={`font-bold ${remainingVerify <= 1 ? "text-destructive" : "text-muted-foreground"}`}>
+                {remainingVerify} {remainingVerify === 1 ? "retry" : "retries"} remaining
+              </span>
+            </div>
           </section>
         )}
 
@@ -429,13 +485,15 @@ export default function OfficeKiosk() {
           <div className="mt-4 flex flex-wrap gap-3 text-xs text-muted-foreground">
             <button
               onClick={() => setMode("enroll-face")}
-              className="inline-flex items-center gap-1 rounded-full bg-background px-3 py-1.5 font-bold hover:bg-muted"
+              disabled={isLockedOut && enrollAttempts >= settings.max_enrollment_attempts}
+              className="inline-flex items-center gap-1 rounded-full bg-background px-3 py-1.5 font-bold hover:bg-muted disabled:opacity-40"
             >
               <RefreshCcw className="h-3.5 w-3.5" /> Re-enroll face
             </button>
             <button
               onClick={() => setMode("enroll-thumb")}
-              className="inline-flex items-center gap-1 rounded-full bg-background px-3 py-1.5 font-bold hover:bg-muted"
+              disabled={isLockedOut && enrollAttempts >= settings.max_enrollment_attempts}
+              className="inline-flex items-center gap-1 rounded-full bg-background px-3 py-1.5 font-bold hover:bg-muted disabled:opacity-40"
             >
               <RefreshCcw className="h-3.5 w-3.5" /> Re-enroll thumb
             </button>
@@ -452,9 +510,10 @@ export default function OfficeKiosk() {
             setVerifyAttempts(next);
             setMode(null);
             if (next >= settings.max_verify_retries) {
-              toast.error(`Max verification retries (${settings.max_verify_retries}) reached. Please try again later.`);
+              const until = Date.now() + LOCKOUT_MINUTES_VERIFY * 60_000;
+              setLockoutUntil(until);
+              toast.error(`Max verification retries reached. Locked for ${LOCKOUT_MINUTES_VERIFY} minutes.`);
               setNeedSecondFactor(null);
-              setVerifyAttempts(0);
             }
           }}
           onSuccess={onFaceVerified}
@@ -467,9 +526,10 @@ export default function OfficeKiosk() {
             setVerifyAttempts(next);
             setMode(null);
             if (next >= settings.max_verify_retries) {
-              toast.error(`Max verification retries (${settings.max_verify_retries}) reached. Please try again later.`);
+              const until = Date.now() + LOCKOUT_MINUTES_VERIFY * 60_000;
+              setLockoutUntil(until);
+              toast.error(`Max verification retries reached. Locked for ${LOCKOUT_MINUTES_VERIFY} minutes.`);
               setNeedSecondFactor(null);
-              setVerifyAttempts(0);
             }
           }}
           onSuccess={onThumbVerified}
@@ -483,8 +543,9 @@ export default function OfficeKiosk() {
             setEnrollAttempts(next);
             setMode(null);
             if (next >= settings.max_enrollment_attempts) {
-              toast.error(`Max enrollment attempts (${settings.max_enrollment_attempts}) reached. Please contact HR.`);
-              setEnrollAttempts(0);
+              const until = Date.now() + LOCKOUT_MINUTES_ENROLL * 60_000;
+              setLockoutUntil(until);
+              toast.error(`Max enrollment attempts reached. Locked for ${LOCKOUT_MINUTES_ENROLL} minutes. Contact HR if you need help.`);
             }
           }}
           onSuccess={async (snapshot) => {
@@ -516,6 +577,7 @@ export default function OfficeKiosk() {
               setEnrollmentFaceUrl(signed?.signedUrl ?? null);
               toast.success("Face enrolled");
               setMode(null);
+              setEnrollAttempts(0);
             } catch (err: any) {
               toast.error(err?.message ?? "Could not save face enrollment");
             }
@@ -530,8 +592,9 @@ export default function OfficeKiosk() {
             setEnrollAttempts(next);
             setMode(null);
             if (next >= settings.max_enrollment_attempts) {
-              toast.error(`Max enrollment attempts (${settings.max_enrollment_attempts}) reached. Please contact HR.`);
-              setEnrollAttempts(0);
+              const until = Date.now() + LOCKOUT_MINUTES_ENROLL * 60_000;
+              setLockoutUntil(until);
+              toast.error(`Max enrollment attempts reached. Locked for ${LOCKOUT_MINUTES_ENROLL} minutes. Contact HR if you need help.`);
             }
           }}
           onSuccess={async () => {
@@ -554,6 +617,7 @@ export default function OfficeKiosk() {
               setEnrollment((prev) => ({ ...(prev ?? {} as Enrollment), ...(saved as Enrollment) }));
               toast.success("Thumb enrolled");
               setMode(null);
+              setEnrollAttempts(0);
             } catch (err: any) {
               toast.error(err?.message ?? "Could not save thumb enrollment");
             }
