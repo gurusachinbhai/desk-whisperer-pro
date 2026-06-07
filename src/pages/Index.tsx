@@ -64,6 +64,7 @@ import { GraduationCap, ClipboardList, TrendingUp } from "lucide-react";
 import AdminDocumentsPanel from "@/components/AdminDocumentsPanel";
 import AdminDepartmentsPanel from "@/components/AdminDepartmentsPanel";
 import AdminConsole from "@/components/admin/AdminConsole";
+import AdminGlobalAttendancePanel from "@/components/admin/AdminGlobalAttendancePanel";
 import LicenseAlertsCard from "@/components/admin/LicenseAlertsCard";
 import EmployeeWorkInfoCard from "@/components/EmployeeWorkInfoCard";
 import ManagerHierarchy, { type HierarchyEmployee } from "@/components/ManagerHierarchy";
@@ -125,7 +126,7 @@ type EmployeeInvite = {
 };
 
 type AppMode = "signup" | "login";
-type ActiveTab = "home" | "book" | "attendance" | "leave" | "payroll" | "documents" | "training" | "appraisal" | "assistant" | "billing" | "reports" | "map" | "rooms" | "directory" | "admin" | "team" | "sales";
+type ActiveTab = "home" | "book" | "attendance" | "leave" | "payroll" | "documents" | "training" | "appraisal" | "assistant" | "billing" | "reports" | "map" | "rooms" | "directory" | "admin" | "team" | "sales" | "globalattendance";
 type LoginStep = "form" | "otp";
 type LoginIdentifier = "email" | "phone";
 
@@ -246,6 +247,7 @@ const bottomTabs: { id: ActiveTab; icon: typeof CalendarCheck; label: string }[]
   { id: "appraisal", icon: ClipboardList, label: "Appraisal" },
   { id: "sales", icon: TrendingUp, label: "Sales" },
   { id: "assistant", icon: Sparkles, label: "AI Assistant" },
+  { id: "globalattendance", icon: Clock, label: "Global Attendance" },
   { id: "admin", icon: BarChart3, label: "Admin" },
 ];
 
@@ -6924,7 +6926,7 @@ const Index = () => {
         {/* Primary navigation — horizontal, scrollable on small screens */}
         <nav className="mx-auto w-full max-w-7xl overflow-x-auto px-2 pb-2 sm:px-4 lg:px-6">
           <div className="flex w-max min-w-full items-center gap-1">
-            {bottomTabs.filter((t) => t.id !== "admin" || isAdmin).map((tab) => (
+            {bottomTabs.filter((t) => (t.id !== "admin" || isAdmin) && (t.id !== "globalattendance" || isAdmin)).map((tab) => (
               <button
                 key={tab.label}
                 onClick={() => setActiveTab(tab.id)}
@@ -7027,6 +7029,9 @@ const Index = () => {
               {activeTab === "map" && renderMapPanel()}
               {activeTab === "rooms" && renderRoomsPanel()}
               {activeTab === "directory" && renderDirectoryPanel()}
+              {isAdmin && activeTab === "globalattendance" && companyProfile && (
+                <AdminGlobalAttendancePanel companyId={companyProfile.id} />
+              )}
             </section>
           </div>
         )}

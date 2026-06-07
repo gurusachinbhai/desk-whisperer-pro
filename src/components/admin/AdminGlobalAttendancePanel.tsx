@@ -193,10 +193,6 @@ export default function AdminGlobalAttendancePanel({ companyId }: { companyId: s
             <Label className="text-[10px] font-bold uppercase">Date</Label>
             <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="h-9 w-44" />
           </div>
-          <div>
-            <Label className="text-[10px] font-bold uppercase">Search</Label>
-            <Input placeholder="Name, email, code" value={search} onChange={(e) => setSearch(e.target.value)} className="h-9 w-56" />
-          </div>
           <Button variant="outline" size="sm" onClick={load} disabled={loading}>
             <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} /> Refresh
           </Button>
@@ -234,6 +230,11 @@ export default function AdminGlobalAttendancePanel({ companyId }: { companyId: s
                 </option>
               ))}
             </select>
+            {selectedEmployee && (
+              <p className="mt-1 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+                Employee ID: <span className="text-foreground">{selectedEmployee.employee_code ?? "—"}</span>
+              </p>
+            )}
           </div>
           <div className="flex flex-col justify-end">
             <Label className="text-[10px] font-bold uppercase">Verification</Label>
@@ -256,7 +257,8 @@ export default function AdminGlobalAttendancePanel({ companyId }: { companyId: s
                 <div>
                   <p className="text-sm font-extrabold">{verified.employee.display_name}</p>
                   <p className="text-xs text-muted-foreground">
-                    {verified.employee.employee_code ?? verified.employee.email ?? "Identity verified"} · via {verified.method === "face" ? "Face" : "Thumb"}
+                    ID: {verified.employee.employee_code ?? "—"}
+                    {verified.employee.email ? ` · ${verified.employee.email}` : ""} · via {verified.method === "face" ? "Face" : "Thumb"}
                   </p>
                 </div>
               </div>
@@ -288,97 +290,6 @@ export default function AdminGlobalAttendancePanel({ companyId }: { companyId: s
             </div>
           </div>
         )}
-      </section>
-
-      {/* Per-employee attendance table */}
-      <section className="rounded-3xl border border-border bg-card p-5">
-        <div className="flex items-center justify-between">
-          <h3 className="font-display text-sm font-extrabold uppercase tracking-wide text-muted-foreground">
-            Employee Attendance · {date}
-          </h3>
-          <span className="text-xs font-bold text-muted-foreground">
-            {presentCount} / {employees.length} present
-          </span>
-        </div>
-
-        <div className="mt-3 overflow-x-auto rounded-lg border border-border">
-          <table className="w-full min-w-[760px] text-sm">
-            <thead className="bg-muted text-left text-xs uppercase tracking-wide text-muted-foreground">
-              <tr>
-                <th className="px-3 py-2">Employee</th>
-                <th className="px-3 py-2">Code</th>
-                <th className="px-3 py-2">Check-in</th>
-                <th className="px-3 py-2">Check-out</th>
-                <th className="px-3 py-2">Status</th>
-                <th className="px-3 py-2">Method</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {loading && (
-                <tr><td colSpan={6} className="px-3 py-6 text-center text-muted-foreground">
-                  <Loader2 className="mx-auto h-4 w-4 animate-spin" />
-                </td></tr>
-              )}
-              {!loading && filteredEmployees.length === 0 && (
-                <tr><td colSpan={6} className="px-3 py-6 text-center text-muted-foreground">No employees match.</td></tr>
-              )}
-              {!loading && filteredEmployees.map((emp) => {
-                const rec = emp.user_id ? recordByUser.get(emp.user_id) : undefined;
-                const method = rec?.notes?.includes("Face")
-                  ? "face"
-                  : rec?.notes?.includes("Thumb")
-                  ? "thumb"
-                  : null;
-                return (
-                  <tr key={emp.id} className="text-foreground">
-                    <td className="px-3 py-2 font-bold">{emp.display_name}</td>
-                    <td className="px-3 py-2 text-muted-foreground">{emp.employee_code ?? "—"}</td>
-                    <td className="px-3 py-2">
-                      {rec?.check_in_at ? (
-                        <span className="inline-flex items-center gap-1 text-emerald-600">
-                          <CheckCircle2 className="h-3.5 w-3.5" />
-                          {format(new Date(rec.check_in_at), "hh:mm a")}
-                        </span>
-                      ) : (
-                        <span className="text-muted-foreground">—</span>
-                      )}
-                    </td>
-                    <td className="px-3 py-2">
-                      {rec?.check_out_at ? (
-                        <span className="inline-flex items-center gap-1 text-amber-600">
-                          <Clock className="h-3.5 w-3.5" />
-                          {format(new Date(rec.check_out_at), "hh:mm a")}
-                        </span>
-                      ) : (
-                        <span className="text-muted-foreground">—</span>
-                      )}
-                    </td>
-                    <td className="px-3 py-2">
-                      {rec?.check_in_at ? (
-                        <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-bold text-emerald-600">
-                          Present
-                        </span>
-                      ) : (
-                        <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-bold text-muted-foreground">
-                          Absent
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-3 py-2 text-xs">
-                      {method === "face" ? (
-                        <span className="inline-flex items-center gap-1"><ScanFace className="h-3.5 w-3.5" /> Face</span>
-                      ) : method === "thumb" ? (
-                        <span className="inline-flex items-center gap-1"><Fingerprint className="h-3.5 w-3.5" /> Thumb</span>
-                      ) : (
-                        <span className="text-muted-foreground">—</span>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
       </section>
     </div>
   );
