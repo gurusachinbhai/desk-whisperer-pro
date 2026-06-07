@@ -485,13 +485,15 @@ export default function OfficeKiosk() {
           <div className="mt-4 flex flex-wrap gap-3 text-xs text-muted-foreground">
             <button
               onClick={() => setMode("enroll-face")}
-              className="inline-flex items-center gap-1 rounded-full bg-background px-3 py-1.5 font-bold hover:bg-muted"
+              disabled={isLockedOut && enrollAttempts >= settings.max_enrollment_attempts}
+              className="inline-flex items-center gap-1 rounded-full bg-background px-3 py-1.5 font-bold hover:bg-muted disabled:opacity-40"
             >
               <RefreshCcw className="h-3.5 w-3.5" /> Re-enroll face
             </button>
             <button
               onClick={() => setMode("enroll-thumb")}
-              className="inline-flex items-center gap-1 rounded-full bg-background px-3 py-1.5 font-bold hover:bg-muted"
+              disabled={isLockedOut && enrollAttempts >= settings.max_enrollment_attempts}
+              className="inline-flex items-center gap-1 rounded-full bg-background px-3 py-1.5 font-bold hover:bg-muted disabled:opacity-40"
             >
               <RefreshCcw className="h-3.5 w-3.5" /> Re-enroll thumb
             </button>
