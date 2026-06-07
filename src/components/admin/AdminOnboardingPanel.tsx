@@ -173,16 +173,29 @@ function AddEmployeeForm({ companyId, uploaderName, companyDomain }: { companyId
 
     setBusy(true);
     try {
-      const { data: codeData, error: codeErr } = await supabase.rpc("generate_employee_code", { _company_id: companyId });
-      if (codeErr) throw codeErr;
-      const employeeCode = codeData as unknown as string;
+      let finalCode = employeeCode.trim().toUpperCase();
+      if (!finalCode) {
+        const { data: codeData, error: codeErr } = await supabase.rpc("generate_employee_code", { _company_id: companyId });
+        if (codeErr) throw codeErr;
+        finalCode = codeData as unknown as string;
+      } else {
+        // Pre-check uniqueness within company
+        const { data: dup } = await supabase.from("employee_profiles")
+          .select("id").eq("company_id", companyId).eq("employee_code", finalCode).maybeSingle();
+        if (dup) {
+          setErrors({ employeeCode: "This Employee ID is already used in your company." });
+          toast.error("Employee ID already exists");
+          setBusy(false);
+          return;
+        }
+      }
 
       const { data: emp, error: empErr } = await supabase.from("employee_profiles").insert({
         company_id: companyId,
         display_name: displayName.trim(),
         email: email.trim().toLowerCase(),
         phone: phone.trim() || null,
-        employee_code: employeeCode,
+        employee_code: finalCode,
         uan_number: uan.replace(/\s/g, "") || null,
         status: "approved",
       }).select().single();
@@ -213,11 +226,13 @@ function AddEmployeeForm({ companyId, uploaderName, companyDomain }: { companyId
         });
       }
 
-      toast.success("Employee onboarded", { description: `Code ${employeeCode}` });
-      setLastCode(employeeCode);
+      toast.success("Employee onboarded", { description: `Code ${finalCode}` });
+      setLastCode(finalCode);
       reset();
     } catch (err: any) {
-      toast.error("Onboarding failed", { description: err.message ?? String(err) });
+      const friendly = friendlyDbError(err);
+      if (friendly.field) setErrors({ [friendly.field]: friendly.message });
+      toast.error("Onboarding failed", { description: friendly.message });
     } finally { setBusy(false); }
   };
 
