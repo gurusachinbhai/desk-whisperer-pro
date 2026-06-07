@@ -108,6 +108,32 @@ export default function AdminHRAssistancePanel({ companyId }: { companyId: strin
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [companyId]);
 
+  const saveSettings = async () => {
+    setSavingSettings(true);
+    try {
+      const { data: auth } = await supabase.auth.getUser();
+      const payload = {
+        company_id: companyId,
+        verification_mode: settings.verification_mode,
+        max_enrollment_attempts: settings.max_enrollment_attempts,
+        max_verify_retries: settings.max_verify_retries,
+        updated_by: auth?.user?.id ?? null,
+      };
+      const { data, error } = await supabase
+        .from("hr_kiosk_settings")
+        .upsert(payload, { onConflict: "company_id" })
+        .select("id,company_id,verification_mode,max_enrollment_attempts,max_verify_retries")
+        .single();
+      if (error) throw error;
+      setSettings(data as KioskSettings);
+      toast.success("Kiosk settings saved");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Could not save settings");
+    } finally {
+      setSavingSettings(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
